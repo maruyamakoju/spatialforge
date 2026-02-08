@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
 
+    # Sentry error tracking (optional)
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.1  # 10% of transactions
+
     # Rate limiting (calls per month)
     rate_limit_free: int = 100
     rate_limit_builder: int = 5_000

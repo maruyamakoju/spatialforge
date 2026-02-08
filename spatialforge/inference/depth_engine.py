@@ -150,10 +150,22 @@ class DepthEngine:
         pil_image = Image.fromarray(image_rgb)
 
         # Run inference
-        raw_output = pipe(pil_image)
+        try:
+            raw_output = pipe(pil_image)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower() or "oom" in str(e).lower():
+                # Clear CUDA cache and retry once
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                raise RuntimeError("GPU out of memory during depth estimation") from e
+            raise
 
         # Extract depth tensor from pipeline output
         raw_depth = self._extract_raw_depth(raw_output, h, w)
+
+        # Clear GPU memory after extraction
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         # Convert to metric if applicable
         is_metric = model_info.task == "metric_depth"

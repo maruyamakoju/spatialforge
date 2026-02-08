@@ -31,11 +31,45 @@ from .storage.object_store import ObjectStore
 
 logger = logging.getLogger(__name__)
 
+
+def init_sentry() -> None:
+    """Initialize Sentry error tracking if DSN is configured."""
+    settings = get_settings()
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+            from sentry_sdk.integrations.fastapi import FastApiIntegration
+            from sentry_sdk.integrations.starlette import StarletteIntegration
+
+            sentry_sdk.init(
+                dsn=settings.sentry_dsn,
+                environment=settings.sentry_environment,
+                traces_sample_rate=settings.sentry_traces_sample_rate,
+                integrations=[
+                    StarletteIntegration(transaction_style="endpoint"),
+                    FastApiIntegration(transaction_style="endpoint"),
+                ],
+                release=f"spatialforge@{__version__}",
+                # Include request data
+                send_default_pii=False,  # Don't send PII (user IDs, emails)
+                attach_stacktrace=True,
+                max_breadcrumbs=50,
+                debug=settings.debug,
+            )
+            logger.info("Sentry error tracking enabled (environment: %s)", settings.sentry_environment)
+        except ImportError:
+            logger.warning("Sentry SDK not installed, error tracking disabled")
+    else:
+        logger.info("Sentry DSN not configured, error tracking disabled")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: init and cleanup shared resources."""
     settings = get_settings()
     logger.info("Starting SpatialForge v%s", __version__)
+
+    # Initialize Sentry error tracking
+    init_sentry()
 
     # Redis (optional — app starts without it, but auth is disabled)
     try:

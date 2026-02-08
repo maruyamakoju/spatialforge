@@ -8,9 +8,17 @@ import os
 import tempfile
 import traceback
 
+import torch
+
 from .celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+class GPUOutOfMemoryError(Exception):
+    """Raised when GPU runs out of memory."""
+
+    pass
 
 # Lazy-initialized shared resources (initialized once per worker process)
 _model_manager = None
@@ -51,7 +59,15 @@ def _get_object_store():
     return _object_store
 
 
-@celery_app.task(bind=True, name="spatialforge.workers.tasks.reconstruct_task")
+@celery_app.task(
+    bind=True,
+    name="spatialforge.workers.tasks.reconstruct_task",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    max_retries=3,
+)
 def reconstruct_task(
     self,
     video_object_key: str,
@@ -134,7 +150,15 @@ def reconstruct_task(
         return err
 
 
-@celery_app.task(bind=True, name="spatialforge.workers.tasks.floorplan_task")
+@celery_app.task(
+    bind=True,
+    name="spatialforge.workers.tasks.floorplan_task",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    max_retries=3,
+)
 def floorplan_task(
     self,
     video_object_key: str,
@@ -218,7 +242,15 @@ def floorplan_task(
         return {"status": "failed", "error": str(exc)}
 
 
-@celery_app.task(bind=True, name="spatialforge.workers.tasks.segment_3d_task")
+@celery_app.task(
+    bind=True,
+    name="spatialforge.workers.tasks.segment_3d_task",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    max_retries=3,
+)
 def segment_3d_task(
     self,
     video_object_key: str,
