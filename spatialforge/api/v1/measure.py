@@ -12,8 +12,16 @@ from ...models.responses import MeasureResponse
 
 router = APIRouter()
 
+_ERROR_RESPONSES = {
+    400: {"description": "Invalid input (bad points format, coordinates out of bounds, NaN/Inf)"},
+    401: {"description": "Missing or invalid API key"},
+    413: {"description": "Image exceeds 20MB size limit"},
+    429: {"description": "Monthly rate limit exceeded"},
+    504: {"description": "Inference timed out"},
+}
 
-@router.post("/measure", response_model=MeasureResponse)
+
+@router.post("/measure", response_model=MeasureResponse, responses=_ERROR_RESPONSES)
 async def measure_distance(
     request: Request,
     image: UploadFile = File(..., description="Image file (JPEG/PNG/WebP)"),

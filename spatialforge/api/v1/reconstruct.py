@@ -12,8 +12,15 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 
+_ERROR_RESPONSES = {
+    400: {"description": "Invalid input (video too short, unsupported format)"},
+    401: {"description": "Missing or invalid API key"},
+    413: {"description": "Video exceeds 500MB size limit"},
+    429: {"description": "Monthly rate limit exceeded"},
+}
 
-@router.post("/reconstruct", response_model=ReconstructJobResponse)
+
+@router.post("/reconstruct", response_model=ReconstructJobResponse, responses=_ERROR_RESPONSES)
 async def start_reconstruction(
     request: Request,
     video: UploadFile = File(..., description="Video file (MP4, max 120s)"),

@@ -18,8 +18,17 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
+_ERROR_RESPONSES = {
+    400: {"description": "Invalid input (bad image format, unsupported content type)"},
+    401: {"description": "Missing or invalid API key"},
+    413: {"description": "Image exceeds 20MB size limit"},
+    429: {"description": "Monthly rate limit exceeded"},
+    503: {"description": "Auth service unavailable (Redis down)"},
+    504: {"description": "Inference timed out (try a smaller image or faster model)"},
+}
 
-@router.post("/depth", response_model=DepthResponse)
+
+@router.post("/depth", response_model=DepthResponse, responses=_ERROR_RESPONSES)
 async def estimate_depth(
     request: Request,
     image: UploadFile = File(..., description="Image file (JPEG/PNG/WebP)"),

@@ -15,6 +15,13 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 500 * 1024 * 1024
 
+_ERROR_RESPONSES = {
+    400: {"description": "Invalid input (video too short, prompt empty)"},
+    401: {"description": "Missing or invalid API key"},
+    413: {"description": "Video exceeds 500MB size limit"},
+    429: {"description": "Monthly rate limit exceeded"},
+}
+
 BETA_NOTICE = (
     "This endpoint is in BETA. SAM3 integration is pending "
     "(requires separate container and HuggingFace access approval). "
@@ -22,7 +29,7 @@ BETA_NOTICE = (
 )
 
 
-@router.post("/segment-3d", response_model=Segment3DJobResponse)
+@router.post("/segment-3d", response_model=Segment3DJobResponse, responses=_ERROR_RESPONSES)
 async def start_segment_3d(
     request: Request,
     video: UploadFile = File(..., description="Video file (MP4)"),

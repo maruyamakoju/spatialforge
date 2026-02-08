@@ -11,8 +11,16 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB for video
 
+_ERROR_RESPONSES = {
+    400: {"description": "Invalid input (must provide video or images, not both)"},
+    401: {"description": "Missing or invalid API key"},
+    413: {"description": "File exceeds size limit"},
+    429: {"description": "Monthly rate limit exceeded"},
+    504: {"description": "Inference timed out"},
+}
 
-@router.post("/pose", response_model=PoseResponse)
+
+@router.post("/pose", response_model=PoseResponse, responses=_ERROR_RESPONSES)
 async def estimate_pose(
     request: Request,
     video: UploadFile = File(None, description="Video file (MP4)"),
