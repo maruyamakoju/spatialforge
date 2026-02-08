@@ -11,11 +11,14 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
 import httpx
 
+from .exceptions import RETRYABLE_STATUS_CODES, SpatialForgeError, raise_for_status
 from .models import (
     CameraPose,
     DepthResult,
@@ -28,14 +31,7 @@ from .models import (
 
 DEFAULT_BASE_URL = "https://spatialforge-demo.fly.dev"
 
-
-class SpatialForgeError(Exception):
-    """API error."""
-
-    def __init__(self, status_code: int, detail: str) -> None:
-        self.status_code = status_code
-        self.detail = detail
-        super().__init__(f"HTTP {status_code}: {detail}")
+logger = logging.getLogger("spatialforge_client")
 
 
 class Client:
@@ -45,6 +41,8 @@ class Client:
         api_key: Your SpatialForge API key (starts with 'sf_').
         base_url: API base URL. Defaults to production.
         timeout: Request timeout in seconds.
+        max_retries: Maximum number of retries for transient errors (429, 5xx).
+        retry_base_delay: Base delay in seconds for exponential backoff.
     """
 
     def __init__(
@@ -52,9 +50,13 @@ class Client:
         api_key: str,
         base_url: str = DEFAULT_BASE_URL,
         timeout: float = 120.0,
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
+        self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay
         self._client = httpx.Client(
             base_url=self._base_url,
             headers={"X-API-Key": api_key},
@@ -70,7 +72,7 @@ class Client:
     def close(self) -> None:
         self._client.close()
 
-    def _parse_error(self, resp) -> str:
+    def _parse_error(self, resp: httpx.Response) -> str:
         """Extract error detail from HTTP response."""
         try:
             ct = resp.headers.get("content-type", "")
@@ -80,16 +82,70 @@ class Client:
             pass
         return resp.text
 
+    def _get_retry_after(self, resp: httpx.Response) -> float | None:
+        """Extract Retry-After header value in seconds."""
+        val = resp.headers.get("retry-after")
+        if val is not None:
+            try:
+                return float(val)
+            except ValueError:
+                pass
+        return None
+
+    def _request_with_retry(
+        self,
+        method: str,
+        path: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Execute an HTTP request with exponential backoff retry for transient errors."""
+        last_exc: Exception | None = None
+
+        for attempt in range(self._max_retries + 1):
+            try:
+                resp = self._client.request(method, path, **kwargs)
+            except httpx.TimeoutException as e:
+                last_exc = e
+                if attempt < self._max_retries:
+                    delay = self._retry_base_delay * (2 ** attempt)
+                    logger.warning(
+                        "Request timeout (attempt %d/%d), retrying in %.1fs",
+                        attempt + 1, self._max_retries + 1, delay,
+                    )
+                    time.sleep(delay)
+                    continue
+                raise SpatialForgeError(504, f"Request timed out after {self._max_retries + 1} attempts") from e
+
+            if resp.status_code < 400:
+                return resp
+
+            # Check if we should retry
+            if resp.status_code in RETRYABLE_STATUS_CODES and attempt < self._max_retries:
+                retry_after = self._get_retry_after(resp)
+                delay = retry_after if retry_after is not None else self._retry_base_delay * (2 ** attempt)
+                logger.warning(
+                    "HTTP %d (attempt %d/%d), retrying in %.1fs",
+                    resp.status_code, attempt + 1, self._max_retries + 1, delay,
+                )
+                time.sleep(delay)
+                continue
+
+            # Non-retryable or exhausted retries
+            raise_for_status(
+                resp.status_code,
+                self._parse_error(resp),
+                retry_after=self._get_retry_after(resp),
+            )
+
+        # Should not reach here, but just in case
+        raise SpatialForgeError(500, "Unexpected retry exhaustion") from last_exc
+
     def _get(self, path: str) -> dict:
-        resp = self._client.get(path)
-        if resp.status_code >= 400:
-            raise SpatialForgeError(resp.status_code, self._parse_error(resp))
+        resp = self._request_with_retry("GET", path)
         return resp.json()
 
     def _post_file(self, path: str, files: dict, data: dict | None = None) -> dict:
-        resp = self._client.post(path, files=files, data=data or {})
-        if resp.status_code >= 400:
-            raise SpatialForgeError(resp.status_code, self._parse_error(resp))
+        resp = self._request_with_retry("POST", path, files=files, data=data or {})
         return resp.json()
 
     # ── /depth ──────────────────────────────────────────────

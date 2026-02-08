@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SpatialForge — API Documentation</title>
-  <meta name="description" content="SpatialForge API documentation with code examples for depth estimation, measurement, pose estimation, and 3D reconstruction.">
+  <meta name="description" content="SpatialForge API documentation with code examples in Python, JavaScript, Go, and cURL for depth estimation, measurement, pose estimation, and 3D reconstruction.">
   <style>
     :root {
       --bg: #0a0a0f;
       --surface: #12121a;
+      --surface-2: #1a1a28;
       --border: #1e1e2e;
       --text: #e4e4ef;
       --muted: #8888a0;
@@ -17,6 +18,9 @@
       --accent-glow: rgba(99, 102, 241, 0.15);
       --green: #34d399;
       --orange: #fb923c;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --purple: #c084fc;
       --radius: 12px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,49 +33,126 @@
     }
     a { color: var(--accent-bright); text-decoration: none; }
     a:hover { text-decoration: underline; }
+
+    /* ── Nav ─────────────────────── */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(10,10,15,0.9); backdrop-filter: blur(12px);
+      background: rgba(10,10,15,0.92); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px;
       display: flex; align-items: center; justify-content: space-between;
     }
     nav .logo { font-size: 1.25rem; font-weight: 700; color: var(--text); }
     nav .logo span { color: var(--accent-bright); }
-    nav .links { display: flex; gap: 1.5rem; }
+    nav .links { display: flex; gap: 1.5rem; align-items: center; }
     nav .links a { color: var(--muted); font-size: 0.9rem; }
     nav .links a:hover { color: var(--text); text-decoration: none; }
-    .container { max-width: 900px; margin: 0 auto; padding: 100px 2rem 4rem; }
+    nav .links a.active { color: var(--accent-bright); }
+
+    /* ── Layout ──────────────────── */
+    .page { display: flex; margin-top: 64px; }
+    .sidebar {
+      position: fixed; top: 64px; left: 0; bottom: 0; width: 260px;
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 1.5rem 0; overflow-y: auto; z-index: 50;
+    }
+    .sidebar-section { padding: 0 1.5rem; margin-bottom: 1.5rem; }
+    .sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem; }
+    .sidebar a { display: block; padding: 0.3rem 1.5rem; font-size: 0.85rem; color: var(--muted); border-left: 2px solid transparent; }
+    .sidebar a:hover { color: var(--text); background: var(--accent-glow); text-decoration: none; }
+    .sidebar a.method-label { font-family: monospace; font-size: 0.8rem; }
+    .main { margin-left: 260px; max-width: 860px; padding: 3rem 3rem 6rem; }
+
+    /* ── Typography ──────────────── */
     h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
     h1 span { color: var(--accent-bright); }
-    .subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 3rem; }
-    h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-    h3 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.5rem; color: var(--accent-bright); }
-    p { margin-bottom: 1rem; color: var(--muted); }
-    code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: var(--green); }
+    .page-subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 3rem; }
+    h2 { font-size: 1.6rem; font-weight: 700; margin: 3.5rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+    h2:first-of-type { border-top: none; padding-top: 0; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+    h4 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--muted); }
+    p { margin-bottom: 1rem; color: var(--muted); line-height: 1.7; }
+    code { background: var(--surface); padding: 2px 7px; border-radius: 4px; font-size: 0.88em; color: var(--green); font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    /* ── Code blocks ─────────────── */
     pre {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.5rem; overflow-x: auto;
-      margin: 1rem 0 2rem; font-size: 0.85rem; line-height: 1.7;
+      border-radius: var(--radius); padding: 1.25rem 1.5rem; overflow-x: auto;
+      margin: 0.75rem 0 1.5rem; font-size: 0.82rem; line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
     }
-    pre code { background: none; padding: 0; color: var(--text); }
-    .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; margin-right: 8px; }
-    .method-post { background: rgba(52, 211, 153, 0.15); color: var(--green); }
-    .method-get { background: rgba(99, 102, 241, 0.15); color: var(--accent-bright); }
-    .endpoint-path { font-family: monospace; font-size: 1rem; font-weight: 600; }
-    .param-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-    .param-table th { text-align: left; font-size: 0.8rem; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0; }
-    .param-table td { padding: 0.5rem 0; border-bottom: 1px solid rgba(30,30,46,0.5); font-size: 0.9rem; }
-    .param-table td:first-child { font-family: monospace; color: var(--green); width: 30%; }
-    .param-table td:nth-child(2) { color: var(--muted); width: 20%; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background: var(--accent-glow); color: var(--accent-bright); }
-    .tabs { display: flex; gap: 0; margin: 1rem 0 0; }
-    .tab { padding: 0.5rem 1rem; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
-    .tab:first-child { border-radius: var(--radius) 0 0 0; }
-    .tab:last-child { border-radius: 0 var(--radius) 0 0; }
-    .tab.active { background: var(--border); color: var(--text); border-bottom-color: var(--border); }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    footer { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+    pre code { background: none; padding: 0; color: var(--text); font-size: inherit; }
+    .kw { color: var(--purple); }
+    .str { color: var(--green); }
+    .fn { color: var(--blue); }
+    .cmt { color: #555568; }
+    .num { color: var(--orange); }
+    .var { color: var(--text); }
+
+    /* ── Endpoint header ─────────── */
+    .endpoint-header { display: flex; align-items: center; gap: 0.75rem; margin: 2.5rem 0 0.75rem; flex-wrap: wrap; }
+    .method { display: inline-block; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; font-family: monospace; letter-spacing: 0.03em; }
+    .method-post { background: rgba(52, 211, 153, 0.12); color: var(--green); }
+    .method-get { background: rgba(99, 102, 241, 0.12); color: var(--accent-bright); }
+    .endpoint-path { font-family: monospace; font-size: 1.05rem; font-weight: 600; color: var(--text); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+    .badge-async { background: rgba(251, 146, 60, 0.12); color: var(--orange); }
+    .badge-auth { background: rgba(99, 102, 241, 0.12); color: var(--accent-bright); }
+    .badge-public { background: rgba(52, 211, 153, 0.12); color: var(--green); }
+    .badge-beta { background: rgba(251, 146, 60, 0.12); color: var(--orange); }
+
+    /* ── Param tables ────────────── */
+    .param-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; }
+    .param-table th { text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .param-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(30,30,46,0.5); font-size: 0.88rem; vertical-align: top; }
+    .param-table td:first-child { font-family: monospace; color: var(--green); white-space: nowrap; }
+    .param-table td:nth-child(2) { color: var(--muted); white-space: nowrap; }
+    .param-required { color: var(--orange); font-size: 0.75rem; font-weight: 600; }
+
+    /* ── Language tabs ────────────── */
+    .lang-tabs { display: flex; gap: 0; margin: 0.75rem 0 0; border-bottom: 1px solid var(--border); }
+    .lang-tab {
+      padding: 0.5rem 1.25rem; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+      color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s;
+      user-select: none; background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .lang-tab:hover { color: var(--text); }
+    .lang-tab.active { color: var(--accent-bright); border-bottom-color: var(--accent-bright); }
+    .lang-panel { display: none; }
+    .lang-panel.active { display: block; }
+
+    /* ── Response example ─────────── */
+    .response-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1rem; margin-bottom: 0.25rem; }
+
+    /* ── Error table ─────────────── */
+    .error-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; }
+    .error-table th { text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.75rem; }
+    .error-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(30,30,46,0.5); font-size: 0.88rem; }
+    .error-table td:first-child { font-family: monospace; font-weight: 700; }
+    .status-4xx { color: var(--orange); }
+    .status-5xx { color: var(--red); }
+
+    /* ── Callout ──────────────────── */
+    .callout {
+      background: var(--accent-glow); border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1rem 0 1.5rem;
+      font-size: 0.9rem; color: var(--text);
+    }
+    .callout-warn {
+      background: rgba(251,146,60,0.08); border-color: rgba(251,146,60,0.2);
+    }
+    .callout strong { color: var(--accent-bright); }
+    .callout-warn strong { color: var(--orange); }
+
+    /* ── Footer ──────────────────── */
+    footer { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-left: 260px; }
+
+    /* ── Mobile ──────────────────── */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 2rem 1.5rem 4rem; }
+      footer { margin-left: 0; }
+    }
   </style>
 </head>
 <body>
@@ -79,7 +160,7 @@
     <a href="index.html" class="logo">Spatial<span>Forge</span></a>
     <div class="links">
       <a href="index.html">Home</a>
-      <a href="docs.html">Docs</a>
+      <a href="docs.html" class="active">Docs</a>
       <a href="demo.html">Demo</a>
       <a href="pricing.html">Pricing</a>
       <a href="https://spatialforge-demo.fly.dev/docs" target="_blank">API Reference</a>
@@ -87,177 +168,668 @@
     </div>
   </nav>
 
-  <div class="container">
-    <h1>API <span>Documentation</span></h1>
-    <p class="subtitle">Everything you need to integrate spatial intelligence into your application.</p>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Getting Started</div>
+      </div>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#authentication">Authentication</a>
+      <a href="#rate-limiting">Rate Limiting</a>
 
-    <!-- Quick Start -->
-    <h2>Quick Start</h2>
+      <div class="sidebar-section" style="margin-top:1.5rem">
+        <div class="sidebar-title">Sync Endpoints</div>
+      </div>
+      <a href="#depth" class="method-label">POST /v1/depth</a>
+      <a href="#depth-vis" class="method-label">POST /v1/depth/visualize</a>
+      <a href="#measure" class="method-label">POST /v1/measure</a>
+      <a href="#pose" class="method-label">POST /v1/pose</a>
 
-    <h3>Installation</h3>
-    <pre><code>pip install spatialforge-client</code></pre>
+      <div class="sidebar-section" style="margin-top:1.5rem">
+        <div class="sidebar-title">Async Endpoints</div>
+      </div>
+      <a href="#reconstruct" class="method-label">POST /v1/reconstruct</a>
+      <a href="#floorplan" class="method-label">POST /v1/floorplan</a>
+      <a href="#segment-3d" class="method-label">POST /v1/segment-3d</a>
 
-    <h3>Python SDK</h3>
-    <pre><code><span style="color: #fb923c">import</span> spatialforge_client <span style="color: #fb923c">as</span> sf
+      <div class="sidebar-section" style="margin-top:1.5rem">
+        <div class="sidebar-title">Billing</div>
+      </div>
+      <a href="#billing-plans" class="method-label">GET /v1/billing/plans</a>
+      <a href="#billing-usage" class="method-label">GET /v1/billing/usage</a>
+      <a href="#billing-checkout" class="method-label">POST /v1/billing/checkout</a>
+      <a href="#billing-portal" class="method-label">POST /v1/billing/portal</a>
 
-client = sf.Client(api_key=<span style="color: #34d399">"sf_your_key"</span>)
+      <div class="sidebar-section" style="margin-top:1.5rem">
+        <div class="sidebar-title">Reference</div>
+      </div>
+      <a href="#async-polling">Async Job Polling</a>
+      <a href="#errors">Error Handling</a>
+      <a href="#models">Models</a>
+      <a href="#sdks">SDKs &amp; Tools</a>
+    </aside>
 
-<span style="color: #8888a0"># Depth estimation</span>
-result = client.depth(<span style="color: #34d399">"photo.jpg"</span>)
-print(f<span style="color: #34d399">"Depth range: {result.min_depth_m:.2f}m - {result.max_depth_m:.2f}m"</span>)
+    <!-- Main Content -->
+    <div class="main">
+      <h1>API <span>Documentation</span></h1>
+      <p class="page-subtitle">Complete reference for integrating spatial intelligence into your application.</p>
 
-<span style="color: #8888a0"># Distance measurement</span>
-measure = client.measure(<span style="color: #34d399">"room.jpg"</span>, point1=(100, 200), point2=(500, 200))
-print(f<span style="color: #34d399">"Distance: {measure.distance_cm:.1f} cm"</span>)</code></pre>
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="quickstart">Quick Start</h2>
 
-    <h3>Async Python</h3>
-    <pre><code><span style="color: #fb923c">import</span> spatialforge_client <span style="color: #fb923c">as</span> sf
+      <h3>Install the SDK</h3>
+      <div class="lang-tabs" data-group="install">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="js">JavaScript</button>
+        <button class="lang-tab" data-lang="go">Go</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="install" data-lang="python">
+        <pre><code><span class="cmt"># Install the Python SDK</span>
+pip install spatialforge-client
 
-<span style="color: #fb923c">async with</span> sf.AsyncClient(api_key=<span style="color: #34d399">"sf_your_key"</span>) <span style="color: #fb923c">as</span> client:
-    result = <span style="color: #fb923c">await</span> client.depth(<span style="color: #34d399">"photo.jpg"</span>)
-    print(result.min_depth_m)</code></pre>
+<span class="cmt"># With CLI support</span>
+pip install spatialforge-client[cli]</code></pre>
+      </div>
+      <div class="lang-panel" data-group="install" data-lang="js">
+        <pre><code><span class="cmt">// Using fetch (built into Node 18+ and all modern browsers)</span>
+<span class="cmt">// No package needed — see examples below</span>
 
-    <h3>CLI</h3>
-    <pre><code><span style="color: #8888a0"># Set your API key</span>
+<span class="cmt">// Or install node-fetch for older Node.js versions</span>
+npm install node-fetch</code></pre>
+      </div>
+      <div class="lang-panel" data-group="install" data-lang="go">
+        <pre><code><span class="cmt">// Use net/http from the standard library</span>
+<span class="cmt">// No external package needed — see examples below</span></code></pre>
+      </div>
+      <div class="lang-panel" data-group="install" data-lang="curl">
+        <pre><code><span class="cmt"># cURL is pre-installed on macOS, Linux, and Windows 10+</span>
+<span class="cmt"># Set your API key as an environment variable:</span>
+export SPATIALFORGE_API_KEY=sf_your_key</code></pre>
+      </div>
+
+      <h3>Your First API Call</h3>
+      <div class="lang-tabs" data-group="first">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="python-async">Python (async)</button>
+        <button class="lang-tab" data-lang="js">JavaScript</button>
+        <button class="lang-tab" data-lang="go">Go</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="first" data-lang="python">
+        <pre><code><span class="kw">import</span> spatialforge_client <span class="kw">as</span> sf
+
+client = sf.<span class="fn">Client</span>(api_key=<span class="str">"sf_your_key"</span>)
+
+<span class="cmt"># Estimate depth from a single image</span>
+result = client.<span class="fn">depth</span>(<span class="str">"photo.jpg"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Depth range: {result.min_depth_m:.2f}m – {result.max_depth_m:.2f}m"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Confidence: {result.confidence_mean:.0%}"</span>)
+
+<span class="cmt"># Save the depth map locally</span>
+result.<span class="fn">save_depth_map</span>(<span class="str">"depth_output.png"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="first" data-lang="python-async">
+        <pre><code><span class="kw">import</span> spatialforge_client <span class="kw">as</span> sf
+
+<span class="kw">async with</span> sf.<span class="fn">AsyncClient</span>(api_key=<span class="str">"sf_your_key"</span>) <span class="kw">as</span> client:
+    result = <span class="kw">await</span> client.<span class="fn">depth</span>(<span class="str">"photo.jpg"</span>)
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"Depth: {result.min_depth_m:.2f}m – {result.max_depth_m:.2f}m"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="first" data-lang="js">
+        <pre><code><span class="kw">const</span> form = <span class="kw">new</span> <span class="fn">FormData</span>();
+form.<span class="fn">append</span>(<span class="str">"image"</span>, <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"photo.jpg"</span>).<span class="fn">then</span>(r => r.<span class="fn">blob</span>()));
+form.<span class="fn">append</span>(<span class="str">"model"</span>, <span class="str">"large"</span>);
+form.<span class="fn">append</span>(<span class="str">"metric"</span>, <span class="str">"true"</span>);
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://spatialforge-demo.fly.dev/v1/depth"</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { <span class="str">"X-API-Key"</span>: <span class="str">"sf_your_key"</span> },
+  body: form,
+});
+
+<span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+console.<span class="fn">log</span>(<span class="str">`Depth: ${data.metadata.min_depth_m}m – ${data.metadata.max_depth_m}m`</span>);</code></pre>
+      </div>
+      <div class="lang-panel" data-group="first" data-lang="go">
+        <pre><code><span class="kw">package</span> main
+
+<span class="kw">import</span> (
+    <span class="str">"bytes"</span>
+    <span class="str">"encoding/json"</span>
+    <span class="str">"fmt"</span>
+    <span class="str">"io"</span>
+    <span class="str">"mime/multipart"</span>
+    <span class="str">"net/http"</span>
+    <span class="str">"os"</span>
+)
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    body := &bytes.Buffer{}
+    writer := multipart.<span class="fn">NewWriter</span>(body)
+    file, _ := os.<span class="fn">Open</span>(<span class="str">"photo.jpg"</span>)
+    part, _ := writer.<span class="fn">CreateFormFile</span>(<span class="str">"image"</span>, <span class="str">"photo.jpg"</span>)
+    io.<span class="fn">Copy</span>(part, file)
+    writer.<span class="fn">WriteField</span>(<span class="str">"model"</span>, <span class="str">"large"</span>)
+    writer.<span class="fn">Close</span>()
+
+    req, _ := http.<span class="fn">NewRequest</span>(<span class="str">"POST"</span>,
+        <span class="str">"https://spatialforge-demo.fly.dev/v1/depth"</span>, body)
+    req.Header.<span class="fn">Set</span>(<span class="str">"X-API-Key"</span>, <span class="str">"sf_your_key"</span>)
+    req.Header.<span class="fn">Set</span>(<span class="str">"Content-Type"</span>, writer.<span class="fn">FormDataContentType</span>())
+
+    resp, _ := http.DefaultClient.<span class="fn">Do</span>(req)
+    <span class="kw">defer</span> resp.Body.<span class="fn">Close</span>()
+
+    <span class="kw">var</span> result <span class="kw">map</span>[<span class="kw">string</span>]<span class="kw">any</span>
+    json.<span class="fn">NewDecoder</span>(resp.Body).<span class="fn">Decode</span>(&result)
+    fmt.<span class="fn">Println</span>(result)
+}</code></pre>
+      </div>
+      <div class="lang-panel" data-group="first" data-lang="curl">
+        <pre><code>curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
+  -H <span class="str">"X-API-Key: sf_your_key"</span> \
+  -F <span class="str">"image=@photo.jpg"</span> \
+  -F <span class="str">"model=large"</span> \
+  -F <span class="str">"metric=true"</span></code></pre>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="authentication">Authentication</h2>
+      <p>All API endpoints require authentication via the <code>X-API-Key</code> header. The only exceptions are <code>GET /health</code> and <code>GET /v1/billing/plans</code>.</p>
+
+      <pre><code><span class="cmt"># Every request must include your API key</span>
+curl -H <span class="str">"X-API-Key: sf_your_key"</span> https://spatialforge-demo.fly.dev/v1/billing/usage</code></pre>
+
+      <div class="callout">
+        <strong>API Key Format:</strong> Keys start with <code>sf_</code> followed by 32 hex characters (e.g., <code>sf_a1b2c3d4e5f6...</code>). Keep your key secret — it controls billing and rate limits for your account.
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="rate-limiting">Rate Limiting</h2>
+      <p>SpatialForge uses a two-tier rate limiting system:</p>
+
+      <table class="param-table">
+        <tr><th>Tier</th><th>Limit</th><th>Scope</th></tr>
+        <tr><td>IP-based</td><td>60 requests/minute</td><td>Per IP address (unauthenticated)</td></tr>
+        <tr><td>API key</td><td>Plan-dependent</td><td>Monthly quota per key</td></tr>
+      </table>
+
+      <table class="param-table">
+        <tr><th>Plan</th><th>Monthly Calls</th><th>Max Resolution</th></tr>
+        <tr><td>Free</td><td>1,000</td><td>720p</td></tr>
+        <tr><td>Builder</td><td>10,000</td><td>1080p</td></tr>
+        <tr><td>Pro</td><td>50,000</td><td>4K</td></tr>
+        <tr><td>Enterprise</td><td>Unlimited</td><td>Unlimited</td></tr>
+      </table>
+
+      <p>When rate limited, you'll receive a <code>429 Too Many Requests</code> response. The SDK automatically includes the <code>Retry-After</code> header value when available.</p>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="depth">Depth Estimation</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/depth</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Estimate metric or relative depth from a single image. Returns a 16-bit depth map URL plus metadata including min/max depth, focal length, and confidence score.</p>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>image</td><td>file <span class="param-required">required</span></td><td>Image file (JPEG, PNG, WebP). Max 20 MB, 4096px max dimension.</td></tr>
+        <tr><td>model</td><td>string</td><td><code>large</code> (default), <code>base</code>, <code>small</code>, or <code>metric-outdoor</code></td></tr>
+        <tr><td>output_format</td><td>string</td><td><code>png16</code> (default), <code>exr</code>, or <code>npy</code></td></tr>
+        <tr><td>metric</td><td>boolean</td><td><code>true</code> (default) for metric depth in meters, <code>false</code> for relative</td></tr>
+      </table>
+
+      <h4>Examples</h4>
+      <div class="lang-tabs" data-group="depth">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="js">JavaScript</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="depth" data-lang="python">
+        <pre><code>result = client.<span class="fn">depth</span>(<span class="str">"room.jpg"</span>, model=<span class="str">"large"</span>, metric=<span class="kw">True</span>)
+
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Resolution: {result.width}x{result.height}"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Depth: {result.min_depth_m:.2f}m – {result.max_depth_m:.2f}m"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Confidence: {result.confidence_mean:.0%}"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Depth map: {result.depth_map_url}"</span>)
+
+<span class="cmt"># Download the depth map</span>
+result.<span class="fn">save_depth_map</span>(<span class="str">"depth.png"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="depth" data-lang="js">
+        <pre><code><span class="kw">const</span> form = <span class="kw">new</span> <span class="fn">FormData</span>();
+form.<span class="fn">append</span>(<span class="str">"image"</span>, fileBlob, <span class="str">"room.jpg"</span>);
+form.<span class="fn">append</span>(<span class="str">"model"</span>, <span class="str">"large"</span>);
+form.<span class="fn">append</span>(<span class="str">"metric"</span>, <span class="str">"true"</span>);
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://spatialforge-demo.fly.dev/v1/depth"</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { <span class="str">"X-API-Key"</span>: apiKey },
+  body: form,
+});
+<span class="kw">const</span> { depth_map_url, metadata } = <span class="kw">await</span> res.<span class="fn">json</span>();
+console.<span class="fn">log</span>(<span class="str">`Depth: ${metadata.min_depth_m}m – ${metadata.max_depth_m}m`</span>);</code></pre>
+      </div>
+      <div class="lang-panel" data-group="depth" data-lang="curl">
+        <pre><code>curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">"image=@room.jpg"</span> \
+  -F <span class="str">"model=large"</span> \
+  -F <span class="str">"metric=true"</span> \
+  -F <span class="str">"output_format=png16"</span></code></pre>
+      </div>
+
+      <div class="response-label">Response</div>
+      <pre><code>{
+  <span class="str">"depth_map_url"</span>: <span class="str">"https://storage.example.com/depth/abc123.png"</span>,
+  <span class="str">"colormap_url"</span>: <span class="str">"https://storage.example.com/depth_vis/abc123.jpg"</span>,
+  <span class="str">"metadata"</span>: {
+    <span class="str">"width"</span>: <span class="num">1920</span>,
+    <span class="str">"height"</span>: <span class="num">1080</span>,
+    <span class="str">"min_depth_m"</span>: <span class="num">0.42</span>,
+    <span class="str">"max_depth_m"</span>: <span class="num">8.73</span>,
+    <span class="str">"focal_length_px"</span>: <span class="num">1440.0</span>,
+    <span class="str">"confidence_mean"</span>: <span class="num">0.94</span>
+  },
+  <span class="str">"processing_time_ms"</span>: <span class="num">47.3</span>
+}</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <div class="endpoint-header" id="depth-vis">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/depth/visualize</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Returns a colorized depth visualization as a JPEG image (binary response). Useful for previews and debugging.</p>
+
+      <h4>Parameters</h4>
+      <p>Same as <code>/v1/depth</code> (image, model, metric).</p>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="measure">Distance Measurement</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/measure</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Measure the real-world distance between two points in an image. Uses metric depth estimation and camera intrinsics to compute 3D distances. Accuracy is typically within &plusmn;5%, improving to &plusmn;2% with a reference object.</p>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>image</td><td>file <span class="param-required">required</span></td><td>Image file (JPEG, PNG, WebP)</td></tr>
+        <tr><td>points</td><td>JSON <span class="param-required">required</span></td><td>Array of two points: <code>[{"x":100,"y":200},{"x":500,"y":200}]</code></td></tr>
+        <tr><td>reference_object</td><td>JSON</td><td>Calibration reference: <code>{"type":"credit_card","bbox":[x,y,w,h]}</code></td></tr>
+      </table>
+
+      <h4>Examples</h4>
+      <div class="lang-tabs" data-group="measure">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="js">JavaScript</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="measure" data-lang="python">
+        <pre><code><span class="cmt"># Basic measurement</span>
+m = client.<span class="fn">measure</span>(<span class="str">"room.jpg"</span>, point1=(<span class="num">100</span>, <span class="num">200</span>), point2=(<span class="num">500</span>, <span class="num">200</span>))
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Distance: {m.distance_cm:.1f} cm (confidence: {m.confidence:.0%})"</span>)
+
+<span class="cmt"># With reference object for better accuracy</span>
+m = client.<span class="fn">measure</span>(
+    <span class="str">"room.jpg"</span>,
+    point1=(<span class="num">100</span>, <span class="num">200</span>),
+    point2=(<span class="num">500</span>, <span class="num">200</span>),
+    reference_object={<span class="str">"type"</span>: <span class="str">"credit_card"</span>, <span class="str">"bbox"</span>: [<span class="num">50</span>, <span class="num">50</span>, <span class="num">120</span>, <span class="num">75</span>]}
+)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Calibrated distance: {m.distance_m:.3f}m"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="measure" data-lang="js">
+        <pre><code><span class="kw">const</span> form = <span class="kw">new</span> <span class="fn">FormData</span>();
+form.<span class="fn">append</span>(<span class="str">"image"</span>, fileBlob, <span class="str">"room.jpg"</span>);
+form.<span class="fn">append</span>(<span class="str">"points"</span>, <span class="fn">JSON.stringify</span>([
+  { x: <span class="num">100</span>, y: <span class="num">200</span> },
+  { x: <span class="num">500</span>, y: <span class="num">200</span> }
+]));
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://spatialforge-demo.fly.dev/v1/measure"</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { <span class="str">"X-API-Key"</span>: apiKey },
+  body: form,
+});
+<span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+console.<span class="fn">log</span>(<span class="str">`Distance: ${(data.distance_m * 100).toFixed(1)} cm`</span>);</code></pre>
+      </div>
+      <div class="lang-panel" data-group="measure" data-lang="curl">
+        <pre><code>curl -X POST https://spatialforge-demo.fly.dev/v1/measure \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">'image=@room.jpg'</span> \
+  -F <span class="str">'points=[{"x":100,"y":200},{"x":500,"y":200}]'</span></code></pre>
+      </div>
+
+      <div class="response-label">Response</div>
+      <pre><code>{
+  <span class="str">"distance_m"</span>: <span class="num">2.34</span>,
+  <span class="str">"confidence"</span>: <span class="num">0.87</span>,
+  <span class="str">"depth_at_points"</span>: [<span class="num">3.21</span>, <span class="num">3.45</span>],
+  <span class="str">"calibration_method"</span>: <span class="str">"intrinsic"</span>,
+  <span class="str">"processing_time_ms"</span>: <span class="num">62.1</span>
+}</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="pose">Camera Pose Estimation</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/pose</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Estimate 6-DoF camera poses (rotation + translation) and intrinsics from a video or a set of images. Useful for SLAM, AR/VR, and multi-view stereo applications.</p>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>video</td><td>file</td><td>Video file (MP4). Max 100 MB. Provide video <em>or</em> images.</td></tr>
+        <tr><td>images</td><td>files</td><td>Multiple image files (min 2). Provide video <em>or</em> images.</td></tr>
+        <tr><td>output_pointcloud</td><td>boolean</td><td><code>false</code> (default). Set to <code>true</code> for sparse 3D point cloud.</td></tr>
+      </table>
+
+      <h4>Examples</h4>
+      <div class="lang-tabs" data-group="pose">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="pose" data-lang="python">
+        <pre><code><span class="cmt"># From video</span>
+poses = client.<span class="fn">pose</span>(video=<span class="str">"walkthrough.mp4"</span>)
+<span class="kw">for</span> p <span class="kw">in</span> poses.camera_poses:
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"Frame {p.frame_index}: T={p.translation}"</span>)
+
+<span class="cmt"># From multiple images with point cloud</span>
+poses = client.<span class="fn">pose</span>(
+    images=[<span class="str">"img1.jpg"</span>, <span class="str">"img2.jpg"</span>, <span class="str">"img3.jpg"</span>],
+    output_pointcloud=<span class="kw">True</span>
+)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Point cloud: {poses.pointcloud_url}"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="pose" data-lang="curl">
+        <pre><code><span class="cmt"># From video</span>
+curl -X POST https://spatialforge-demo.fly.dev/v1/pose \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">"video=@walkthrough.mp4"</span> \
+  -F <span class="str">"output_pointcloud=true"</span>
+
+<span class="cmt"># From images</span>
+curl -X POST https://spatialforge-demo.fly.dev/v1/pose \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">"images=@img1.jpg"</span> \
+  -F <span class="str">"images=@img2.jpg"</span></code></pre>
+      </div>
+
+      <div class="response-label">Response</div>
+      <pre><code>{
+  <span class="str">"camera_poses"</span>: [
+    {
+      <span class="str">"frame_index"</span>: <span class="num">0</span>,
+      <span class="str">"rotation"</span>: [[<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>], [<span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">0.0</span>], [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>]],
+      <span class="str">"translation"</span>: [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>],
+      <span class="str">"intrinsics"</span>: { <span class="str">"fx"</span>: <span class="num">525.0</span>, <span class="str">"fy"</span>: <span class="num">525.0</span>, <span class="str">"cx"</span>: <span class="num">320.0</span>, <span class="str">"cy"</span>: <span class="num">240.0</span>, <span class="str">"width"</span>: <span class="num">640</span>, <span class="str">"height"</span>: <span class="num">480</span> }
+    }
+  ],
+  <span class="str">"pointcloud_url"</span>: <span class="str">"https://storage.example.com/pointclouds/xyz.npy"</span>,
+  <span class="str">"num_frames"</span>: <span class="num">24</span>,
+  <span class="str">"processing_time_ms"</span>: <span class="num">1250.4</span>
+}</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="reconstruct">3D Reconstruction</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/reconstruct</span>
+        <span class="badge badge-async">Async</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Reconstruct a 3D scene from video. Produces Gaussian splats, point clouds, or meshes. Returns a <code>job_id</code> for polling.</p>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>video</td><td>file <span class="param-required">required</span></td><td>Video file (MP4). Max 500 MB, 120s max duration.</td></tr>
+        <tr><td>quality</td><td>string</td><td><code>standard</code> (default), <code>draft</code>, or <code>high</code></td></tr>
+        <tr><td>output</td><td>string</td><td><code>gaussian</code> (default), <code>pointcloud</code>, or <code>mesh</code></td></tr>
+        <tr><td>webhook_url</td><td>string</td><td>Optional URL for completion notification callback</td></tr>
+      </table>
+
+      <h4>Examples</h4>
+      <div class="lang-tabs" data-group="recon">
+        <button class="lang-tab active" data-lang="python">Python</button>
+        <button class="lang-tab" data-lang="curl">cURL</button>
+      </div>
+      <div class="lang-panel active" data-group="recon" data-lang="python">
+        <pre><code><span class="cmt"># Submit job</span>
+job = client.<span class="fn">reconstruct</span>(<span class="str">"video.mp4"</span>, quality=<span class="str">"high"</span>, output=<span class="str">"gaussian"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Job ID: {job.job_id}"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Estimated: {job.estimated_time_s:.0f}s"</span>)
+
+<span class="cmt"># Wait for completion (blocks with polling)</span>
+result = job.<span class="fn">wait</span>(poll_interval=<span class="num">5.0</span>, timeout=<span class="num">600</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Scene URL: {result['scene_url']}"</span>)
+
+<span class="cmt"># Or download directly</span>
+job.<span class="fn">download</span>(<span class="str">"scene.ply"</span>)</code></pre>
+      </div>
+      <div class="lang-panel" data-group="recon" data-lang="curl">
+        <pre><code><span class="cmt"># Submit</span>
+curl -X POST https://spatialforge-demo.fly.dev/v1/reconstruct \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">"video=@scene.mp4"</span> \
+  -F <span class="str">"quality=high"</span> \
+  -F <span class="str">"output=gaussian"</span>
+
+<span class="cmt"># Poll for result</span>
+curl https://spatialforge-demo.fly.dev/v1/reconstruct/JOB_ID \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span></code></pre>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="floorplan">Floor Plan Generation</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/floorplan</span>
+        <span class="badge badge-async">Async</span>
+        <span class="badge badge-auth">Auth Required</span>
+        <span class="badge badge-beta">Beta</span>
+      </div>
+      <p>Generate a 2D floor plan from a room walkthrough video. Detects walls and room boundaries from depth data. Outputs SVG, DXF, or JSON.</p>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>video</td><td>file <span class="param-required">required</span></td><td>Walkthrough video (MP4). 10s minimum, 30s+ recommended. Max 500 MB.</td></tr>
+        <tr><td>output_format</td><td>string</td><td><code>svg</code> (default), <code>dxf</code>, or <code>json</code></td></tr>
+      </table>
+
+      <h4>Example</h4>
+      <pre><code>job = client.<span class="fn">floorplan</span>(<span class="str">"walkthrough.mp4"</span>, output_format=<span class="str">"svg"</span>)
+result = job.<span class="fn">wait</span>()
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Floor plan: {result['floorplan_url']}"</span>)
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Area: {result['floor_area_m2']:.1f} m\u00b2, {result['room_count']} rooms"</span>)</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="segment-3d">3D Segmentation</h2>
+      <div class="endpoint-header">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/segment-3d</span>
+        <span class="badge badge-async">Async</span>
+        <span class="badge badge-auth">Auth Required</span>
+        <span class="badge badge-beta">Beta</span>
+      </div>
+      <p>Segment objects in 3D space using natural language prompts. Combines depth estimation with open-vocabulary detection. Returns labelled objects with 3D bounding boxes and optional masks.</p>
+
+      <div class="callout callout-warn">
+        <strong>Beta:</strong> SAM3 integration is pending (requires HuggingFace access approval). Current results are depth-based approximations.
+      </div>
+
+      <h4>Parameters</h4>
+      <table class="param-table">
+        <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+        <tr><td>video</td><td>file <span class="param-required">required</span></td><td>Video file (MP4). Max 500 MB.</td></tr>
+        <tr><td>prompt</td><td>string <span class="param-required">required</span></td><td>Natural language description, e.g. <code>"find all chairs"</code></td></tr>
+        <tr><td>output_3d_mask</td><td>boolean</td><td><code>true</code> (default). Generate per-object 3D masks.</td></tr>
+        <tr><td>output_bbox</td><td>boolean</td><td><code>true</code> (default). Include 3D bounding boxes.</td></tr>
+      </table>
+
+      <h4>Example</h4>
+      <pre><code>job = client.<span class="fn">segment_3d</span>(<span class="str">"room.mp4"</span>, prompt=<span class="str">"find all chairs and tables"</span>)
+result = job.<span class="fn">wait</span>()
+<span class="kw">for</span> obj <span class="kw">in</span> result[<span class="str">"objects"</span>]:
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"{obj['label']}: confidence={obj['confidence']:.2f}"</span>)</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="billing-plans">Billing Endpoints</h2>
+      <div class="endpoint-header">
+        <span class="method method-get">GET</span>
+        <span class="endpoint-path">/v1/billing/plans</span>
+        <span class="badge badge-public">Public</span>
+      </div>
+      <p>List all available plans with pricing. No authentication required.</p>
+      <pre><code>curl https://spatialforge-demo.fly.dev/v1/billing/plans</code></pre>
+
+      <div class="endpoint-header" id="billing-usage">
+        <span class="method method-get">GET</span>
+        <span class="endpoint-path">/v1/billing/usage</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Get current month's usage statistics for your API key.</p>
+      <pre><code>curl -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  https://spatialforge-demo.fly.dev/v1/billing/usage</code></pre>
+
+      <div class="response-label">Response</div>
+      <pre><code>{
+  <span class="str">"plan"</span>: <span class="str">"builder"</span>,
+  <span class="str">"monthly_calls"</span>: <span class="num">3421</span>,
+  <span class="str">"monthly_limit"</span>: <span class="num">10000</span>,
+  <span class="str">"reset_date"</span>: <span class="str">"2026-03-01"</span>
+}</code></pre>
+
+      <div class="endpoint-header" id="billing-checkout">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/billing/checkout</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Create a Stripe Checkout session to upgrade or change your plan. Returns a URL to redirect the user.</p>
+
+      <div class="endpoint-header" id="billing-portal">
+        <span class="method method-post">POST</span>
+        <span class="endpoint-path">/v1/billing/portal</span>
+        <span class="badge badge-auth">Auth Required</span>
+      </div>
+      <p>Create a Stripe Customer Portal session to manage subscription, payment methods, and invoices.</p>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="async-polling">Async Job Polling</h2>
+      <p>Endpoints marked <span class="badge badge-async">Async</span> return a <code>job_id</code> immediately. Poll the corresponding <code>GET</code> endpoint for results.</p>
+
+      <h4>Job Lifecycle</h4>
+      <pre><code><span class="cmt">pending</span> → <span class="cmt">processing</span> → <span class="str">complete</span> | <span class="str">failed</span></code></pre>
+
+      <h4>SDK (recommended)</h4>
+      <pre><code><span class="cmt"># Automatic polling with timeout</span>
+job = client.<span class="fn">reconstruct</span>(<span class="str">"video.mp4"</span>)
+result = job.<span class="fn">wait</span>(poll_interval=<span class="num">5.0</span>, timeout=<span class="num">600</span>)
+
+<span class="cmt"># Manual polling</span>
+status = job.<span class="fn">poll</span>()
+<span class="fn">print</span>(status[<span class="str">"status"</span>])  <span class="cmt"># "processing" | "complete" | "failed"</span>
+
+<span class="cmt"># Async version</span>
+result = <span class="kw">await</span> job.<span class="fn">async_wait</span>(poll_interval=<span class="num">5.0</span>)</code></pre>
+
+      <h4>Manual Polling (cURL)</h4>
+      <pre><code><span class="cmt"># Submit job</span>
+JOB_ID=$(curl -s -X POST https://spatialforge-demo.fly.dev/v1/reconstruct \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span> \
+  -F <span class="str">"video=@video.mp4"</span> | jq -r '.job_id')
+
+<span class="cmt"># Poll until complete</span>
+curl https://spatialforge-demo.fly.dev/v1/reconstruct/$JOB_ID \
+  -H <span class="str">"X-API-Key: $SPATIALFORGE_API_KEY"</span></code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="errors">Error Handling</h2>
+      <p>All errors return JSON with a <code>detail</code> field describing the issue.</p>
+
+      <pre><code>{
+  <span class="str">"detail"</span>: <span class="str">"Image exceeds 20MB size limit"</span>
+}</code></pre>
+
+      <h4>Status Codes</h4>
+      <table class="error-table">
+        <tr><th>Code</th><th>Meaning</th><th>Common Causes</th></tr>
+        <tr><td class="status-4xx">400</td><td>Bad Request</td><td>Invalid image format, missing parameters, malformed JSON, points outside image bounds</td></tr>
+        <tr><td class="status-4xx">401</td><td>Unauthorized</td><td>Missing or invalid API key</td></tr>
+        <tr><td class="status-4xx">403</td><td>Forbidden</td><td>Plan does not support this endpoint or feature</td></tr>
+        <tr><td class="status-4xx">413</td><td>Payload Too Large</td><td>Image &gt; 20 MB or video &gt; 500 MB</td></tr>
+        <tr><td class="status-4xx">429</td><td>Too Many Requests</td><td>Monthly API quota exceeded or per-minute rate limit hit</td></tr>
+        <tr><td class="status-5xx">500</td><td>Internal Error</td><td>Server-side processing failure</td></tr>
+        <tr><td class="status-5xx">503</td><td>Service Unavailable</td><td>Model loading or dependency not ready</td></tr>
+        <tr><td class="status-5xx">504</td><td>Gateway Timeout</td><td>Inference exceeded 120s — try a smaller image or faster model</td></tr>
+      </table>
+
+      <h4>SDK Error Handling</h4>
+      <pre><code><span class="kw">from</span> spatialforge_client <span class="kw">import</span> Client, SpatialForgeError
+
+client = <span class="fn">Client</span>(api_key=<span class="str">"sf_your_key"</span>)
+
+<span class="kw">try</span>:
+    result = client.<span class="fn">depth</span>(<span class="str">"photo.jpg"</span>)
+<span class="kw">except</span> SpatialForgeError <span class="kw">as</span> e:
+    <span class="fn">print</span>(<span class="kw">f</span><span class="str">"API error {e.status_code}: {e.detail}"</span>)
+    <span class="kw">if</span> e.status_code == <span class="num">429</span>:
+        <span class="fn">print</span>(<span class="str">"Rate limited — wait and retry"</span>)
+    <span class="kw">elif</span> e.status_code == <span class="num">504</span>:
+        <span class="fn">print</span>(<span class="str">"Timeout — try model='small' for faster inference"</span>)</code></pre>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="models">Depth Models</h2>
+      <p>All production models are <strong>Apache 2.0</strong> licensed (safe for commercial use).</p>
+      <table class="param-table">
+        <tr><th>Model Key</th><th>Task</th><th>Resolution</th><th>Speed</th></tr>
+        <tr><td>large</td><td>Metric depth (indoor)</td><td>Full</td><td>Default (~50ms GPU)</td></tr>
+        <tr><td>metric-outdoor</td><td>Metric depth (outdoor)</td><td>Full</td><td>Default (~50ms GPU)</td></tr>
+        <tr><td>base</td><td>Relative depth</td><td>Full</td><td>Fast (~25ms GPU)</td></tr>
+        <tr><td>small</td><td>Relative depth</td><td>Reduced</td><td>Fastest (~12ms GPU)</td></tr>
+      </table>
+
+      <div class="callout">
+        <strong>Tip:</strong> Use <code>model=large</code> for indoor scenes where metric accuracy matters. Use <code>model=small</code> when speed is critical or for quick prototyping.
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <h2 id="sdks">SDKs &amp; Tools</h2>
+      <table class="param-table">
+        <tr><th>Tool</th><th>Install</th><th>Description</th></tr>
+        <tr><td>Python SDK</td><td><code>pip install spatialforge-client</code></td><td>Sync + Async clients, typed models, job polling</td></tr>
+        <tr><td>CLI</td><td><code>pip install spatialforge-client[cli]</code></td><td>Command-line interface with rich terminal output</td></tr>
+        <tr><td>Swagger UI</td><td><a href="https://spatialforge-demo.fly.dev/docs" target="_blank">Live API Reference</a></td><td>Interactive OpenAPI documentation with try-it-out</td></tr>
+        <tr><td>ReDoc</td><td><a href="https://spatialforge-demo.fly.dev/redoc" target="_blank">ReDoc</a></td><td>Clean, readable API reference</td></tr>
+      </table>
+
+      <h4>CLI Examples</h4>
+      <pre><code><span class="cmt"># Set your API key</span>
 export SPATIALFORGE_API_KEY=sf_your_key
 
-<span style="color: #8888a0"># Estimate depth</span>
+<span class="cmt"># Depth estimation</span>
 spatialforge depth photo.jpg --model large --output depth.png
 
-<span style="color: #8888a0"># Measure distance</span>
+<span class="cmt"># Measure distance between two points</span>
 spatialforge measure room.jpg --p1 100,200 --p2 500,200
 
-<span style="color: #8888a0"># Reconstruct 3D</span>
+<span class="cmt"># 3D reconstruction</span>
 spatialforge reconstruct walkthrough.mp4 --quality high</code></pre>
-
-    <h3>cURL</h3>
-    <pre><code>curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
-  -H "X-API-Key: sf_your_key" \
-  -F "image=@photo.jpg" \
-  -F "model=large"</code></pre>
-
-    <!-- Authentication -->
-    <h2>Authentication</h2>
-    <p>All API endpoints require authentication via the <code>X-API-Key</code> header. The only exceptions are <code>/health</code> and <code>GET /v1/billing/plans</code>.</p>
-    <pre><code>curl -H "X-API-Key: sf_your_key" https://spatialforge-demo.fly.dev/v1/billing/usage</code></pre>
-
-    <!-- Endpoints -->
-    <h2>Endpoints</h2>
-
-    <!-- Depth -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/depth</span></h3>
-    <p>Estimate depth from a single image. Returns a depth map and colorized visualization.</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>image</td><td>file <span class="badge">required</span></td><td>Image file (JPEG, PNG, WebP). Max 20MB.</td></tr>
-      <tr><td>model</td><td>string</td><td><code>large</code> (default), <code>base</code>, or <code>small</code></td></tr>
-      <tr><td>output_format</td><td>string</td><td><code>png16</code> (default), <code>exr</code>, or <code>npy</code></td></tr>
-      <tr><td>metric</td><td>boolean</td><td><code>true</code> (default) for metric depth in meters</td></tr>
-    </table>
-
-    <!-- Measure -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/measure</span></h3>
-    <p>Measure real-world distance between two points in an image.</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>image</td><td>file <span class="badge">required</span></td><td>Image file (JPEG, PNG, WebP)</td></tr>
-      <tr><td>points</td><td>JSON <span class="badge">required</span></td><td>Array of two points: <code>[{"x":100,"y":200},{"x":500,"y":200}]</code></td></tr>
-      <tr><td>reference_object</td><td>JSON</td><td>Optional calibration reference with <code>type</code> and <code>bbox</code></td></tr>
-    </table>
-
-    <!-- Pose -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/pose</span></h3>
-    <p>Estimate camera poses from video or multiple images. Returns rotation matrices and translation vectors.</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>video</td><td>file</td><td>Video file (MP4, MOV). Provide either video or images.</td></tr>
-      <tr><td>images</td><td>files</td><td>Multiple image files. Provide either video or images.</td></tr>
-      <tr><td>output_pointcloud</td><td>boolean</td><td><code>false</code> (default). Set to <code>true</code> for sparse point cloud.</td></tr>
-    </table>
-
-    <!-- Reconstruct -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/reconstruct</span> <span class="badge">async</span></h3>
-    <p>Start asynchronous 3D reconstruction from video. Returns a job ID for polling.</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Video file (MP4, MOV). Max 120s.</td></tr>
-      <tr><td>quality</td><td>string</td><td><code>standard</code> (default), <code>draft</code>, or <code>high</code></td></tr>
-      <tr><td>output</td><td>string</td><td><code>gaussian</code> (default), <code>pointcloud</code>, or <code>mesh</code></td></tr>
-    </table>
-
-    <!-- Floorplan -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/floorplan</span> <span class="badge">async</span></h3>
-    <p>Generate a 2D floor plan from walkthrough video.</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Walkthrough video file</td></tr>
-      <tr><td>output_format</td><td>string</td><td><code>svg</code> (default), <code>dxf</code>, or <code>json</code></td></tr>
-    </table>
-
-    <!-- Segment-3D -->
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/segment-3d</span> <span class="badge">async</span></h3>
-    <p>Segment 3D objects in video using a text prompt (open-vocabulary).</p>
-    <table class="param-table">
-      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
-      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Video file</td></tr>
-      <tr><td>prompt</td><td>string <span class="badge">required</span></td><td>Natural language description (e.g., "find all chairs")</td></tr>
-    </table>
-
-    <!-- Billing -->
-    <h2>Billing Endpoints</h2>
-
-    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/v1/billing/plans</span></h3>
-    <p>List available plans with pricing. No authentication required.</p>
-
-    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/v1/billing/usage</span></h3>
-    <p>Get current usage statistics for your API key.</p>
-
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/billing/checkout</span></h3>
-    <p>Create a Stripe Checkout session to upgrade your plan.</p>
-
-    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/billing/portal</span></h3>
-    <p>Create a Stripe Customer Portal session to manage your subscription.</p>
-
-    <!-- Polling Async Jobs -->
-    <h2>Async Job Polling</h2>
-    <p>Endpoints marked <span class="badge">async</span> return a <code>job_id</code>. Poll for results:</p>
-    <pre><code><span style="color: #8888a0"># Submit job</span>
-job = client.reconstruct(<span style="color: #34d399">"video.mp4"</span>, quality=<span style="color: #34d399">"high"</span>)
-print(job.job_id)  <span style="color: #8888a0"># "job_abc123"</span>
-
-<span style="color: #8888a0"># Wait for completion (blocks with polling)</span>
-result = job.wait(poll_interval=5.0, timeout=600)
-print(result[<span style="color: #34d399">"scene_url"</span>])
-
-<span style="color: #8888a0"># Or poll manually</span>
-status = job.poll()
-print(status[<span style="color: #34d399">"status"</span>])  <span style="color: #8888a0"># "processing" | "complete" | "failed"</span></code></pre>
-
-    <!-- Error Handling -->
-    <h2>Error Handling</h2>
-    <p>All errors return JSON with a <code>detail</code> field:</p>
-    <pre><code>{
-  <span style="color: #34d399">"detail"</span>: <span style="color: #34d399">"Invalid or disabled API key."</span>
-}</code></pre>
-    <table class="param-table">
-      <tr><th>Status Code</th><th>Meaning</th><th>Example</th></tr>
-      <tr><td>400</td><td>Bad Request</td><td>Invalid image format, missing parameters</td></tr>
-      <tr><td>401</td><td>Unauthorized</td><td>Missing or invalid API key</td></tr>
-      <tr><td>403</td><td>Forbidden</td><td>Plan does not support this endpoint</td></tr>
-      <tr><td>413</td><td>Too Large</td><td>Image exceeds 20MB / video exceeds 120s</td></tr>
-      <tr><td>429</td><td>Rate Limited</td><td>Monthly quota exceeded</td></tr>
-      <tr><td>500</td><td>Server Error</td><td>Internal processing failure</td></tr>
-    </table>
-
-    <!-- SDKs -->
-    <h2>SDKs & Tools</h2>
-    <table class="param-table">
-      <tr><th>Tool</th><th>Install</th><th>Description</th></tr>
-      <tr><td>Python SDK</td><td><code>pip install spatialforge-client</code></td><td>Sync + Async clients, type-safe models</td></tr>
-      <tr><td>CLI</td><td><code>pip install spatialforge-client[cli]</code></td><td>Command-line interface with rich output</td></tr>
-      <tr><td>API Reference</td><td><a href="https://spatialforge-demo.fly.dev/docs">Swagger UI</a></td><td>Interactive OpenAPI documentation</td></tr>
-    </table>
-
+    </div>
   </div>
 
   <footer>
@@ -266,5 +838,33 @@ print(status[<span style="color: #34d399">"status"</span>])  <span style="color:
     <a href="https://spatialforge-demo.fly.dev/docs">API Reference</a> &middot;
     <a href="https://pypi.org/project/spatialforge-client/">PyPI</a>
   </footer>
+
+  <script>
+    // Language tab switching
+    document.querySelectorAll('.lang-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const group = tab.closest('.lang-tabs').dataset.group;
+        const lang = tab.dataset.lang;
+
+        // Update tabs
+        tab.closest('.lang-tabs').querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        // Update panels
+        document.querySelectorAll(`.lang-panel[data-group="${group}"]`).forEach(p => {
+          p.classList.toggle('active', p.dataset.lang === lang);
+        });
+      });
+    });
+
+    // Smooth scroll for sidebar links
+    document.querySelectorAll('.sidebar a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
 </body>
 </html>

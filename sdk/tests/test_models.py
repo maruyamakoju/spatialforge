@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from spatialforge_client.models import (
     AsyncJob,
     CameraPose,

@@ -7,7 +7,7 @@
 Turn any photo or video into depth maps, 3D measurements, camera poses, and floor plans with a single API call. Production-ready spatial intelligence powered by state-of-the-art depth estimation.
 
 [![CI](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml/badge.svg)](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-94%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-139%20passed-brightgreen.svg)](#testing)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
@@ -307,17 +307,17 @@ Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
 ## Testing
 
 ```bash
-# Server tests (45 tests)
+# Server tests (62 tests)
 pytest tests/ -v
 
-# SDK tests (49 tests)
+# SDK tests (77 tests)
 cd sdk && pytest tests/ -v
 
 # Lint
 ruff check --config pyproject.toml spatialforge/ tests/
 ```
 
-**94 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), SDK sync/async clients, and data models.
+**139 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
 
 ## Project Structure
 
@@ -338,7 +338,7 @@ spatialforge/
 sdk/               # Python SDK (spatialforge-client) — sync, async, CLI
 site/              # Landing page, docs, demo, pricing
 infra/             # Redis infrastructure (Fly.io deployment)
-tests/             # pytest test suite (45 server + 49 SDK)
+tests/             # pytest test suite (62 server + 77 SDK)
 monitoring/        # Prometheus + Grafana configs
 .github/workflows/ # CI/CD (test, lint, docker, deploy, SDK publish)
 ```

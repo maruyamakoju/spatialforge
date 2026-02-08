@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import pytest
-
 from spatialforge_client import (
     Client,
     DepthResult,
+    FloorplanJob,
     MeasureResult,
     PoseResult,
     ReconstructJob,
-    FloorplanJob,
     Segment3DJob,
     SpatialForgeError,
 )

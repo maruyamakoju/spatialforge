@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any
-
 import httpx
 import pytest
-
 
 # ── Mock API responses ────────────────────────────────────
 
@@ -85,8 +81,13 @@ ASYNC_JOB_FAILED = {
     "error": "Video too short for reconstruction",
 }
 
+ERROR_400 = {"detail": "Invalid image format"}
 ERROR_401 = {"detail": "Invalid or disabled API key."}
+ERROR_403 = {"detail": "Plan does not support this endpoint"}
+ERROR_413 = {"detail": "Image exceeds 20MB size limit"}
 ERROR_429 = {"detail": "Rate limit exceeded. Try again in 60 seconds."}
+ERROR_500 = {"detail": "Internal server error"}
+ERROR_504 = {"detail": "Request timed out after 120s"}
 
 
 def _route(request: httpx.Request) -> httpx.Response:
@@ -98,7 +99,17 @@ def _route(request: httpx.Request) -> httpx.Response:
     if api_key == "sf_invalid":
         return httpx.Response(401, json=ERROR_401)
     if api_key == "sf_ratelimited":
-        return httpx.Response(429, json=ERROR_429)
+        return httpx.Response(429, json=ERROR_429, headers={"Retry-After": "30"})
+    if api_key == "sf_forbidden":
+        return httpx.Response(403, json=ERROR_403)
+    if api_key == "sf_toolarge":
+        return httpx.Response(413, json=ERROR_413)
+    if api_key == "sf_badrequest":
+        return httpx.Response(400, json=ERROR_400)
+    if api_key == "sf_servererror":
+        return httpx.Response(500, json=ERROR_500)
+    if api_key == "sf_timeout":
+        return httpx.Response(504, json=ERROR_504)
 
     if path == "/v1/depth" and request.method == "POST":
         return httpx.Response(200, json=DEPTH_RESPONSE)
@@ -167,14 +178,60 @@ def async_client():
 @pytest.fixture
 def invalid_key_client():
     """Create a sync client with invalid API key."""
+    client = _make_error_client("sf_invalid")
+    yield client
+    client.close()
+
+
+def _make_error_client(api_key: str):
+    """Helper to create a sync client with a specific error-triggering API key."""
     from spatialforge_client import Client
 
-    client = Client(api_key="sf_invalid", base_url="https://mock.api")
+    client = Client(api_key=api_key, base_url="https://mock.api", max_retries=0)
     client._client = httpx.Client(
         base_url="https://mock.api",
-        headers={"X-API-Key": "sf_invalid"},
+        headers={"X-API-Key": api_key},
         transport=MockTransport(),
     )
+    return client
+
+
+@pytest.fixture
+def forbidden_client():
+    """Create a sync client that triggers 403."""
+    client = _make_error_client("sf_forbidden")
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def toolarge_client():
+    """Create a sync client that triggers 413."""
+    client = _make_error_client("sf_toolarge")
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def badrequest_client():
+    """Create a sync client that triggers 400."""
+    client = _make_error_client("sf_badrequest")
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def servererror_client():
+    """Create a sync client that triggers 500."""
+    client = _make_error_client("sf_servererror")
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def timeout_client():
+    """Create a sync client that triggers 504."""
+    client = _make_error_client("sf_timeout")
     yield client
     client.close()
 

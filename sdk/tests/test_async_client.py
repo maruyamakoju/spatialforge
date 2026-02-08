@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import pytest
-
 from spatialforge_client import (
     AsyncClient,
     DepthResult,
+    FloorplanJob,
     MeasureResult,
     PoseResult,
     ReconstructJob,
-    FloorplanJob,
     Segment3DJob,
     SpatialForgeError,
 )
@@ -105,6 +104,7 @@ class TestAsyncJobs:
 class TestAsyncErrors:
     async def test_invalid_key(self, tiny_image):
         import httpx
+
         from .conftest import AsyncMockTransport
 
         client = AsyncClient(api_key="sf_invalid", base_url="https://mock.api")

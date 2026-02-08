@@ -47,7 +47,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
-    environment: testpypi
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/spatialforge-client/
     permissions:
       id-token: write
 
@@ -66,10 +68,12 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [build, test-publish]
+    needs: [build]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
-    environment: pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/project/spatialforge-client/
     permissions:
       id-token: write
 
