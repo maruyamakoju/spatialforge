@@ -116,14 +116,26 @@ async def get_current_user(
     """FastAPI dependency to validate API key from request header.
 
     Uses request.app.state to access the key manager — no circular imports.
+    If Redis is unavailable (key_manager is None), runs in demo mode.
     """
+    manager = getattr(request.app.state, "key_manager", None)
+
+    # Demo mode: no Redis → allow all requests with a demo record
+    if manager is None:
+        return APIKeyRecord(
+            key_hash="demo",
+            plan=Plan.FREE,
+            owner="demo",
+            monthly_calls=0,
+            monthly_limit=999_999_999,
+        )
+
     if api_key is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing API key. Include X-API-Key header.",
         )
 
-    manager: APIKeyManager = request.app.state.key_manager
     record = await manager.validate_key(api_key)
     if record is None:
         raise HTTPException(

@@ -35,33 +35,39 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     logger.info("Starting SpatialForge v%s", __version__)
 
-    # Redis
-    redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-    app.state.redis = redis
+    # Redis (optional — app starts without it, but auth is disabled)
+    try:
+        redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+        await redis.ping()
+        app.state.redis = redis
 
-    # API key manager
-    key_manager = APIKeyManager(redis, settings.api_key_secret)
-    app.state.key_manager = key_manager
+        # API key manager
+        key_manager = APIKeyManager(redis, settings.api_key_secret)
+        app.state.key_manager = key_manager
 
-    # Ensure an admin key exists
-    existing = await key_manager.validate_key(settings.admin_api_key)
-    if existing is None:
-        from .auth.api_keys import Plan, hash_api_key
+        # Ensure an admin key exists
+        existing = await key_manager.validate_key(settings.admin_api_key)
+        if existing is None:
+            from .auth.api_keys import Plan, hash_api_key
 
-        key_hash = hash_api_key(settings.admin_api_key, settings.api_key_secret)
-        await redis.hset(
-            f"apikey:{key_hash}",
-            mapping={
-                "key_hash": key_hash,
-                "plan": Plan.ADMIN.value,
-                "owner": "admin",
-                "created_at": "0",
-                "monthly_calls": "0",
-                "monthly_limit": "999999999",
-                "enabled": "1",
-            },
-        )
-        logger.info("Admin API key registered")
+            key_hash = hash_api_key(settings.admin_api_key, settings.api_key_secret)
+            await redis.hset(
+                f"apikey:{key_hash}",
+                mapping={
+                    "key_hash": key_hash,
+                    "plan": Plan.ADMIN.value,
+                    "owner": "admin",
+                    "created_at": "0",
+                    "monthly_calls": "0",
+                    "monthly_limit": "999999999",
+                    "enabled": "1",
+                },
+            )
+            logger.info("Admin API key registered")
+    except Exception:
+        logger.warning("Redis not available — auth and rate limiting disabled")
+        app.state.redis = None
+        app.state.key_manager = None
 
     # Model manager
     device = settings.device if torch.cuda.is_available() else "cpu"
@@ -97,7 +103,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Cleanup
     model_manager.unload_all()
-    await redis.close()
+    if app.state.redis is not None:
+        await app.state.redis.close()
     logger.info("SpatialForge shutdown complete")
 
 
