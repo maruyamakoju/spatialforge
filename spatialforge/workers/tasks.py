@@ -7,7 +7,6 @@ import logging
 import os
 import tempfile
 import traceback
-from pathlib import Path
 
 from .celery_app import celery_app
 
@@ -334,7 +333,7 @@ def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {svg_w} {svg_h}" '
         f'width="{svg_w}" height="{svg_h}">',
         '<rect width="100%" height="100%" fill="white"/>',
-        f'<g transform="scale(2)">',
+        '<g transform="scale(2)">',
     ]
 
     # Draw occupied cells

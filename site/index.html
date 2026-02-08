@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpatialForge — Any Camera. Instant 3D. One API.</title>
+  <meta name="description" content="Turn any photo or video into 3D depth maps, measurements, and floor plans with a single API call. Powered by state-of-the-art depth estimation.">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-bright: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --green: #34d399;
+      --orange: #fb923c;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ─────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: var(--accent-bright); }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-left: 2rem;
+      transition: color 0.2s;
+    }
+
+    nav a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .nav-cta:hover { background: var(--accent-bright); }
+
+    /* ── Hero ────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: var(--accent-glow);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 999px;
+      font-size: 0.85rem;
+      color: var(--accent-bright);
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 .gradient {
+      background: linear-gradient(135deg, var(--accent-bright), #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.25rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-bright);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--muted);
+      background: var(--surface);
+    }
+
+    /* ── Code Demo ───────────────────────────────── */
+    .demo {
+      max-width: 720px;
+      margin: 3rem auto 0;
+      position: relative;
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      overflow-x: auto;
+      text-align: left;
+    }
+
+    .code-block pre {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .code-block .kw { color: #c084fc; }
+    .code-block .str { color: #34d399; }
+    .code-block .fn { color: #60a5fa; }
+    .code-block .cmt { color: #4a4a5a; }
+    .code-block .var { color: var(--text); }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #eab308; }
+    .dot-green { background: #22c55e; }
+
+    .code-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: auto;
+      font-family: monospace;
+    }
+
+    /* ── Section common ──────────────────────────── */
+    section { padding: 6rem 2rem; }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-header h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-header p {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── Features ─────────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card .endpoint {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--accent-bright);
+      background: var(--accent-glow);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+      display: inline-block;
+    }
+
+    .feature-card p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .beta-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: rgba(251, 146, 60, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    /* ── How it Works ────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .step {
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: var(--accent-bright);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .step h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Pricing ──────────────────────────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .price-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .price-card.featured {
+      border-color: var(--accent);
+      position: relative;
+    }
+
+    .price-card.featured::before {
+      content: 'POPULAR';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 1rem;
+      border-radius: 999px;
+    }
+
+    .price-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .price {
+      font-size: 3rem;
+      font-weight: 800;
+      margin: 1rem 0;
+    }
+
+    .price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .price-card ul {
+      list-style: none;
+      text-align: left;
+      margin: 1.5rem 0;
+    }
+
+    .price-card li {
+      padding: 0.4rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .price-card li::before {
+      content: '\2713';
+      color: var(--green);
+      margin-right: 0.5rem;
+      font-weight: 700;
+    }
+
+    .price-card .btn-primary {
+      width: 100%;
+      display: block;
+      text-align: center;
+    }
+
+    .price-card .btn-secondary {
+      width: 100%;
+      display: block;
+      text-align: center;
+    }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent-bright);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Mobile ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      nav { padding: 1rem; }
+      nav a:not(.nav-cta) { display: none; }
+      .hero { padding: 7rem 1.5rem 3rem; }
+      section { padding: 4rem 1.5rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="logo">Spatial<span>Forge</span></div>
+    <div>
+      <a href="#features">Features</a>
+      <a href="#how">How it Works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/maruyamakoju/spatialforge" target="_blank">GitHub</a>
+      <a href="/docs" class="nav-cta">API Docs</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="badge">Powered by Depth Anything V2</div>
+    <h1>Any Camera.<br><span class="gradient">Instant 3D.</span><br>One API.</h1>
+    <p class="subtitle">Turn any photo or video into depth maps, 3D measurements, and floor plans with a single API call. Production-ready spatial intelligence for developers.</p>
+    <div class="hero-buttons">
+      <a href="#pricing" class="btn-primary">Get API Key</a>
+      <a href="https://github.com/maruyamakoju/spatialforge" class="btn-secondary" target="_blank">View on GitHub</a>
+    </div>
+
+    <div class="demo">
+      <div class="code-block">
+        <div class="code-header">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-green"></span>
+          <span class="code-label">python</span>
+        </div>
+<pre><span class="kw">from</span> <span class="var">spatialforge</span> <span class="kw">import</span> <span class="var">SpatialForge</span>
+
+<span class="var">sf</span> = <span class="fn">SpatialForge</span>(<span class="str">"sf_your_api_key"</span>)
+
+<span class="cmt"># Get metric depth from any image</span>
+<span class="var">result</span> = <span class="var">sf</span>.<span class="fn">depth</span>(<span class="str">"room.jpg"</span>, <span class="var">metric</span>=<span class="kw">True</span>)
+<span class="fn">print</span>(<span class="var">result</span>.<span class="var">depth_map_url</span>)    <span class="cmt"># 16-bit PNG depth map</span>
+<span class="fn">print</span>(<span class="var">result</span>.<span class="var">colormap_url</span>)     <span class="cmt"># Colorized visualization</span>
+
+<span class="cmt"># Measure real-world distances</span>
+<span class="var">dist</span> = <span class="var">sf</span>.<span class="fn">measure</span>(<span class="str">"room.jpg"</span>, <span class="var">points</span>=[[<span class="var">100</span>,<span class="var">200</span>], [<span class="var">400</span>,<span class="var">200</span>]])
+<span class="fn">print</span>(<span class="kw">f</span><span class="str">"Distance: </span><span class="var">{dist.meters}</span><span class="str">m"</span>)  <span class="cmt"># "Distance: 2.34m"</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="section-header">
+      <h2>Six Endpoints. Infinite Possibilities.</h2>
+      <p>Everything you need to add spatial intelligence to your app, from depth estimation to floor plan generation.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F4CF;</span>
+        <span class="endpoint">POST /v1/depth</span>
+        <h3>Depth Estimation</h3>
+        <p>Generate metric or relative depth maps from any single image. 16-bit PNG, NumPy, or colorized output. Sub-second inference on GPU.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F4F7;</span>
+        <span class="endpoint">POST /v1/pose</span>
+        <h3>Camera Pose</h3>
+        <p>Estimate camera extrinsics from video frames. Get 6-DoF pose matrices for AR, VR, and SLAM applications.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F4D0;</span>
+        <span class="endpoint">POST /v1/measure</span>
+        <h3>3D Measurement</h3>
+        <p>Measure real-world distances between any two pixels. Uses metric depth + camera intrinsics for accurate results.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F3D7;</span>
+        <span class="endpoint">POST /v1/reconstruct</span>
+        <h3>3D Reconstruction</h3>
+        <p>Generate point clouds and 3D meshes from images or video. Export as PLY or OBJ for downstream processing.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F3E0;</span>
+        <span class="endpoint">POST /v1/floorplan</span>
+        <h3>Floor Plans <span class="beta-tag">BETA</span></h3>
+        <p>Automatically generate 2D floor plans from room photos. Detect walls, doors, and windows from depth data.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F9CA;</span>
+        <span class="endpoint">POST /v1/segment-3d</span>
+        <h3>3D Segmentation <span class="beta-tag">BETA</span></h3>
+        <p>Segment objects in 3D space. Combine depth estimation with semantic segmentation for spatial understanding.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section id="how" style="background: var(--surface);">
+    <div class="section-header">
+      <h2>Up and Running in 3 Minutes</h2>
+      <p>No ML expertise needed. No GPU required on your end. Just HTTP requests.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Get an API Key</h3>
+        <p>Sign up and get your API key instantly. Free tier includes 1,000 calls/month.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Send an Image</h3>
+        <p>POST any JPEG or PNG to our endpoints. We handle model loading, inference, and scaling.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Get 3D Data</h3>
+        <p>Receive depth maps, measurements, point clouds, or floor plans. Use our SDK or raw HTTP.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing">
+    <div class="section-header">
+      <h2>Simple, Transparent Pricing</h2>
+      <p>Start free. Scale as you grow. No surprise bills.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>Free</h3>
+        <div class="price">$0<span>/mo</span></div>
+        <ul>
+          <li>1,000 API calls / month</li>
+          <li>All 6 endpoints</li>
+          <li>Community support</li>
+          <li>720p max resolution</li>
+        </ul>
+        <a href="#" class="btn-secondary">Get Started</a>
+      </div>
+      <div class="price-card featured">
+        <h3>Pro</h3>
+        <div class="price">$49<span>/mo</span></div>
+        <ul>
+          <li>50,000 API calls / month</li>
+          <li>All 6 endpoints</li>
+          <li>Priority support</li>
+          <li>4K resolution</li>
+          <li>Webhook notifications</li>
+        </ul>
+        <a href="#" class="btn-primary">Get Started</a>
+      </div>
+      <div class="price-card">
+        <h3>Enterprise</h3>
+        <div class="price">Custom</div>
+        <ul>
+          <li>Unlimited calls</li>
+          <li>Dedicated GPU instances</li>
+          <li>SLA guarantee</li>
+          <li>On-premise deployment</li>
+          <li>Custom model training</li>
+        </ul>
+        <a href="#" class="btn-secondary">Contact Us</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2025 SpatialForge. Built with <a href="https://github.com/maruyamakoju/spatialforge">open source</a>.</p>
+  </footer>
+
+</body>
+</html>
