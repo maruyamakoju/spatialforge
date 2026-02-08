@@ -72,6 +72,7 @@ ignore = [
     "UP035",   # Import from typing vs collections.abc — both valid in 3.11
     "SIM102",  # Nested if — keep for readability in complex EXIF parsing
     "SIM108",  # Ternary operator — keep if/else for clarity in multi-line logic
+    "UP042",   # str(Enum) → StrEnum — keep str,Enum for broader compatibility
 ]
 
 [tool.pytest.ini_options]
