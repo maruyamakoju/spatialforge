@@ -25,7 +25,7 @@ services:
       - key: REDIS_URL
         fromService:
           name: spatialforge-redis
-          type: redis
+          type: keyvalue
           property: connectionString
       - key: ALLOWED_ORIGINS
         value: '["*"]'
@@ -34,8 +34,8 @@ services:
       - key: WORKERS
         value: "1"
 
-  - type: redis
+  - type: keyvalue
     name: spatialforge-redis
-    plan: starter
+    plan: free
     maxmemoryPolicy: allkeys-lru
     ipAllowList: []
