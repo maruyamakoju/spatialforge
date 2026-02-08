@@ -1,0 +1,34 @@
+# ============================================================
+# SpatialForge Celery Worker — GPU-enabled
+# ============================================================
+FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 python3.12-venv python3-pip \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    ffmpeg && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+RUN python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir -e ".[dev]"
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY . .
+RUN pip install --no-cache-dir -e .
+
+RUN mkdir -p /app/models /app/uploads /app/results
+
+# Run Celery worker with GPU-heavy queue
+CMD ["celery", "-A", "spatialforge.workers.celery_app", "worker", \
+     "--loglevel=info", "--concurrency=1", "-Q", "default,gpu_heavy", \
+     "--max-tasks-per-child=50"]

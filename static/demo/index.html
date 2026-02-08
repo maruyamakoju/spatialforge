@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpatialForge — Any Camera. Instant 3D. One API.</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #13131a;
+            --border: #2a2a3a;
+            --text: #e4e4ef;
+            --text-dim: #8888a0;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 3rem 0 2rem;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* API Key Bar */
+        .api-key-bar {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin: 2rem 0;
+        }
+
+        .api-key-bar label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .api-key-bar input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+
+        .api-key-bar input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 0.25rem;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab:hover { color: var(--text); background: rgba(99,102,241,0.1); }
+        .tab.active { background: var(--accent); color: white; }
+
+        /* Panel */
+        .panel {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .panel.active { display: block; }
+
+        .panel h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .panel p.desc {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(99,102,241,0.05);
+        }
+
+        .drop-zone .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .drop-zone .label {
+            color: var(--text-dim);
+        }
+
+        .drop-zone input[type="file"] { display: none; }
+
+        /* Preview */
+        .preview-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .preview-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-box .title {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-box img, .preview-box canvas {
+            width: 100%;
+            border-radius: 6px;
+            object-fit: contain;
+            flex: 1;
+        }
+
+        .preview-box .placeholder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Metadata panel */
+        .metadata {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            color: var(--text-dim);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Status badge */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status.processing { background: rgba(99,102,241,0.2); color: var(--accent); }
+        .status.success { background: rgba(16,185,129,0.2); color: var(--success); }
+        .status.error { background: rgba(239,68,68,0.2); color: var(--error); }
+
+        /* Code snippet */
+        .code-snippet {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            color: #a5b4fc;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            .preview-area { grid-template-columns: 1fr; }
+            .tabs { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">SpatialForge</div>
+            <p class="tagline">Any Camera. Instant 3D. One API.</p>
+        </header>
+
+        <div class="api-key-bar">
+            <label>API Key</label>
+            <input type="password" id="apiKey" placeholder="sf_xxxxxxxxxxxxxxxx" />
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-panel="depth">/depth</button>
+            <button class="tab" data-panel="measure">/measure</button>
+            <button class="tab" data-panel="reconstruct">/reconstruct</button>
+            <button class="tab" data-panel="code">Code Examples</button>
+        </div>
+
+        <!-- /depth panel -->
+        <div class="panel active" id="panel-depth">
+            <h2>Depth Estimation</h2>
+            <p class="desc">Upload any image — get a metric depth map in milliseconds.</p>
+
+            <div class="drop-zone" id="depth-drop">
+                <div class="icon">&#128247;</div>
+                <div class="label">Drop an image here or click to upload</div>
+                <input type="file" accept="image/*" id="depth-file" />
+            </div>
+
+            <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+                <select id="depth-model" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:0.5rem;border-radius:8px;">
+                    <option value="giant">Giant (best)</option>
+                    <option value="large">Large</option>
+                    <option value="base">Base</option>
+                    <option value="small">Small (fastest)</option>
+                </select>
+                <button class="btn" id="depth-submit" disabled>
+                    Estimate Depth
+                </button>
+                <span id="depth-status"></span>
+            </div>
+
+            <div class="preview-area" id="depth-preview" style="display:none;">
+                <div class="preview-box">
+                    <div class="title">Input</div>
+                    <img id="depth-input-img" />
+                </div>
+                <div class="preview-box">
+                    <div class="title">Depth Map</div>
+                    <img id="depth-output-img" />
+                </div>
+            </div>
+
+            <div class="metadata" id="depth-metadata" style="display:none;"></div>
+        </div>
+
+        <!-- /measure panel -->
+        <div class="panel" id="panel-measure">
+            <h2>Distance Measurement</h2>
+            <p class="desc">Upload an image, click two points, and get real-world distance.</p>
+
+            <div class="drop-zone" id="measure-drop">
+                <div class="icon">&#128207;</div>
+                <div class="label">Drop an image here or click to upload</div>
+                <input type="file" accept="image/*" id="measure-file" />
+            </div>
+
+            <div style="margin: 1rem 0;">
+                <canvas id="measure-canvas" style="max-width:100%;border-radius:8px;cursor:crosshair;display:none;"></canvas>
+                <p id="measure-instructions" style="color:var(--text-dim);font-size:0.85rem;display:none;">
+                    Click two points on the image to measure distance between them.
+                </p>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <button class="btn" id="measure-submit" disabled>Measure</button>
+                <button class="btn" id="measure-reset" style="background:var(--border);display:none;">Reset Points</button>
+                <span id="measure-status"></span>
+            </div>
+
+            <div class="metadata" id="measure-metadata" style="display:none;"></div>
+        </div>
+
+        <!-- /reconstruct panel -->
+        <div class="panel" id="panel-reconstruct">
+            <h2>3D Reconstruction</h2>
+            <p class="desc">Upload a walkthrough video — get a 3D point cloud or Gaussian splat.</p>
+
+            <div class="drop-zone" id="recon-drop">
+                <div class="icon">&#127916;</div>
+                <div class="label">Drop a video here or click to upload (MP4, max 120s)</div>
+                <input type="file" accept="video/mp4,video/*" id="recon-file" />
+            </div>
+
+            <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+                <select id="recon-quality" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:0.5rem;border-radius:8px;">
+                    <option value="draft">Draft (fast)</option>
+                    <option value="standard" selected>Standard</option>
+                    <option value="high">High (slow)</option>
+                </select>
+                <select id="recon-output" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:0.5rem;border-radius:8px;">
+                    <option value="gaussian">3D Gaussian</option>
+                    <option value="pointcloud">Point Cloud</option>
+                    <option value="mesh">Mesh</option>
+                </select>
+                <button class="btn" id="recon-submit" disabled>Start Reconstruction</button>
+                <span id="recon-status"></span>
+            </div>
+
+            <div class="metadata" id="recon-metadata" style="display:none;"></div>
+        </div>
+
+        <!-- Code Examples panel -->
+        <div class="panel" id="panel-code">
+            <h2>Quick Start</h2>
+            <p class="desc">Get started with SpatialForge in seconds.</p>
+
+            <h3 style="font-size:0.95rem;margin:1rem 0 0.5rem;">Install SDK</h3>
+            <div class="code-snippet">pip install spatialforge</div>
+
+            <h3 style="font-size:0.95rem;margin:1.5rem 0 0.5rem;">Python — Depth Estimation</h3>
+            <div class="code-snippet"><span style="color:#c084fc">import</span> spatialforge
+
+client = spatialforge.Client(api_key=<span style="color:#fbbf24">"sf_your_key"</span>)
+
+<span style="color:#6ee7b7"># Get depth map from any image</span>
+result = client.depth(<span style="color:#fbbf24">"photo.jpg"</span>)
+print(f<span style="color:#fbbf24">"Depth range: {result.min_depth_m:.2f}m — {result.max_depth_m:.2f}m"</span>)
+result.save_depth_map(<span style="color:#fbbf24">"depth.png"</span>)</div>
+
+            <h3 style="font-size:0.95rem;margin:1.5rem 0 0.5rem;">Python — 3D Reconstruction</h3>
+            <div class="code-snippet"><span style="color:#6ee7b7"># Reconstruct 3D from video</span>
+job = client.reconstruct(<span style="color:#fbbf24">"walkthrough.mp4"</span>, quality=<span style="color:#fbbf24">"high"</span>)
+scene = job.wait()  <span style="color:#6ee7b7"># Blocks until complete</span>
+
+print(f<span style="color:#fbbf24">"Generated {scene.num_gaussians} Gaussians"</span>)
+scene.download(<span style="color:#fbbf24">"scene.ply"</span>)</div>
+
+            <h3 style="font-size:0.95rem;margin:1.5rem 0 0.5rem;">cURL — Depth</h3>
+            <div class="code-snippet">curl -X POST https://api.spatialforge.dev/v1/depth \
+  -H "X-API-Key: sf_your_key" \
+  -F "image=@photo.jpg" \
+  -F "model=giant"</div>
+
+            <h3 style="font-size:0.95rem;margin:1.5rem 0 0.5rem;">cURL — Measure</h3>
+            <div class="code-snippet">curl -X POST https://api.spatialforge.dev/v1/measure \
+  -H "X-API-Key: sf_your_key" \
+  -F "image=@room.jpg" \
+  -F 'points=[{"x":100,"y":200},{"x":500,"y":200}]'</div>
+        </div>
+
+        <footer>
+            <p>SpatialForge v0.1.0 &mdash; <a href="/docs">API Docs</a> | <a href="/redoc">ReDoc</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+            });
+        });
+
+        // ── Drop zone helper ──
+        function setupDropZone(dropId, fileId, onFile) {
+            const drop = document.getElementById(dropId);
+            const input = document.getElementById(fileId);
+
+            drop.addEventListener('click', () => input.click());
+            drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+            drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+            drop.addEventListener('drop', e => {
+                e.preventDefault();
+                drop.classList.remove('dragover');
+                if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
+            });
+            input.addEventListener('change', () => { if (input.files.length) onFile(input.files[0]); });
+        }
+
+        function getApiKey() {
+            return document.getElementById('apiKey').value.trim();
+        }
+
+        // ── /depth ──
+        let depthFile = null;
+
+        setupDropZone('depth-drop', 'depth-file', file => {
+            depthFile = file;
+            document.getElementById('depth-submit').disabled = false;
+            // Show preview
+            const url = URL.createObjectURL(file);
+            document.getElementById('depth-input-img').src = url;
+            document.getElementById('depth-preview').style.display = 'grid';
+            document.getElementById('depth-output-img').src = '';
+            document.getElementById('depth-metadata').style.display = 'none';
+        });
+
+        document.getElementById('depth-submit').addEventListener('click', async () => {
+            if (!depthFile) return;
+            const key = getApiKey();
+            if (!key) { alert('Enter your API key first.'); return; }
+
+            const btn = document.getElementById('depth-submit');
+            const status = document.getElementById('depth-status');
+            btn.disabled = true;
+            status.innerHTML = '<span class="status processing"><span class="spinner"></span> Processing...</span>';
+
+            const form = new FormData();
+            form.append('image', depthFile);
+            form.append('model', document.getElementById('depth-model').value);
+            form.append('output_format', 'png16');
+            form.append('metric', 'true');
+
+            try {
+                const res = await fetch(API_BASE + '/v1/depth', {
+                    method: 'POST',
+                    headers: { 'X-API-Key': key },
+                    body: form,
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    status.innerHTML = `<span class="status error">${data.detail || 'Error'}</span>`;
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Show colorized depth map (browser-displayable JPEG)
+                if (data.colormap_url) {
+                    document.getElementById('depth-output-img').src = data.colormap_url;
+                } else if (data.depth_map_url) {
+                    document.getElementById('depth-output-img').src = data.depth_map_url;
+                }
+                status.innerHTML = `<span class="status success">${data.processing_time_ms.toFixed(0)}ms</span>`;
+
+                // Show metadata
+                const meta = document.getElementById('depth-metadata');
+                meta.textContent = JSON.stringify(data, null, 2);
+                meta.style.display = 'block';
+            } catch (e) {
+                status.innerHTML = `<span class="status error">${e.message}</span>`;
+            }
+            btn.disabled = false;
+        });
+
+        // ── /measure ──
+        let measureFile = null;
+        let measureImage = null;
+        let measurePoints = [];
+
+        setupDropZone('measure-drop', 'measure-file', file => {
+            measureFile = file;
+            measurePoints = [];
+            document.getElementById('measure-submit').disabled = true;
+            document.getElementById('measure-reset').style.display = 'none';
+            document.getElementById('measure-metadata').style.display = 'none';
+
+            const canvas = document.getElementById('measure-canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                measureImage = img;
+                const maxW = 800;
+                const scale = Math.min(1, maxW / img.width);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                canvas.style.display = 'block';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                document.getElementById('measure-instructions').style.display = 'block';
+                canvas._scale = scale;
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        document.getElementById('measure-canvas').addEventListener('click', e => {
+            if (!measureImage || measurePoints.length >= 2) return;
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const scale = canvas._scale || 1;
+            const x = (e.clientX - rect.left) / scale;
+            const y = (e.clientY - rect.top) / scale;
+            measurePoints.push({ x: Math.round(x), y: Math.round(y) });
+
+            // Draw point
+            const ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(e.clientX - rect.left, e.clientY - rect.top, 6, 0, Math.PI * 2);
+            ctx.fillStyle = measurePoints.length === 1 ? '#6366f1' : '#ec4899';
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (measurePoints.length === 2) {
+                // Draw line between points
+                const p1 = measurePoints[0];
+                const p2 = measurePoints[1];
+                ctx.beginPath();
+                ctx.moveTo(p1.x * scale, p1.y * scale);
+                ctx.lineTo(p2.x * scale, p2.y * scale);
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                document.getElementById('measure-submit').disabled = false;
+                document.getElementById('measure-reset').style.display = 'inline-flex';
+            }
+        });
+
+        document.getElementById('measure-reset').addEventListener('click', () => {
+            measurePoints = [];
+            const canvas = document.getElementById('measure-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(measureImage, 0, 0, canvas.width, canvas.height);
+            document.getElementById('measure-submit').disabled = true;
+            document.getElementById('measure-reset').style.display = 'none';
+            document.getElementById('measure-metadata').style.display = 'none';
+        });
+
+        document.getElementById('measure-submit').addEventListener('click', async () => {
+            if (!measureFile || measurePoints.length !== 2) return;
+            const key = getApiKey();
+            if (!key) { alert('Enter your API key first.'); return; }
+
+            const btn = document.getElementById('measure-submit');
+            const status = document.getElementById('measure-status');
+            btn.disabled = true;
+            status.innerHTML = '<span class="status processing"><span class="spinner"></span> Measuring...</span>';
+
+            const form = new FormData();
+            form.append('image', measureFile);
+            form.append('points', JSON.stringify(measurePoints));
+
+            try {
+                const res = await fetch(API_BASE + '/v1/measure', {
+                    method: 'POST',
+                    headers: { 'X-API-Key': key },
+                    body: form,
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    status.innerHTML = `<span class="status error">${data.detail || 'Error'}</span>`;
+                    btn.disabled = false;
+                    return;
+                }
+
+                const dist = data.distance_m;
+                let display = dist >= 1 ? `${dist.toFixed(2)} m` : `${(dist * 100).toFixed(1)} cm`;
+                status.innerHTML = `<span class="status success">${display} (conf: ${(data.confidence * 100).toFixed(0)}%)</span>`;
+
+                const meta = document.getElementById('measure-metadata');
+                meta.textContent = JSON.stringify(data, null, 2);
+                meta.style.display = 'block';
+            } catch (e) {
+                status.innerHTML = `<span class="status error">${e.message}</span>`;
+            }
+            btn.disabled = false;
+        });
+
+        // ── /reconstruct ──
+        let reconFile = null;
+
+        setupDropZone('recon-drop', 'recon-file', file => {
+            reconFile = file;
+            document.getElementById('recon-submit').disabled = false;
+            document.getElementById('recon-metadata').style.display = 'none';
+        });
+
+        document.getElementById('recon-submit').addEventListener('click', async () => {
+            if (!reconFile) return;
+            const key = getApiKey();
+            if (!key) { alert('Enter your API key first.'); return; }
+
+            const btn = document.getElementById('recon-submit');
+            const status = document.getElementById('recon-status');
+            btn.disabled = true;
+            status.innerHTML = '<span class="status processing"><span class="spinner"></span> Uploading...</span>';
+
+            const form = new FormData();
+            form.append('video', reconFile);
+            form.append('quality', document.getElementById('recon-quality').value);
+            form.append('output', document.getElementById('recon-output').value);
+
+            try {
+                const res = await fetch(API_BASE + '/v1/reconstruct', {
+                    method: 'POST',
+                    headers: { 'X-API-Key': key },
+                    body: form,
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    status.innerHTML = `<span class="status error">${data.detail || 'Error'}</span>`;
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Poll for result
+                const jobId = data.job_id;
+                status.innerHTML = `<span class="status processing"><span class="spinner"></span> Processing (est: ${data.estimated_time_s}s)...</span>`;
+
+                const poll = async () => {
+                    const r = await fetch(API_BASE + `/v1/reconstruct/${jobId}`, {
+                        headers: { 'X-API-Key': key },
+                    });
+                    const d = await r.json();
+
+                    if (d.status === 'complete') {
+                        status.innerHTML = '<span class="status success">Complete!</span>';
+                        const meta = document.getElementById('recon-metadata');
+                        meta.textContent = JSON.stringify(d, null, 2);
+                        meta.style.display = 'block';
+                        btn.disabled = false;
+                    } else if (d.status === 'failed') {
+                        status.innerHTML = `<span class="status error">${d.error || 'Failed'}</span>`;
+                        btn.disabled = false;
+                    } else {
+                        status.innerHTML = `<span class="status processing"><span class="spinner"></span> ${d.status}...</span>`;
+                        setTimeout(poll, 3000);
+                    }
+                };
+                setTimeout(poll, 3000);
+            } catch (e) {
+                status.innerHTML = `<span class="status error">${e.message}</span>`;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
