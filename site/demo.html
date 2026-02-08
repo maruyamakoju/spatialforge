@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpatialForge Demo — Depth Estimation</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-bright: #818cf8;
+      --green: #34d399;
+      --orange: #fb923c;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent-bright); text-decoration: none; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+    .nav-links a:hover { color: var(--text); }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-bright), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle { color: var(--muted); margin-bottom: 2rem; }
+
+    /* ── Controls ─────────────────── */
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .control-group label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    select {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    /* ── Drop Zone ─────────────────── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+      margin-bottom: 2rem;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-glow, rgba(99, 102, 241, 0.08));
+    }
+
+    .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.5; }
+    .drop-zone-text { color: var(--muted); }
+    .drop-zone-text strong { color: var(--accent-bright); }
+
+    /* ── Results ─────────────────── */
+    .results { display: none; }
+    .results.visible { display: block; }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .image-grid { grid-template-columns: 1fr; }
+    }
+
+    .image-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .image-card-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .image-card img {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    /* ── Metadata ─────────────────── */
+    .metadata {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .metadata h3 {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .meta-item { }
+    .meta-label { font-size: 0.75rem; color: var(--muted); }
+    .meta-value { font-size: 1.1rem; font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .meta-value.green { color: var(--green); }
+    .meta-value.orange { color: var(--orange); }
+
+    /* ── Loading ─────────────────── */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .loading.visible { display: block; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { color: var(--muted); }
+    .loading-hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7; }
+
+    /* ── Error ─────────────────── */
+    .error {
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+    }
+
+    .error.visible { display: block; }
+
+    /* ── Footer ─────────────────── */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+    }
+
+    .footer a { color: var(--accent-bright); text-decoration: none; }
+
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">SpatialForge</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="https://spatialforge-demo.fly.dev/docs" target="_blank">API Docs</a>
+    <a href="https://github.com/maruyamakoju/spatialforge" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<div class="container" style="margin-top: 1rem;">
+  <h1>Depth Estimation Demo</h1>
+  <p class="subtitle">Upload any image to generate a depth map using Depth Anything V2. No API key required.</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Model</label>
+      <select id="model">
+        <option value="small">Small (fastest)</option>
+        <option value="base">Base (balanced)</option>
+        <option value="large" selected>Large (best quality)</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>API Endpoint</label>
+      <select id="endpoint">
+        <option value="https://spatialforge-demo.fly.dev">Cloud (Fly.io)</option>
+        <option value="http://localhost:8000">Local (localhost:8000)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-zone-icon">&#x1F4F7;</div>
+    <div class="drop-zone-text">
+      <strong>Drop an image here</strong> or click to browse<br>
+      <span style="font-size: 0.8rem;">JPEG, PNG, WebP up to 20MB</span>
+    </div>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+  </div>
+
+  <div class="error" id="error"></div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Estimating depth...</div>
+    <div class="loading-hint">First request downloads the model (~30s). Subsequent requests are faster.</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="image-grid">
+      <div class="image-card">
+        <div class="image-card-header">Original Image</div>
+        <img id="originalImg" alt="Original">
+      </div>
+      <div class="image-card">
+        <div class="image-card-header">Depth Map (colorized)</div>
+        <img id="depthImg" alt="Depth map">
+      </div>
+    </div>
+
+    <div class="metadata">
+      <h3>Depth Metadata</h3>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="meta-label">Resolution</div>
+          <div class="meta-value" id="metaRes">-</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Min Depth</div>
+          <div class="meta-value green" id="metaMin">-</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Max Depth</div>
+          <div class="meta-value green" id="metaMax">-</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Focal Length</div>
+          <div class="meta-value" id="metaFocal">-</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Confidence</div>
+          <div class="meta-value orange" id="metaConf">-</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Processing Time</div>
+          <div class="meta-value" id="metaTime">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Powered by <a href="https://github.com/maruyamakoju/spatialforge">SpatialForge</a> &mdash; Any Camera. Instant 3D. One API.
+</div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const loading = document.getElementById('loading');
+const results = document.getElementById('results');
+const errorDiv = document.getElementById('error');
+
+// Drop zone events
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processImage(file);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) processImage(e.target.files[0]);
+});
+
+async function processImage(file) {
+  // Reset UI
+  errorDiv.classList.remove('visible');
+  results.classList.remove('visible');
+  loading.classList.add('visible');
+
+  // Show original
+  const originalUrl = URL.createObjectURL(file);
+  document.getElementById('originalImg').src = originalUrl;
+
+  const endpoint = document.getElementById('endpoint').value;
+  const model = document.getElementById('model').value;
+
+  const formData = new FormData();
+  formData.append('image', file);
+  formData.append('model', model);
+  formData.append('metric', 'true');
+
+  try {
+    const resp = await fetch(`${endpoint}/v1/depth`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { const j = await resp.json(); detail = j.detail || detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const data = await resp.json();
+
+    // Show depth map
+    document.getElementById('depthImg').src = data.colormap_url;
+
+    // Show metadata
+    const m = data.metadata;
+    document.getElementById('metaRes').textContent = `${m.width} x ${m.height}`;
+    document.getElementById('metaMin').textContent = `${m.min_depth_m.toFixed(2)}m`;
+    document.getElementById('metaMax').textContent = `${m.max_depth_m.toFixed(2)}m`;
+    document.getElementById('metaFocal').textContent = `${m.focal_length_px.toFixed(1)}px`;
+    document.getElementById('metaConf').textContent = `${(m.confidence_mean * 100).toFixed(1)}%`;
+    document.getElementById('metaTime').textContent = `${data.processing_time_ms.toFixed(0)}ms`;
+
+    loading.classList.remove('visible');
+    results.classList.add('visible');
+  } catch (err) {
+    loading.classList.remove('visible');
+    errorDiv.textContent = `Error: ${err.message}`;
+    errorDiv.classList.add('visible');
+  }
+}
+</script>
+
+</body>
+</html>
