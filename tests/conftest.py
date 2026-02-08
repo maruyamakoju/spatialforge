@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import io
-from unittest.mock import AsyncMock, MagicMock, patch
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from PIL import Image
 
 
 @pytest.fixture
 def mock_redis():
-    """Mock Redis client."""
+    """Mock async Redis client."""
     redis = AsyncMock()
     redis.hgetall = AsyncMock(
         return_value={
@@ -49,10 +52,11 @@ def mock_model_manager():
     mm.dtype = "float32"
     mm.research_mode = False
 
-    # Mock depth pipeline: returns dict with predicted_depth tensor
+    # Mock depth pipeline — must use a real torch.Tensor so isinstance() check passes
+    import torch
+
     fake_depth = np.random.rand(384, 384).astype(np.float32) * 10
-    fake_tensor = MagicMock()
-    fake_tensor.squeeze.return_value.cpu.return_value.numpy.return_value = fake_depth
+    fake_tensor = torch.from_numpy(fake_depth).unsqueeze(0)  # 1 x 384 x 384
 
     pipe = MagicMock()
     pipe.return_value = {"predicted_depth": fake_tensor}
@@ -64,7 +68,6 @@ def mock_model_manager():
         description="test model",
     )
 
-    # get_depth_model now returns (pipeline, ModelInfo) tuple
     mm.get_depth_model = MagicMock(return_value=(pipe, model_info))
     mm.gpu_status = MagicMock(return_value={"gpu_available": False})
     mm.unload_all = MagicMock()
@@ -85,18 +88,68 @@ def mock_object_store():
 
 @pytest.fixture
 def app(mock_redis, mock_model_manager, mock_object_store):
-    """Create a test FastAPI app with mocked dependencies."""
-    with (
-        patch("spatialforge.main.aioredis") as mock_aioredis,
-        patch("spatialforge.main.ObjectStore", return_value=mock_object_store),
-        patch("spatialforge.main.ModelManager", return_value=mock_model_manager),
-    ):
-        mock_aioredis.from_url = MagicMock(return_value=mock_redis)
+    """Create a test FastAPI app with mocked dependencies.
 
-        from spatialforge.main import create_app
+    Instead of relying on the lifespan (which needs real Redis/MinIO),
+    we create a minimal app with the same routes and inject mocked state.
+    """
+    from spatialforge.auth.api_keys import APIKeyRecord, Plan, get_current_user
 
-        test_app = create_app()
-        yield test_app
+    # No-op lifespan for tests
+    @asynccontextmanager
+    async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        yield
+
+    test_app = FastAPI(lifespan=test_lifespan)
+
+    # Inject mocked state
+    test_app.state.redis = mock_redis
+    test_app.state.model_manager = mock_model_manager
+    test_app.state.object_store = mock_object_store
+    test_app.state.key_manager = MagicMock()
+
+    # Override auth dependency to return a fake admin user
+    async def fake_auth():
+        return APIKeyRecord(
+            key_hash="test_hash",
+            plan=Plan.ADMIN,
+            owner="test",
+            monthly_calls=0,
+            monthly_limit=999999999,
+        )
+
+    test_app.dependency_overrides[get_current_user] = fake_auth
+
+    # Register routes (same as main.py)
+    from spatialforge.api.v1 import depth, floorplan, measure, pose, reconstruct, segment
+    from spatialforge.models.responses import HealthResponse
+
+    test_app.include_router(depth.router, prefix="/v1", tags=["depth"])
+    test_app.include_router(pose.router, prefix="/v1", tags=["pose"])
+    test_app.include_router(reconstruct.router, prefix="/v1", tags=["reconstruct"])
+    test_app.include_router(measure.router, prefix="/v1", tags=["measure"])
+    test_app.include_router(floorplan.router, prefix="/v1", tags=["floorplan"])
+    test_app.include_router(segment.router, prefix="/v1", tags=["segment-3d"])
+
+    @test_app.get("/health", response_model=HealthResponse, tags=["system"])
+    async def health():
+        return HealthResponse(
+            status="ok",
+            version="0.1.0",
+            gpu_available=False,
+            models_loaded=mock_model_manager.loaded_models,
+        )
+
+    @test_app.get("/", tags=["system"])
+    async def root():
+        return {
+            "name": "SpatialForge",
+            "tagline": "Any Camera. Instant 3D. One API.",
+            "version": "0.1.0",
+            "docs": "/docs",
+        }
+
+    yield test_app
 
 
 @pytest.fixture

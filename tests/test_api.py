@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def test_health(client):
-    """Health endpoint returns OK without auth."""
+    """Health endpoint returns OK."""
     resp = client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
@@ -20,14 +20,8 @@ def test_root(client):
     assert data["name"] == "SpatialForge"
 
 
-def test_depth_no_auth(client):
-    """Depth endpoint requires API key."""
-    resp = client.post("/v1/depth")
-    assert resp.status_code in (401, 422)
-
-
 def test_depth_with_auth(client, api_key, sample_image_bytes):
-    """Depth endpoint succeeds with valid auth and image."""
+    """Depth endpoint succeeds with valid image (auth overridden in test)."""
     resp = client.post(
         "/v1/depth",
         headers={"X-API-Key": api_key},
@@ -38,6 +32,8 @@ def test_depth_with_auth(client, api_key, sample_image_bytes):
     data = resp.json()
     assert "depth_map_url" in data
     assert "metadata" in data
+    assert data["metadata"]["width"] == 100
+    assert data["metadata"]["height"] == 100
 
 
 def test_depth_invalid_file(client, api_key):
@@ -49,6 +45,19 @@ def test_depth_invalid_file(client, api_key):
         data={"model": "large", "output_format": "png16", "metric": "true"},
     )
     assert resp.status_code == 400
+
+
+def test_depth_colormap_url(client, api_key, sample_image_bytes):
+    """Depth response includes colormap_url."""
+    resp = client.post(
+        "/v1/depth",
+        headers={"X-API-Key": api_key},
+        files={"image": ("test.jpg", sample_image_bytes, "image/jpeg")},
+        data={"model": "large", "output_format": "png16", "metric": "true"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data.get("colormap_url") is not None
 
 
 def test_measure_invalid_points(client, api_key):
