@@ -24,6 +24,7 @@ from .config import get_settings
 from .inference.model_manager import ModelManager
 from .logging_config import RequestTracingMiddleware, setup_logging
 from .metrics import MetricsMiddleware
+from .middleware.security_headers import SecurityHeadersMiddleware
 from .models.responses import HealthResponse
 from .storage.object_store import ObjectStore
 
@@ -133,11 +134,29 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="SpatialForge API",
-        description="Any Camera. Instant 3D. One API. — Spatial intelligence API powered by Depth Anything 3",
+        summary="Any Camera. Instant 3D. One API.",
+        description=(
+            "SpatialForge is a spatial intelligence API that transforms ordinary camera input "
+            "into precise 3D understanding. Powered by state-of-the-art depth estimation models, "
+            "it provides monocular depth estimation, real-world measurement, camera pose recovery, "
+            "3D reconstruction, floor plan generation, and 3D semantic segmentation.\n\n"
+            "## Authentication\n"
+            "All endpoints (except `/health` and `/v1/billing/plans`) require an API key "
+            "passed via the `X-API-Key` header.\n\n"
+            "## Rate Limits\n"
+            "| Plan | Monthly Calls | Price |\n"
+            "|------|--------------|-------|\n"
+            "| Free | 100 | $0 |\n"
+            "| Builder | 5,000 | $29/mo |\n"
+            "| Pro | 50,000 | $99/mo |\n"
+            "| Enterprise | Unlimited | $499/mo |\n"
+        ),
         version=__version__,
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
+        contact={"name": "SpatialForge", "url": "https://github.com/maruyamakoju/spatialforge"},
+        license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
     )
 
     # CORS
@@ -145,9 +164,13 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["X-API-Key", "Content-Type", "Authorization"],
+        expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
     )
+
+    # Security headers (OWASP best practices)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Rate limiter
     app.add_middleware(RateLimiterMiddleware)

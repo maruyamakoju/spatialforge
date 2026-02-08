@@ -1,7 +1,10 @@
-"""SpatialForge Python SDK — pip install spatialforge"""
+"""SpatialForge Python SDK — pip install spatialforge-client"""
 
-from .client import Client
+from .async_client import AsyncClient
+from .client import Client, SpatialForgeError
 from .models import (
+    AsyncJob,
+    CameraPose,
     DepthResult,
     FloorplanJob,
     MeasureResult,
@@ -12,11 +15,15 @@ from .models import (
 
 __version__ = "0.1.0"
 __all__ = [
+    "AsyncClient",
+    "AsyncJob",
+    "CameraPose",
     "Client",
     "DepthResult",
+    "FloorplanJob",
     "MeasureResult",
     "PoseResult",
     "ReconstructJob",
-    "FloorplanJob",
     "Segment3DJob",
+    "SpatialForgeError",
 ]

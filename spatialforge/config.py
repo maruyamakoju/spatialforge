@@ -25,7 +25,12 @@ class Settings(BaseSettings):
     port: int = 8000
     workers: int = 1
     debug: bool = False
-    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://maruyamakoju.github.io",
+        "https://spatialforge-demo.fly.dev",
+    ]
 
     # Auth
     api_key_secret: str = _DEFAULT_SECRET

@@ -86,13 +86,13 @@ class AsyncJob:
     _endpoint: str = field(default="", repr=False)
 
     def poll(self) -> dict:
-        """Check current job status."""
+        """Check current job status (sync)."""
         if self._client is None:
             raise RuntimeError("Job not associated with a client")
         return self._client._get(f"{self._endpoint}/{self.job_id}")
 
     def wait(self, poll_interval: float = 3.0, timeout: float = 600.0) -> dict:
-        """Block until job completes or times out."""
+        """Block until job completes or times out (sync)."""
         import time
 
         start = time.time()
@@ -104,6 +104,30 @@ class AsyncJob:
             if status == "failed":
                 raise RuntimeError(f"Job failed: {result.get('error', 'Unknown error')}")
             time.sleep(poll_interval)
+        raise TimeoutError(f"Job {self.job_id} did not complete within {timeout}s")
+
+    async def async_poll(self) -> dict:
+        """Check current job status (async)."""
+        if self._client is None:
+            raise RuntimeError("Job not associated with a client")
+        return await self._client._get(f"{self._endpoint}/{self.job_id}")
+
+    async def async_wait(
+        self, poll_interval: float = 3.0, timeout: float = 600.0
+    ) -> dict:
+        """Await until job completes or times out (async)."""
+        import asyncio
+        import time
+
+        start = time.time()
+        while time.time() - start < timeout:
+            result = await self.async_poll()
+            status = result.get("status", "")
+            if status == "complete":
+                return result
+            if status == "failed":
+                raise RuntimeError(f"Job failed: {result.get('error', 'Unknown error')}")
+            await asyncio.sleep(poll_interval)
         raise TimeoutError(f"Job {self.job_id} did not complete within {timeout}s")
 
 

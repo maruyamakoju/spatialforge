@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpatialForge — API Documentation</title>
+  <meta name="description" content="SpatialForge API documentation with code examples for depth estimation, measurement, pose estimation, and 3D reconstruction.">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-bright: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --green: #34d399;
+      --orange: #fb923c;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-bright); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,10,15,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    nav .logo { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    nav .logo span { color: var(--accent-bright); }
+    nav .links { display: flex; gap: 1.5rem; }
+    nav .links a { color: var(--muted); font-size: 0.9rem; }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+    .container { max-width: 900px; margin: 0 auto; padding: 100px 2rem 4rem; }
+    h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    h1 span { color: var(--accent-bright); }
+    .subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 3rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.5rem; color: var(--accent-bright); }
+    p { margin-bottom: 1rem; color: var(--muted); }
+    code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: var(--green); }
+    pre {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; overflow-x: auto;
+      margin: 1rem 0 2rem; font-size: 0.85rem; line-height: 1.7;
+    }
+    pre code { background: none; padding: 0; color: var(--text); }
+    .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; margin-right: 8px; }
+    .method-post { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+    .method-get { background: rgba(99, 102, 241, 0.15); color: var(--accent-bright); }
+    .endpoint-path { font-family: monospace; font-size: 1rem; font-weight: 600; }
+    .param-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .param-table th { text-align: left; font-size: 0.8rem; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0; }
+    .param-table td { padding: 0.5rem 0; border-bottom: 1px solid rgba(30,30,46,0.5); font-size: 0.9rem; }
+    .param-table td:first-child { font-family: monospace; color: var(--green); width: 30%; }
+    .param-table td:nth-child(2) { color: var(--muted); width: 20%; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background: var(--accent-glow); color: var(--accent-bright); }
+    .tabs { display: flex; gap: 0; margin: 1rem 0 0; }
+    .tab { padding: 0.5rem 1rem; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+    .tab:first-child { border-radius: var(--radius) 0 0 0; }
+    .tab:last-child { border-radius: 0 var(--radius) 0 0; }
+    .tab.active { background: var(--border); color: var(--text); border-bottom-color: var(--border); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    footer { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="logo">Spatial<span>Forge</span></a>
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="docs.html">Docs</a>
+      <a href="demo.html">Demo</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="https://spatialforge-demo.fly.dev/docs" target="_blank">API Reference</a>
+      <a href="https://github.com/maruyamakoju/spatialforge" target="_blank">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>API <span>Documentation</span></h1>
+    <p class="subtitle">Everything you need to integrate spatial intelligence into your application.</p>
+
+    <!-- Quick Start -->
+    <h2>Quick Start</h2>
+
+    <h3>Installation</h3>
+    <pre><code>pip install spatialforge-client</code></pre>
+
+    <h3>Python SDK</h3>
+    <pre><code><span style="color: #fb923c">import</span> spatialforge_client <span style="color: #fb923c">as</span> sf
+
+client = sf.Client(api_key=<span style="color: #34d399">"sf_your_key"</span>)
+
+<span style="color: #8888a0"># Depth estimation</span>
+result = client.depth(<span style="color: #34d399">"photo.jpg"</span>)
+print(f<span style="color: #34d399">"Depth range: {result.min_depth_m:.2f}m - {result.max_depth_m:.2f}m"</span>)
+
+<span style="color: #8888a0"># Distance measurement</span>
+measure = client.measure(<span style="color: #34d399">"room.jpg"</span>, point1=(100, 200), point2=(500, 200))
+print(f<span style="color: #34d399">"Distance: {measure.distance_cm:.1f} cm"</span>)</code></pre>
+
+    <h3>Async Python</h3>
+    <pre><code><span style="color: #fb923c">import</span> spatialforge_client <span style="color: #fb923c">as</span> sf
+
+<span style="color: #fb923c">async with</span> sf.AsyncClient(api_key=<span style="color: #34d399">"sf_your_key"</span>) <span style="color: #fb923c">as</span> client:
+    result = <span style="color: #fb923c">await</span> client.depth(<span style="color: #34d399">"photo.jpg"</span>)
+    print(result.min_depth_m)</code></pre>
+
+    <h3>CLI</h3>
+    <pre><code><span style="color: #8888a0"># Set your API key</span>
+export SPATIALFORGE_API_KEY=sf_your_key
+
+<span style="color: #8888a0"># Estimate depth</span>
+spatialforge depth photo.jpg --model large --output depth.png
+
+<span style="color: #8888a0"># Measure distance</span>
+spatialforge measure room.jpg --p1 100,200 --p2 500,200
+
+<span style="color: #8888a0"># Reconstruct 3D</span>
+spatialforge reconstruct walkthrough.mp4 --quality high</code></pre>
+
+    <h3>cURL</h3>
+    <pre><code>curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
+  -H "X-API-Key: sf_your_key" \
+  -F "image=@photo.jpg" \
+  -F "model=large"</code></pre>
+
+    <!-- Authentication -->
+    <h2>Authentication</h2>
+    <p>All API endpoints require authentication via the <code>X-API-Key</code> header. The only exceptions are <code>/health</code> and <code>GET /v1/billing/plans</code>.</p>
+    <pre><code>curl -H "X-API-Key: sf_your_key" https://spatialforge-demo.fly.dev/v1/billing/usage</code></pre>
+
+    <!-- Endpoints -->
+    <h2>Endpoints</h2>
+
+    <!-- Depth -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/depth</span></h3>
+    <p>Estimate depth from a single image. Returns a depth map and colorized visualization.</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>image</td><td>file <span class="badge">required</span></td><td>Image file (JPEG, PNG, WebP). Max 20MB.</td></tr>
+      <tr><td>model</td><td>string</td><td><code>large</code> (default), <code>base</code>, or <code>small</code></td></tr>
+      <tr><td>output_format</td><td>string</td><td><code>png16</code> (default), <code>exr</code>, or <code>npy</code></td></tr>
+      <tr><td>metric</td><td>boolean</td><td><code>true</code> (default) for metric depth in meters</td></tr>
+    </table>
+
+    <!-- Measure -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/measure</span></h3>
+    <p>Measure real-world distance between two points in an image.</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>image</td><td>file <span class="badge">required</span></td><td>Image file (JPEG, PNG, WebP)</td></tr>
+      <tr><td>points</td><td>JSON <span class="badge">required</span></td><td>Array of two points: <code>[{"x":100,"y":200},{"x":500,"y":200}]</code></td></tr>
+      <tr><td>reference_object</td><td>JSON</td><td>Optional calibration reference with <code>type</code> and <code>bbox</code></td></tr>
+    </table>
+
+    <!-- Pose -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/pose</span></h3>
+    <p>Estimate camera poses from video or multiple images. Returns rotation matrices and translation vectors.</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>video</td><td>file</td><td>Video file (MP4, MOV). Provide either video or images.</td></tr>
+      <tr><td>images</td><td>files</td><td>Multiple image files. Provide either video or images.</td></tr>
+      <tr><td>output_pointcloud</td><td>boolean</td><td><code>false</code> (default). Set to <code>true</code> for sparse point cloud.</td></tr>
+    </table>
+
+    <!-- Reconstruct -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/reconstruct</span> <span class="badge">async</span></h3>
+    <p>Start asynchronous 3D reconstruction from video. Returns a job ID for polling.</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Video file (MP4, MOV). Max 120s.</td></tr>
+      <tr><td>quality</td><td>string</td><td><code>standard</code> (default), <code>draft</code>, or <code>high</code></td></tr>
+      <tr><td>output</td><td>string</td><td><code>gaussian</code> (default), <code>pointcloud</code>, or <code>mesh</code></td></tr>
+    </table>
+
+    <!-- Floorplan -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/floorplan</span> <span class="badge">async</span></h3>
+    <p>Generate a 2D floor plan from walkthrough video.</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Walkthrough video file</td></tr>
+      <tr><td>output_format</td><td>string</td><td><code>svg</code> (default), <code>dxf</code>, or <code>json</code></td></tr>
+    </table>
+
+    <!-- Segment-3D -->
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/segment-3d</span> <span class="badge">async</span></h3>
+    <p>Segment 3D objects in video using a text prompt (open-vocabulary).</p>
+    <table class="param-table">
+      <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+      <tr><td>video</td><td>file <span class="badge">required</span></td><td>Video file</td></tr>
+      <tr><td>prompt</td><td>string <span class="badge">required</span></td><td>Natural language description (e.g., "find all chairs")</td></tr>
+    </table>
+
+    <!-- Billing -->
+    <h2>Billing Endpoints</h2>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/v1/billing/plans</span></h3>
+    <p>List available plans with pricing. No authentication required.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/v1/billing/usage</span></h3>
+    <p>Get current usage statistics for your API key.</p>
+
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/billing/checkout</span></h3>
+    <p>Create a Stripe Checkout session to upgrade your plan.</p>
+
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/v1/billing/portal</span></h3>
+    <p>Create a Stripe Customer Portal session to manage your subscription.</p>
+
+    <!-- Polling Async Jobs -->
+    <h2>Async Job Polling</h2>
+    <p>Endpoints marked <span class="badge">async</span> return a <code>job_id</code>. Poll for results:</p>
+    <pre><code><span style="color: #8888a0"># Submit job</span>
+job = client.reconstruct(<span style="color: #34d399">"video.mp4"</span>, quality=<span style="color: #34d399">"high"</span>)
+print(job.job_id)  <span style="color: #8888a0"># "job_abc123"</span>
+
+<span style="color: #8888a0"># Wait for completion (blocks with polling)</span>
+result = job.wait(poll_interval=5.0, timeout=600)
+print(result[<span style="color: #34d399">"scene_url"</span>])
+
+<span style="color: #8888a0"># Or poll manually</span>
+status = job.poll()
+print(status[<span style="color: #34d399">"status"</span>])  <span style="color: #8888a0"># "processing" | "complete" | "failed"</span></code></pre>
+
+    <!-- Error Handling -->
+    <h2>Error Handling</h2>
+    <p>All errors return JSON with a <code>detail</code> field:</p>
+    <pre><code>{
+  <span style="color: #34d399">"detail"</span>: <span style="color: #34d399">"Invalid or disabled API key."</span>
+}</code></pre>
+    <table class="param-table">
+      <tr><th>Status Code</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td>400</td><td>Bad Request</td><td>Invalid image format, missing parameters</td></tr>
+      <tr><td>401</td><td>Unauthorized</td><td>Missing or invalid API key</td></tr>
+      <tr><td>403</td><td>Forbidden</td><td>Plan does not support this endpoint</td></tr>
+      <tr><td>413</td><td>Too Large</td><td>Image exceeds 20MB / video exceeds 120s</td></tr>
+      <tr><td>429</td><td>Rate Limited</td><td>Monthly quota exceeded</td></tr>
+      <tr><td>500</td><td>Server Error</td><td>Internal processing failure</td></tr>
+    </table>
+
+    <!-- SDKs -->
+    <h2>SDKs & Tools</h2>
+    <table class="param-table">
+      <tr><th>Tool</th><th>Install</th><th>Description</th></tr>
+      <tr><td>Python SDK</td><td><code>pip install spatialforge-client</code></td><td>Sync + Async clients, type-safe models</td></tr>
+      <tr><td>CLI</td><td><code>pip install spatialforge-client[cli]</code></td><td>Command-line interface with rich output</td></tr>
+      <tr><td>API Reference</td><td><a href="https://spatialforge-demo.fly.dev/docs">Swagger UI</a></td><td>Interactive OpenAPI documentation</td></tr>
+    </table>
+
+  </div>
+
+  <footer>
+    SpatialForge &mdash; Spatial intelligence for every developer.
+    <br><a href="https://github.com/maruyamakoju/spatialforge">GitHub</a> &middot;
+    <a href="https://spatialforge-demo.fly.dev/docs">API Reference</a> &middot;
+    <a href="https://pypi.org/project/spatialforge-client/">PyPI</a>
+  </footer>
+</body>
+</html>

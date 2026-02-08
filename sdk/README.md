@@ -6,10 +6,15 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+Python SDK for [SpatialForge](https://github.com/maruyamakoju/spatialforge) — spatial intelligence API for depth estimation, measurement, 3D reconstruction, and more.
+
 ## Installation
 
 ```bash
 pip install spatialforge-client
+
+# With CLI support
+pip install spatialforge-client[cli]
 ```
 
 ## Quick Start
@@ -28,18 +33,51 @@ result.save_depth_map("depth.png")
 measure = client.measure("room.jpg", point1=(100, 200), point2=(500, 200))
 print(f"Distance: {measure.distance_cm:.1f} cm")
 
+# Camera poses from video
+poses = client.pose(video="walkthrough.mp4")
+for p in poses.camera_poses:
+    print(f"Frame {p.frame_index}: T={p.translation}")
+
 # 3D reconstruction (async)
 job = client.reconstruct("walkthrough.mp4", quality="high")
 scene = job.wait()  # Blocks until complete
 print(f"Scene URL: {scene['scene_url']}")
-
-# Floor plan generation (async)
-plan = client.floorplan("room_tour.mp4")
-result = plan.wait()
-print(f"Floor area: {result['floor_area_m2']} m2")
 ```
 
-## Custom API endpoint
+## Async Client
+
+```python
+import spatialforge_client as sf
+
+async with sf.AsyncClient(api_key="sf_your_key") as client:
+    # All methods are async
+    result = await client.depth("photo.jpg")
+    print(result.min_depth_m)
+
+    # Async job polling
+    job = await client.reconstruct("video.mp4")
+    scene = await job.async_wait()
+```
+
+## CLI
+
+```bash
+export SPATIALFORGE_API_KEY=sf_your_key
+
+# Depth estimation
+spatialforge depth photo.jpg --model large --output depth.png
+
+# Measure distance
+spatialforge measure room.jpg --p1 100,200 --p2 500,200
+
+# 3D reconstruction
+spatialforge reconstruct walkthrough.mp4 --quality high
+
+# All commands support --json for machine-readable output
+spatialforge depth photo.jpg --json
+```
+
+## Custom API Endpoint
 
 ```python
 # Point to a local or self-hosted instance
@@ -60,8 +98,20 @@ client = sf.Client(
 | `client.floorplan(video)` | Floor plan generation (async) |
 | `client.segment_3d(video, prompt)` | 3D segmentation (async) |
 
+## Error Handling
+
+```python
+from spatialforge_client import SpatialForgeError
+
+try:
+    result = client.depth("photo.jpg")
+except SpatialForgeError as e:
+    print(f"HTTP {e.status_code}: {e.detail}")
+```
+
 ## Links
 
 - [Live API Docs](https://spatialforge-demo.fly.dev/docs)
 - [Interactive Demo](https://maruyamakoju.github.io/spatialforge/demo.html)
+- [Documentation](https://maruyamakoju.github.io/spatialforge/docs.html)
 - [GitHub](https://github.com/maruyamakoju/spatialforge)
