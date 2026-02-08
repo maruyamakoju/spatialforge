@@ -116,18 +116,34 @@ async def get_current_user(
     """FastAPI dependency to validate API key from request header.
 
     Uses request.app.state to access the key manager — no circular imports.
-    If Redis is unavailable (key_manager is None), runs in demo mode.
+    If Redis is unavailable (key_manager is None), auth is unavailable and
+    requests are rejected with 503 unless DEMO_MODE is explicitly enabled.
     """
+    import logging
+
     manager = getattr(request.app.state, "key_manager", None)
 
-    # Demo mode: no Redis → allow all requests with a demo record
     if manager is None:
-        return APIKeyRecord(
-            key_hash="demo",
-            plan=Plan.FREE,
-            owner="demo",
-            monthly_calls=0,
-            monthly_limit=999_999_999,
+        # Check if the app is intentionally running in demo mode
+        # (e.g., for the interactive demo page or local development)
+        from ..config import get_settings
+
+        settings = get_settings()
+        if getattr(settings, "demo_mode", False):
+            return APIKeyRecord(
+                key_hash="demo",
+                plan=Plan.FREE,
+                owner="demo",
+                monthly_calls=0,
+                monthly_limit=999_999_999,
+            )
+
+        logging.getLogger(__name__).warning(
+            "Auth request rejected: Redis unavailable and DEMO_MODE not enabled"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable. Try again later.",
         )
 
     if api_key is None:

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # Auth
     api_key_secret: str = _DEFAULT_SECRET
     admin_api_key: str = _DEFAULT_ADMIN_KEY
+    demo_mode: bool = False  # Allow unauthenticated access when Redis is down
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
