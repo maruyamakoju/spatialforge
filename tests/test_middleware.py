@@ -99,6 +99,19 @@ class TestSecurityHeaders:
         csp = resp.headers.get("Content-Security-Policy", "")
         assert "unsafe-inline" in csp
 
+    def test_api_version_header(self):
+        app = _make_app_with_middleware((SecurityHeadersMiddleware, {}))
+
+        @app.get("/test")
+        async def test_endpoint():
+            return {"ok": True}
+
+        client = TestClient(app)
+        resp = client.get("/test")
+
+        assert "X-API-Version" in resp.headers
+        assert resp.headers["X-API-Version"] == "0.1.0"
+
 
 class TestRequestTimeout:
     """Tests for RequestTimeoutMiddleware."""
