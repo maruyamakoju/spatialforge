@@ -11,7 +11,7 @@ Turn any photo or video into depth maps, 3D measurements, and floor plans with a
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 
-[Live Demo](https://maruyamakoju.github.io/spatialforge/) | [API Docs](https://maruyamakoju.github.io/spatialforge/) | [Python SDK](#python-sdk)
+[Live API](https://spatialforge-demo.fly.dev/docs) | [Landing Page](https://maruyamakoju.github.io/spatialforge/) | [Python SDK](#python-sdk)
 
 </div>
 
