@@ -1,0 +1,44 @@
+# ============================================================
+# Fly.io Configuration — SpatialForge CPU Demo
+# ============================================================
+# Deploy:
+#   flyctl auth login
+#   flyctl launch --copy-config --yes
+#   flyctl deploy
+# ============================================================
+
+app = "spatialforge"
+primary_region = "nrt"  # Tokyo (closest to Japan)
+
+[build]
+  dockerfile = "Dockerfile.cpu"
+
+[env]
+  DEVICE = "cpu"
+  TORCH_DTYPE = "float32"
+  RESEARCH_MODE = "false"
+  WORKERS = "1"
+  ALLOWED_ORIGINS = '["*"]'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 25
+    soft_limit = 20
+
+[[http_service.checks]]
+  grace_period = "30s"
+  interval = "30s"
+  method = "GET"
+  timeout = "10s"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"

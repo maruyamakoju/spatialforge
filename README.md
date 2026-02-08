@@ -156,11 +156,22 @@ docker compose up -d
 docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
 ```
 
-## One-Click Deploy
+## Cloud Deploy
+
+### Render (one-click)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/maruyamakoju/spatialforge)
 
-Deploys the CPU demo (API + managed Redis) with auto-generated secrets. No GPU required.
+Deploys API + managed Redis with auto-generated secrets.
+
+### Fly.io
+
+```bash
+flyctl auth login
+flyctl launch --copy-config --yes
+flyctl secrets set API_KEY_SECRET=$(openssl rand -base64 36) ADMIN_API_KEY=sf_$(openssl rand -hex 16)
+flyctl deploy
+```
 
 ## Models
 
