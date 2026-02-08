@@ -1,10 +1,3 @@
-# ============================================================
-# Render Blueprint — SpatialForge CPU Demo
-# ============================================================
-# Deploy: Connect this repo to Render via Dashboard → "New Blueprint Instance"
-# Docs:   https://docs.render.com/blueprint-spec
-# ============================================================
-
 services:
   - type: web
     name: spatialforge
@@ -27,8 +20,6 @@ services:
           name: spatialforge-redis
           type: keyvalue
           property: connectionString
-      - key: ALLOWED_ORIGINS
-        value: '["*"]'
       - key: RESEARCH_MODE
         value: "false"
       - key: WORKERS
@@ -36,6 +27,9 @@ services:
 
   - type: keyvalue
     name: spatialforge-redis
+    region: oregon
     plan: free
     maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
