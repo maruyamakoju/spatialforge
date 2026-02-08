@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
@@ -35,7 +36,10 @@ async def measure_distance(
             raise ValueError("Exactly 2 points required")
         p1 = (float(points_data[0]["x"]), float(points_data[0]["y"]))
         p2 = (float(points_data[1]["x"]), float(points_data[1]["y"]))
-    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        for pt in [p1, p2]:
+            if any(math.isnan(v) or math.isinf(v) for v in pt):
+                raise ValueError("Coordinates must be finite numbers")
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid points format: {e}") from None
 
     # Parse reference object
@@ -63,6 +67,15 @@ async def measure_distance(
         raise HTTPException(status_code=400, detail=str(e)) from None
 
     rgb = resize_if_needed(rgb, max_size=4096)
+
+    # Validate point coordinates are within image bounds
+    h, w = rgb.shape[:2]
+    for i, pt in enumerate([p1, p2], 1):
+        if not (0 <= pt[0] < w and 0 <= pt[1] < h):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Point {i} ({pt[0]}, {pt[1]}) is outside image bounds ({w}x{h})",
+            )
 
     # Run measurement
     from ...inference.measure_engine import MeasureEngine

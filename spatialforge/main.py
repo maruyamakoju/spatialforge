@@ -25,6 +25,7 @@ from .inference.model_manager import ModelManager
 from .logging_config import RequestTracingMiddleware, setup_logging
 from .metrics import MetricsMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
+from .middleware.timeout import RequestTimeoutMiddleware
 from .models.responses import HealthResponse
 from .storage.object_store import ObjectStore
 
@@ -171,6 +172,9 @@ def create_app() -> FastAPI:
 
     # Security headers (OWASP best practices)
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # Request timeout for inference endpoints
+    app.add_middleware(RequestTimeoutMiddleware, timeout_s=120)
 
     # Rate limiter
     app.add_middleware(RateLimiterMiddleware)

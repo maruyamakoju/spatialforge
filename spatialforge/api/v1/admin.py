@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ... import __version__
 from ...auth.api_keys import APIKeyRecord, Plan, get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -37,6 +41,13 @@ async def create_api_key(
 
     manager = request.app.state.key_manager
     raw_key = await manager.create_key(owner=owner, plan=plan_enum)
+
+    logger.info(
+        "API key created: owner=%s plan=%s by_admin=%s",
+        owner,
+        plan_enum.value,
+        admin.owner,
+    )
 
     return {
         "api_key": raw_key,
