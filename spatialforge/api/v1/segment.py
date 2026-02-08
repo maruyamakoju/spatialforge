@@ -1,4 +1,8 @@
-"""/v1/segment-3d — 3D segmentation with text prompts (DA3 + SAM3 + Grounding DINO)."""
+"""/v1/segment-3d — 3D segmentation with text prompts.
+
+STATUS: BETA — SAM3 integration pending (requires separate container + HF access approval).
+This endpoint currently returns depth-based placeholder results.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,12 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 500 * 1024 * 1024
 
+BETA_NOTICE = (
+    "This endpoint is in BETA. SAM3 integration is pending "
+    "(requires separate container and HuggingFace access approval). "
+    "Results are depth-based placeholders."
+)
+
 
 @router.post("/segment-3d", response_model=Segment3DJobResponse)
 async def start_segment_3d(
@@ -21,10 +31,9 @@ async def start_segment_3d(
     output_bbox: bool = Form(True),
     user: APIKeyRecord = Depends(get_current_user),
 ):
-    """Segment objects in 3D using natural language.
+    """**[BETA]** Segment objects in 3D using natural language.
 
-    Combines DA3 depth maps + SAM 3 segmentation + Grounding DINO object detection
-    to respond to queries like "segment the table" or "find all chairs".
+    SAM3 integration is pending. Currently returns depth-based placeholder results.
 
     Returns a job_id — poll GET /v1/segment-3d/{job_id} for results.
     """

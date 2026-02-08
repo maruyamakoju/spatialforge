@@ -1,4 +1,8 @@
-"""/v1/floorplan — Auto-generated floor plans from room walkthrough video."""
+"""/v1/floorplan — Auto-generated floor plans from room walkthrough video.
+
+STATUS: BETA — Wall detection and room segmentation are approximate.
+Accuracy improves with longer, slower walkthrough videos.
+"""
 
 from __future__ import annotations
 

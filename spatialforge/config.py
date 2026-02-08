@@ -36,9 +36,10 @@ class Settings(BaseSettings):
 
     # Models
     model_dir: Path = Path("./models")
-    default_depth_model: str = "giant"  # giant | large | base | small
+    default_depth_model: str = "large"  # large | base | small (Apache 2.0 only)
     device: str = "cuda"
     torch_dtype: str = "float16"
+    research_mode: bool = False  # DANGER: enables CC-BY-NC models. Never in production.
 
     # Rate limiting (calls per month)
     rate_limit_free: int = 100

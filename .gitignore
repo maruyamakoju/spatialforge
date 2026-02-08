@@ -12,8 +12,8 @@ build/
 .venv/
 venv/
 
-# Models (large files)
-models/
+# Models (large ML weight files — root-level models/ directory only)
+/models/
 *.pt
 *.pth
 *.onnx

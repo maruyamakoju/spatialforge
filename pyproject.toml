@@ -20,14 +20,17 @@ classifiers = [
 ]
 
 dependencies = [
+    # Web framework
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "python-multipart>=0.0.18",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
+    # Data stores
     "redis>=5.2.0",
     "celery[redis]>=5.4.0",
     "minio>=7.2.0",
+    # ML / inference
     "torch>=2.5.0",
     "torchvision>=0.20.0",
     "numpy>=1.26.0",
@@ -35,12 +38,10 @@ dependencies = [
     "opencv-python-headless>=4.10.0",
     "transformers>=4.47.0",
     "safetensors>=0.4.0",
+    # HTTP / observability
     "httpx>=0.28.0",
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
     "prometheus-client>=0.21.0",
     "structlog>=24.4.0",
-    "orjson>=3.10.0",
 ]
 
 [project.optional-dependencies]

@@ -392,14 +392,12 @@ def _fire_webhook(
 def cleanup_expired_results() -> dict:
     """Periodic task: delete expired results from object store.
 
-    Runs every 6 hours via Celery Beat. Removes objects older than result_ttl_hours.
+    Runs every 6 hours via Celery Beat. Uses Redis TTL metadata to determine
+    which objects have expired — never blindly deletes everything.
     """
-    import time
-
     from ..config import get_settings
 
     settings = get_settings()
-    ttl_seconds = settings.result_ttl_hours * 3600
 
     try:
         store = _get_object_store()
@@ -407,23 +405,7 @@ def cleanup_expired_results() -> dict:
         logger.warning("Object store not available for cleanup")
         return {"status": "skipped", "reason": "object_store_unavailable"}
 
-    deleted = 0
-    now = time.time()
+    deleted = store.cleanup_expired(ttl_hours=settings.result_ttl_hours)
 
-    for prefix in ["depth", "depth_vis", "reconstructions", "floorplans", "pointclouds", "uploads"]:
-        try:
-            objects = store.list_objects(prefix=prefix)
-            for obj_key in objects:
-                # MinIO objects don't expose creation time via list easily,
-                # so we use the object key's embedded UUID timestamp as proxy.
-                # For a production system, we'd track creation times in Redis.
-                try:
-                    store.delete(obj_key)
-                    deleted += 1
-                except Exception:
-                    pass
-        except Exception:
-            logger.warning("Cleanup failed for prefix: %s", prefix, exc_info=True)
-
-    logger.info("Cleanup complete: deleted %d expired objects", deleted)
+    logger.info("Cleanup complete: deleted %d expired objects (TTL=%dh)", deleted, settings.result_ttl_hours)
     return {"status": "complete", "deleted": deleted}
