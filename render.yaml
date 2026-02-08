@@ -1,0 +1,41 @@
+# ============================================================
+# Render Blueprint — SpatialForge CPU Demo
+# ============================================================
+# Deploy: Connect this repo to Render via Dashboard → "New Blueprint Instance"
+# Docs:   https://docs.render.com/blueprint-spec
+# ============================================================
+
+services:
+  - type: web
+    name: spatialforge
+    runtime: docker
+    dockerfilePath: ./Dockerfile.cpu
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: DEVICE
+        value: cpu
+      - key: TORCH_DTYPE
+        value: float32
+      - key: API_KEY_SECRET
+        generateValue: true
+      - key: ADMIN_API_KEY
+        generateValue: true
+      - key: REDIS_URL
+        fromService:
+          name: spatialforge-redis
+          type: redis
+          property: connectionString
+      - key: ALLOWED_ORIGINS
+        value: '["*"]'
+      - key: RESEARCH_MODE
+        value: "false"
+      - key: WORKERS
+        value: "1"
+
+  - type: redis
+    name: spatialforge-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []

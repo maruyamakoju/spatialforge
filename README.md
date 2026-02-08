@@ -156,6 +156,12 @@ docker compose up -d
 docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
 ```
 
+## One-Click Deploy
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/maruyamakoju/spatialforge)
+
+Deploys the CPU demo (API + managed Redis) with auto-generated secrets. No GPU required.
+
 ## Models
 
 All production models are **Apache 2.0** licensed (safe for commercial use).
