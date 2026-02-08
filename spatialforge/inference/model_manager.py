@@ -33,49 +33,46 @@ class ModelInfo:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # ── Apache 2.0 (SAFE for commercial use) ─────────────────────
+# NOTE: repo names MUST end with "-hf" for transformers.pipeline() compatibility.
+# DA3 models (depth-anything-3 library) need separate integration — TODO.
 COMMERCIAL_MODELS: dict[str, ModelInfo] = {
-    # DA3 metric depth — THE primary production model
+    # Metric depth (meters) — THE primary production models
     "da3-metric-large": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Metric-Indoor-Large",
+        repo="depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf",
         license="apache-2.0",
         task="metric_depth",
-        description="DA3 Metric Large (indoor) — production default for /depth metric=true",
+        description="DA2 Metric Large (indoor) — production default for /depth metric=true",
     ),
     "da3-metric-large-outdoor": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Metric-Outdoor-Large",
+        repo="depth-anything/Depth-Anything-V2-Metric-Outdoor-Large-hf",
         license="apache-2.0",
         task="metric_depth",
-        description="DA3 Metric Large (outdoor) — for outdoor scenes",
+        description="DA2 Metric Large (outdoor) — for outdoor scenes",
     ),
-    # DA3 relative depth
+    # Relative depth
     "da3-base": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Base",
+        repo="depth-anything/Depth-Anything-V2-Base-hf",
         license="apache-2.0",
         task="relative_depth",
-        description="DA3 Base — fast relative depth, safe for production",
+        description="DA2 Base — fast relative depth, safe for production",
     ),
     "da3-small": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Small",
+        repo="depth-anything/Depth-Anything-V2-Small-hf",
         license="apache-2.0",
         task="relative_depth",
-        description="DA3 Small — fastest, edge/mobile use cases",
+        description="DA2 Small — fastest, edge/mobile use cases",
     ),
 }
 
 # ── CC-BY-NC 4.0 (RESEARCH ONLY — never ship to paying customers) ──
 RESEARCH_MODELS: dict[str, ModelInfo] = {
     "da3-large": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Large",
+        repo="depth-anything/Depth-Anything-V2-Large-hf",
         license="cc-by-nc-4.0",
         task="relative_depth",
-        description="DA3 Large — RESEARCH ONLY (CC-BY-NC)",
+        description="DA2 Large — RESEARCH ONLY (CC-BY-NC)",
     ),
-    "da3-giant": ModelInfo(
-        repo="depth-anything/Depth-Anything-V2-Giant",
-        license="cc-by-nc-4.0",
-        task="relative_depth",
-        description="DA3 Giant — RESEARCH ONLY (CC-BY-NC), highest quality",
-    ),
+    # Giant has no -hf version; omit until DA3 integration is ready
 }
 
 # Aliases for API compatibility (user-facing names → registry keys)
