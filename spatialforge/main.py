@@ -26,6 +26,7 @@ from .logging_config import RequestTracingMiddleware, setup_logging
 from .metrics import MetricsMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
 from .middleware.timeout import RequestTimeoutMiddleware
+from .middleware.webhook_rate_limiter import WebhookRateLimiterMiddleware
 from .models.responses import HealthResponse
 from .storage.object_store import ObjectStore
 
@@ -210,7 +211,10 @@ def create_app() -> FastAPI:
     # Request timeout for inference endpoints
     app.add_middleware(RequestTimeoutMiddleware, timeout_s=120)
 
-    # Rate limiter
+    # Webhook-specific rate limiter (DoS protection)
+    app.add_middleware(WebhookRateLimiterMiddleware, max_requests=100, window_seconds=60)
+
+    # API rate limiter
     app.add_middleware(RateLimiterMiddleware)
 
     # Prometheus metrics middleware

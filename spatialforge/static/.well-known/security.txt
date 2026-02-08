@@ -1,0 +1,40 @@
+Contact: security@spatialforge.example.com
+Contact: https://github.com/maruyamakoju/spatialforge/security/advisories/new
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en, ja
+Canonical: https://spatialforge-demo.fly.dev/.well-known/security.txt
+
+# Security Policy
+
+If you discover a security vulnerability in SpatialForge, please report it responsibly:
+
+1. **Do NOT** open a public GitHub issue for security vulnerabilities
+2. Email security@spatialforge.example.com or use GitHub Security Advisories
+3. Include: Description, reproduction steps, potential impact, suggested fix (if any)
+4. We aim to respond within 48 hours and provide a fix within 7 days for critical issues
+
+# Scope
+
+In scope:
+- API authentication bypass
+- Authorization issues (privilege escalation)
+- Code injection vulnerabilities
+- Data exposure or leakage
+- Denial of service attacks
+- Dependency vulnerabilities with active exploits
+
+Out of scope:
+- Social engineering attacks
+- Physical security
+- Issues in third-party dependencies without active exploits
+- Rate limiting bypasses (we have monitoring)
+
+# Safe Harbor
+
+We support responsible disclosure and will not pursue legal action against security researchers who:
+- Act in good faith
+- Avoid privacy violations, data destruction, and service disruption
+- Give us reasonable time to fix issues before public disclosure
+- Only use test accounts or your own API key for testing
+
+Thank you for helping keep SpatialForge secure!

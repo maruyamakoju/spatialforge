@@ -77,18 +77,38 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    if s.api_key_secret == _DEFAULT_SECRET:
-        logger.warning(
-            "API_KEY_SECRET is using the default value. "
-            "Set a strong random secret via API_KEY_SECRET env var."
-        )
-    if s.admin_api_key == _DEFAULT_ADMIN_KEY:
-        logger.warning(
-            "ADMIN_API_KEY is using the default value. "
-            "Set a unique admin key via ADMIN_API_KEY env var."
-        )
+
+    # SECURITY: Enforce non-default secrets in production
+    if not s.demo_mode:
+        if s.api_key_secret == _DEFAULT_SECRET:
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: API_KEY_SECRET is using the default value. "
+                "This allows attackers to forge valid API keys. "
+                "Set a strong random secret via API_KEY_SECRET environment variable. "
+                "Example: export API_KEY_SECRET=$(openssl rand -base64 48)"
+            )
+        if s.admin_api_key == _DEFAULT_ADMIN_KEY:
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: ADMIN_API_KEY is using the default value. "
+                "Set a unique admin key via ADMIN_API_KEY environment variable. "
+                "Example: export ADMIN_API_KEY=sf_$(openssl rand -hex 32)"
+            )
+        if s.minio_access_key == "minioadmin" and s.minio_secret_key == "minioadmin":
+            logger.warning(
+                "SECURITY WARNING: MinIO using default credentials (minioadmin/minioadmin). "
+                "This is insecure for production. Set MINIO_ACCESS_KEY and MINIO_SECRET_KEY."
+            )
+    else:
+        # Demo mode warnings (not errors)
+        if s.api_key_secret == _DEFAULT_SECRET:
+            logger.warning("Demo mode: API_KEY_SECRET using default value")
+        if s.admin_api_key == _DEFAULT_ADMIN_KEY:
+            logger.warning("Demo mode: ADMIN_API_KEY using default value")
+
     if len(s.api_key_secret) < 32:
-        # Generate a secure secret at runtime if too short
-        s.api_key_secret = secrets.token_urlsafe(48)
-        logger.warning("API_KEY_SECRET too short — generated a random runtime secret.")
+        raise ValueError(
+            "API_KEY_SECRET must be at least 32 characters. "
+            f"Current length: {len(s.api_key_secret)}"
+        )
+
     return s
