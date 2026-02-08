@@ -160,10 +160,18 @@ async def get_current_user(
         )
 
     if record.monthly_calls >= record.monthly_limit:
+        from ..metrics import RATE_LIMIT_HITS
+
+        RATE_LIMIT_HITS.labels(plan=record.plan.value).inc()
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Monthly limit reached ({record.monthly_limit} calls). Upgrade your plan.",
         )
+
+    # Track API usage by plan tier
+    from ..metrics import API_KEY_USAGE
+
+    API_KEY_USAGE.labels(plan=record.plan.value).inc()
 
     await manager.increment_usage(api_key)
     return record

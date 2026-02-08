@@ -79,6 +79,19 @@ API_KEY_USAGE = Counter(
     labelnames=["plan"],
 )
 
+FILE_UPLOAD_SIZE = Histogram(
+    "spatialforge_upload_size_bytes",
+    "Size of uploaded files in bytes",
+    labelnames=["endpoint"],
+    buckets=(1024, 10240, 102400, 524288, 1048576, 5242880, 10485760, 20971520),
+)
+
+RATE_LIMIT_HITS = Counter(
+    "spatialforge_rate_limit_hits_total",
+    "Total number of rate limit rejections",
+    labelnames=["plan"],
+)
+
 
 # ── Middleware ────────────────────────────────────────────────
 
@@ -101,6 +114,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         REQUEST_LATENCY.labels(method=method, endpoint=endpoint, status=status).observe(duration)
         REQUEST_COUNT.labels(method=method, endpoint=endpoint, status=status).inc()
+
+        # Track errors (4xx client errors and 5xx server errors)
+        status_code = response.status_code
+        if status_code >= 400:
+            error_type = "client" if status_code < 500 else "server"
+            ERROR_COUNT.labels(endpoint=endpoint, error_type=error_type).inc()
 
         return response
 
