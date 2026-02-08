@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SpatialForge Demo — Depth Estimation</title>
+  <title>SpatialForge Demo — Depth Estimation & Measurement</title>
   <style>
     :root {
       --bg: #0a0a0f;
@@ -15,6 +15,7 @@
       --accent-bright: #818cf8;
       --green: #34d399;
       --orange: #fb923c;
+      --red: #ef4444;
       --radius: 12px;
     }
 
@@ -57,6 +58,30 @@
 
     .subtitle { color: var(--muted); margin-bottom: 2rem; }
 
+    /* ── Tabs ─────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent-bright); border-bottom-color: var(--accent-bright); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     /* ── Controls ─────────────────── */
     .controls {
       display: flex;
@@ -69,7 +94,7 @@
     .control-group { display: flex; flex-direction: column; gap: 0.25rem; }
     .control-group label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-    select {
+    select, .btn {
       background: var(--surface);
       color: var(--text);
       border: 1px solid var(--border);
@@ -78,6 +103,10 @@
       font-size: 0.9rem;
       cursor: pointer;
     }
+
+    .btn:hover { border-color: var(--accent); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .btn-primary:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
 
     /* ── Drop Zone ─────────────────── */
     .drop-zone {
@@ -93,7 +122,7 @@
 
     .drop-zone:hover, .drop-zone.dragover {
       border-color: var(--accent);
-      background: var(--accent-glow, rgba(99, 102, 241, 0.08));
+      background: rgba(99, 102, 241, 0.08);
     }
 
     .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.5; }
@@ -113,6 +142,7 @@
 
     @media (max-width: 768px) {
       .image-grid { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; align-items: stretch; }
     }
 
     .image-card {
@@ -130,9 +160,12 @@
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .image-card img {
+    .image-card img, .image-card canvas {
       width: 100%;
       display: block;
       background: #000;
@@ -161,19 +194,13 @@
       gap: 1rem;
     }
 
-    .meta-item { }
     .meta-label { font-size: 0.75rem; color: var(--muted); }
     .meta-value { font-size: 1.1rem; font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace; }
     .meta-value.green { color: var(--green); }
     .meta-value.orange { color: var(--orange); }
 
     /* ── Loading ─────────────────── */
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 3rem;
-    }
-
+    .loading { display: none; text-align: center; padding: 3rem; }
     .loading.visible { display: block; }
 
     .spinner {
@@ -190,6 +217,7 @@
 
     .loading-text { color: var(--muted); }
     .loading-hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7; }
+    .loading-timer { color: var(--accent-bright); font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 0.5rem; }
 
     /* ── Error ─────────────────── */
     .error {
@@ -202,7 +230,70 @@
       margin-bottom: 1.5rem;
     }
 
-    .error.visible { display: block; }
+    .error.visible { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .error-text { flex: 1; }
+
+    .retry-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .retry-btn:hover { background: rgba(239, 68, 68, 0.3); }
+
+    /* ── Measure mode ─────────────────── */
+    .measure-instructions {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: var(--accent-bright);
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .measure-result {
+      background: var(--surface);
+      border: 1px solid var(--green);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .measure-distance {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--green);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .measure-detail { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+
+    .point-marker {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    }
+
+    .point-marker.p1 { background: var(--accent); }
+    .point-marker.p2 { background: var(--green); }
+
+    .canvas-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
 
     /* ── Footer ─────────────────── */
     .footer {
@@ -213,7 +304,6 @@
       border-top: 1px solid var(--border);
       margin-top: 3rem;
     }
-
     .footer a { color: var(--accent-bright); text-decoration: none; }
 
     input[type="file"] { display: none; }
@@ -225,90 +315,159 @@
   <a href="index.html" class="logo">SpatialForge</a>
   <div class="nav-links">
     <a href="index.html">Home</a>
-    <a href="https://spatialforge-demo.fly.dev/docs" target="_blank">API Docs</a>
+    <a href="docs.html">Docs</a>
+    <a href="pricing.html">Pricing</a>
     <a href="https://github.com/maruyamakoju/spatialforge" target="_blank">GitHub</a>
   </div>
 </nav>
 
 <div class="container" style="margin-top: 1rem;">
-  <h1>Depth Estimation Demo</h1>
-  <p class="subtitle">Upload any image to generate a depth map using Depth Anything V2. No API key required.</p>
+  <h1>Interactive Demo</h1>
+  <p class="subtitle">Upload any image to try depth estimation and distance measurement. No API key required.</p>
 
-  <div class="controls">
-    <div class="control-group">
-      <label>Model</label>
-      <select id="model">
-        <option value="small">Small (fastest)</option>
-        <option value="base">Base (balanced)</option>
-        <option value="large" selected>Large (best quality)</option>
-      </select>
+  <!-- Mode Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="depth">Depth Estimation</div>
+    <div class="tab" data-tab="measure">Distance Measurement</div>
+  </div>
+
+  <!-- Depth Tab -->
+  <div class="tab-content active" id="depthTab">
+    <div class="controls">
+      <div class="control-group">
+        <label>Model</label>
+        <select id="model">
+          <option value="small">Small (fastest)</option>
+          <option value="base">Base (balanced)</option>
+          <option value="large" selected>Large (best quality)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>API Endpoint</label>
+        <select id="endpoint">
+          <option value="https://spatialforge-demo.fly.dev">Cloud (Fly.io)</option>
+          <option value="http://localhost:8000">Local (localhost:8000)</option>
+        </select>
+      </div>
     </div>
-    <div class="control-group">
-      <label>API Endpoint</label>
-      <select id="endpoint">
-        <option value="https://spatialforge-demo.fly.dev">Cloud (Fly.io)</option>
-        <option value="http://localhost:8000">Local (localhost:8000)</option>
-      </select>
+
+    <div class="drop-zone" id="depthDropZone">
+      <div class="drop-zone-icon">&#x1F4F7;</div>
+      <div class="drop-zone-text">
+        <strong>Drop an image here</strong> or click to browse<br>
+        <span style="font-size: 0.8rem;">JPEG, PNG, WebP up to 20MB</span>
+      </div>
+      <input type="file" id="depthFileInput" accept="image/jpeg,image/png,image/webp">
+    </div>
+
+    <div class="error" id="depthError">
+      <span class="error-text"></span>
+      <button class="retry-btn" id="depthRetry">Retry</button>
+    </div>
+
+    <div class="loading" id="depthLoading">
+      <div class="spinner"></div>
+      <div class="loading-text">Estimating depth...</div>
+      <div class="loading-timer" id="depthTimer">0.0s</div>
+      <div class="loading-hint">First request downloads the model (~30s). Subsequent requests are faster.</div>
+    </div>
+
+    <div class="results" id="depthResults">
+      <div class="image-grid">
+        <div class="image-card">
+          <div class="image-card-header">Original Image</div>
+          <img id="originalImg" alt="Original">
+        </div>
+        <div class="image-card">
+          <div class="image-card-header">
+            <span>Depth Map (colorized)</span>
+            <button class="btn" id="downloadDepth" style="padding:0.25rem 0.75rem;font-size:0.8rem;">Download</button>
+          </div>
+          <img id="depthImg" alt="Depth map">
+        </div>
+      </div>
+
+      <div class="metadata">
+        <h3>Depth Metadata</h3>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Resolution</div>
+            <div class="meta-value" id="metaRes">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Min Depth</div>
+            <div class="meta-value green" id="metaMin">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Max Depth</div>
+            <div class="meta-value green" id="metaMax">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Focal Length</div>
+            <div class="meta-value" id="metaFocal">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Confidence</div>
+            <div class="meta-value orange" id="metaConf">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Processing Time</div>
+            <div class="meta-value" id="metaTime">-</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="drop-zone" id="dropZone">
-    <div class="drop-zone-icon">&#x1F4F7;</div>
-    <div class="drop-zone-text">
-      <strong>Drop an image here</strong> or click to browse<br>
-      <span style="font-size: 0.8rem;">JPEG, PNG, WebP up to 20MB</span>
+  <!-- Measure Tab -->
+  <div class="tab-content" id="measureTab">
+    <div class="controls">
+      <div class="control-group">
+        <label>API Endpoint</label>
+        <select id="measureEndpoint">
+          <option value="https://spatialforge-demo.fly.dev">Cloud (Fly.io)</option>
+          <option value="http://localhost:8000">Local (localhost:8000)</option>
+        </select>
+      </div>
     </div>
-    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
-  </div>
 
-  <div class="error" id="error"></div>
+    <div class="drop-zone" id="measureDropZone">
+      <div class="drop-zone-icon">&#x1F4CF;</div>
+      <div class="drop-zone-text">
+        <strong>Drop an image here</strong> or click to browse<br>
+        <span style="font-size: 0.8rem;">Then click two points to measure the distance between them</span>
+      </div>
+      <input type="file" id="measureFileInput" accept="image/jpeg,image/png,image/webp">
+    </div>
 
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <div class="loading-text">Estimating depth...</div>
-    <div class="loading-hint">First request downloads the model (~30s). Subsequent requests are faster.</div>
-  </div>
+    <div class="measure-instructions" id="measureInstructions" style="display:none;">
+      Click <strong>two points</strong> on the image to measure the distance between them.
+      <button class="btn" id="measureReset" style="margin-left:1rem;padding:0.25rem 0.75rem;font-size:0.8rem;">Reset Points</button>
+    </div>
 
-  <div class="results" id="results">
-    <div class="image-grid">
+    <div class="error" id="measureError">
+      <span class="error-text"></span>
+      <button class="retry-btn" id="measureRetry">Retry</button>
+    </div>
+
+    <div class="loading" id="measureLoading">
+      <div class="spinner"></div>
+      <div class="loading-text">Measuring distance...</div>
+      <div class="loading-timer" id="measureTimer">0.0s</div>
+    </div>
+
+    <div id="measureImageContainer" style="display:none;">
       <div class="image-card">
-        <div class="image-card-header">Original Image</div>
-        <img id="originalImg" alt="Original">
-      </div>
-      <div class="image-card">
-        <div class="image-card-header">Depth Map (colorized)</div>
-        <img id="depthImg" alt="Depth map">
+        <div class="image-card-header">Click two points to measure</div>
+        <div class="canvas-wrapper" id="canvasWrapper">
+          <canvas id="measureCanvas" style="cursor:crosshair;"></canvas>
+        </div>
       </div>
     </div>
 
-    <div class="metadata">
-      <h3>Depth Metadata</h3>
-      <div class="meta-grid">
-        <div class="meta-item">
-          <div class="meta-label">Resolution</div>
-          <div class="meta-value" id="metaRes">-</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Min Depth</div>
-          <div class="meta-value green" id="metaMin">-</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Max Depth</div>
-          <div class="meta-value green" id="metaMax">-</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Focal Length</div>
-          <div class="meta-value" id="metaFocal">-</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Confidence</div>
-          <div class="meta-value orange" id="metaConf">-</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Processing Time</div>
-          <div class="meta-value" id="metaTime">-</div>
-        </div>
-      </div>
+    <div class="measure-result" id="measureResult" style="display:none;">
+      <div class="measure-distance" id="measureDistanceValue">-</div>
+      <div class="measure-detail" id="measureDetails">-</div>
     </div>
   </div>
 </div>
@@ -318,35 +477,84 @@
 </div>
 
 <script>
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const loading = document.getElementById('loading');
-const results = document.getElementById('results');
-const errorDiv = document.getElementById('error');
-
-// Drop zone events
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) processImage(file);
-});
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files[0]) processImage(e.target.files[0]);
+// ── Tab switching ──────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+  });
 });
 
-async function processImage(file) {
-  // Reset UI
-  errorDiv.classList.remove('visible');
-  results.classList.remove('visible');
-  loading.classList.add('visible');
+// ── Timer utility ──────────────────────────────────────
+function startTimer(el) {
+  const start = Date.now();
+  const interval = setInterval(() => {
+    el.textContent = ((Date.now() - start) / 1000).toFixed(1) + 's';
+  }, 100);
+  return () => clearInterval(interval);
+}
 
-  // Show original
-  const originalUrl = URL.createObjectURL(file);
-  document.getElementById('originalImg').src = originalUrl;
+// ── Drop zone utility ──────────────────────────────────
+function setupDropZone(zone, input, handler) {
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handler(file);
+  });
+  input.addEventListener('change', e => {
+    if (e.target.files[0]) handler(e.target.files[0]);
+  });
+}
+
+function showError(errorDiv, message) {
+  errorDiv.querySelector('.error-text').textContent = 'Error: ' + message;
+  errorDiv.classList.add('visible');
+}
+
+// ══════════════════════════════════════════════════════
+// DEPTH TAB
+// ══════════════════════════════════════════════════════
+const depthLoading = document.getElementById('depthLoading');
+const depthResults = document.getElementById('depthResults');
+const depthError = document.getElementById('depthError');
+let lastDepthFile = null;
+let depthColormapUrl = null;
+
+setupDropZone(
+  document.getElementById('depthDropZone'),
+  document.getElementById('depthFileInput'),
+  processDepth
+);
+
+document.getElementById('depthRetry').addEventListener('click', () => {
+  if (lastDepthFile) processDepth(lastDepthFile);
+});
+
+document.getElementById('downloadDepth').addEventListener('click', () => {
+  if (!depthColormapUrl) return;
+  const a = document.createElement('a');
+  a.href = depthColormapUrl;
+  a.download = 'depth_map.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+async function processDepth(file) {
+  lastDepthFile = file;
+  depthError.classList.remove('visible');
+  depthResults.classList.remove('visible');
+  depthLoading.classList.add('visible');
+
+  const stopTimer = startTimer(document.getElementById('depthTimer'));
+
+  document.getElementById('originalImg').src = URL.createObjectURL(file);
 
   const endpoint = document.getElementById('endpoint').value;
   const model = document.getElementById('model').value;
@@ -357,10 +565,7 @@ async function processImage(file) {
   formData.append('metric', 'true');
 
   try {
-    const resp = await fetch(`${endpoint}/v1/depth`, {
-      method: 'POST',
-      body: formData,
-    });
+    const resp = await fetch(`${endpoint}/v1/depth`, { method: 'POST', body: formData });
 
     if (!resp.ok) {
       let detail = `HTTP ${resp.status}`;
@@ -370,10 +575,9 @@ async function processImage(file) {
 
     const data = await resp.json();
 
-    // Show depth map
+    depthColormapUrl = data.colormap_url;
     document.getElementById('depthImg').src = data.colormap_url;
 
-    // Show metadata
     const m = data.metadata;
     document.getElementById('metaRes').textContent = `${m.width} x ${m.height}`;
     document.getElementById('metaMin').textContent = `${m.min_depth_m.toFixed(2)}m`;
@@ -382,12 +586,164 @@ async function processImage(file) {
     document.getElementById('metaConf').textContent = `${(m.confidence_mean * 100).toFixed(1)}%`;
     document.getElementById('metaTime').textContent = `${data.processing_time_ms.toFixed(0)}ms`;
 
-    loading.classList.remove('visible');
-    results.classList.add('visible');
+    stopTimer();
+    depthLoading.classList.remove('visible');
+    depthResults.classList.add('visible');
   } catch (err) {
-    loading.classList.remove('visible');
-    errorDiv.textContent = `Error: ${err.message}`;
-    errorDiv.classList.add('visible');
+    stopTimer();
+    depthLoading.classList.remove('visible');
+    showError(depthError, err.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// MEASURE TAB
+// ══════════════════════════════════════════════════════
+const measureLoading = document.getElementById('measureLoading');
+const measureError = document.getElementById('measureError');
+const measureCanvas = document.getElementById('measureCanvas');
+const ctx = measureCanvas.getContext('2d');
+let measureImage = null;
+let measureFile = null;
+let measurePoints = [];
+
+setupDropZone(
+  document.getElementById('measureDropZone'),
+  document.getElementById('measureFileInput'),
+  loadMeasureImage
+);
+
+document.getElementById('measureRetry').addEventListener('click', () => {
+  if (measureFile && measurePoints.length === 2) runMeasure();
+});
+
+document.getElementById('measureReset').addEventListener('click', resetMeasurePoints);
+
+function loadMeasureImage(file) {
+  measureFile = file;
+  measurePoints = [];
+  measureError.classList.remove('visible');
+  document.getElementById('measureResult').style.display = 'none';
+
+  const img = new Image();
+  img.onload = () => {
+    measureImage = img;
+    measureCanvas.width = img.width;
+    measureCanvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    document.getElementById('measureDropZone').style.display = 'none';
+    document.getElementById('measureImageContainer').style.display = 'block';
+    document.getElementById('measureInstructions').style.display = 'block';
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+measureCanvas.addEventListener('click', e => {
+  if (!measureImage || measurePoints.length >= 2) return;
+
+  const rect = measureCanvas.getBoundingClientRect();
+  const scaleX = measureCanvas.width / rect.width;
+  const scaleY = measureCanvas.height / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+
+  measurePoints.push({ x, y });
+  drawMeasureOverlay();
+
+  if (measurePoints.length === 2) {
+    runMeasure();
+  }
+});
+
+function drawMeasureOverlay() {
+  ctx.drawImage(measureImage, 0, 0);
+  const colors = ['#6366f1', '#34d399'];
+
+  measurePoints.forEach((pt, i) => {
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`P${i + 1}`, pt.x + 12, pt.y + 5);
+  });
+
+  if (measurePoints.length === 2) {
+    ctx.beginPath();
+    ctx.moveTo(measurePoints[0].x, measurePoints[0].y);
+    ctx.lineTo(measurePoints[1].x, measurePoints[1].y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function resetMeasurePoints() {
+  measurePoints = [];
+  document.getElementById('measureResult').style.display = 'none';
+  measureError.classList.remove('visible');
+  if (measureImage) {
+    ctx.drawImage(measureImage, 0, 0);
+  }
+}
+
+async function runMeasure() {
+  measureError.classList.remove('visible');
+  measureLoading.classList.add('visible');
+  document.getElementById('measureResult').style.display = 'none';
+
+  const stopTimer = startTimer(document.getElementById('measureTimer'));
+  const endpoint = document.getElementById('measureEndpoint').value;
+
+  const formData = new FormData();
+  formData.append('image', measureFile);
+  formData.append('points', JSON.stringify([
+    { x: measurePoints[0].x, y: measurePoints[0].y },
+    { x: measurePoints[1].x, y: measurePoints[1].y }
+  ]));
+
+  try {
+    const resp = await fetch(`${endpoint}/v1/measure`, { method: 'POST', body: formData });
+
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { const j = await resp.json(); detail = j.detail || detail; } catch {}
+      throw new Error(detail);
+    }
+
+    const data = await resp.json();
+
+    const distM = data.distance_m;
+    let display, unit;
+    if (distM < 0.01) {
+      display = (distM * 1000).toFixed(1); unit = 'mm';
+    } else if (distM < 1) {
+      display = (distM * 100).toFixed(1); unit = 'cm';
+    } else {
+      display = distM.toFixed(2); unit = 'm';
+    }
+
+    document.getElementById('measureDistanceValue').textContent = `${display} ${unit}`;
+    document.getElementById('measureDetails').textContent =
+      `Confidence: ${(data.confidence * 100).toFixed(0)}% | ` +
+      `Method: ${data.calibration_method} | ` +
+      `Processing: ${data.processing_time_ms.toFixed(0)}ms`;
+
+    stopTimer();
+    measureLoading.classList.remove('visible');
+    document.getElementById('measureResult').style.display = 'block';
+  } catch (err) {
+    stopTimer();
+    measureLoading.classList.remove('visible');
+    showError(measureError, err.message);
   }
 }
 </script>
