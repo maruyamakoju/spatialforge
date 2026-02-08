@@ -252,7 +252,7 @@ Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
 ## Testing
 
 ```bash
-# Server tests (26 tests)
+# Server tests (44 tests)
 pytest tests/ -v
 
 # SDK tests (49 tests)
@@ -262,7 +262,7 @@ cd sdk && pytest tests/ -v
 ruff check --config pyproject.toml spatialforge/ tests/
 ```
 
-75 total tests covering API endpoints, billing, depth processing, video handling, SDK sync/async clients, and data models.
+93 total tests covering API endpoints, billing, depth processing, video handling, middleware (security headers, timeouts), input validation, SDK sync/async clients, and data models.
 
 ## Project Structure
 
@@ -272,7 +272,7 @@ spatialforge/
   auth/            # API key management + sliding window rate limiter
   billing/         # Stripe integration (checkout, webhooks, subscription sync)
   inference/       # Depth, pose, measure, reconstruct engines
-  middleware/      # Security headers middleware
+  middleware/      # Security headers + request timeout middleware
   models/          # Pydantic request/response models with OpenAPI annotations
   storage/         # MinIO object store with TTL tracking
   utils/           # Image and video processing utilities
@@ -283,7 +283,7 @@ spatialforge/
 sdk/               # Python SDK (spatialforge-client) — sync, async, CLI
 site/              # Landing page, docs, demo, pricing
 infra/             # Redis infrastructure (Fly.io deployment)
-tests/             # pytest test suite (26 server + 49 SDK)
+tests/             # pytest test suite (44 server + 49 SDK)
 monitoring/        # Prometheus + Grafana configs
 .github/workflows/ # CI/CD (test, lint, docker, deploy, SDK publish)
 ```

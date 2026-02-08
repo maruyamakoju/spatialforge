@@ -45,10 +45,14 @@ RUN pip install --no-cache-dir ".[dev]" 2>/dev/null || \
 COPY . .
 RUN pip install --no-cache-dir -e .
 
-# Create directories
-RUN mkdir -p /app/models /app/uploads /app/results
+# Create non-root user and directories
+RUN groupadd -r spatialforge && useradd -r -g spatialforge spatialforge && \
+    mkdir -p /app/models /app/uploads /app/results && \
+    chown -R spatialforge:spatialforge /app
 
 EXPOSE 8000
+
+USER spatialforge
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \

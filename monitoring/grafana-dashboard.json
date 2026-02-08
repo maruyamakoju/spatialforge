@@ -162,6 +162,34 @@
           "instant": true
         }
       ]
+    },
+    {
+      "title": "Rate Limit Rejections",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [
+        {
+          "expr": "rate(spatialforge_rate_limit_hits_total[5m])",
+          "legendFormat": "{{plan}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "hits/s" }
+      }
+    },
+    {
+      "title": "Upload File Sizes (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(spatialforge_upload_size_bytes_bucket[5m]))",
+          "legendFormat": "{{endpoint}} p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
     }
   ],
   "schemaVersion": 39,

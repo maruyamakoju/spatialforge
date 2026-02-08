@@ -36,8 +36,10 @@ RUN pip install --no-cache-dir \
 COPY . .
 RUN pip install --no-cache-dir -e .
 
-# Create directories
-RUN mkdir -p /app/models /app/uploads /app/results
+# Create non-root user and directories
+RUN groupadd -r spatialforge && useradd -r -g spatialforge spatialforge && \
+    mkdir -p /app/models /app/uploads /app/results && \
+    chown -R spatialforge:spatialforge /app
 
 # Force CPU mode
 ENV DEVICE=cpu \
@@ -45,7 +47,10 @@ ENV DEVICE=cpu \
 
 EXPOSE 8000
 
+USER spatialforge
+
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD uvicorn spatialforge.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Use exec form for proper signal handling (SIGTERM)
+CMD ["sh", "-c", "uvicorn spatialforge.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
