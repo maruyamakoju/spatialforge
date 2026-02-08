@@ -74,9 +74,8 @@ def reconstruct_task(
 
         # Download video from object store
         video_bytes = store.download_bytes(video_object_key)
-        tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-        tmp_video.write(video_bytes)
-        tmp_video.close()
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
+            tmp_video.write(video_bytes)
 
         try:
             self.update_state(state="PROCESSING", meta={"step": "extracting_keyframes"})
@@ -157,9 +156,8 @@ def floorplan_task(
         mm = _get_model_manager()
 
         video_bytes = store.download_bytes(video_object_key)
-        tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-        tmp_video.write(video_bytes)
-        tmp_video.close()
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
+            tmp_video.write(video_bytes)
 
         try:
             self.update_state(state="PROCESSING", meta={"step": "processing"})
@@ -239,9 +237,8 @@ def segment_3d_task(
         mm = _get_model_manager()
 
         video_bytes = store.download_bytes(video_object_key)
-        tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-        tmp_video.write(video_bytes)
-        tmp_video.close()
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
+            tmp_video.write(video_bytes)
 
         try:
             from ..utils.video import extract_keyframes, validate_video

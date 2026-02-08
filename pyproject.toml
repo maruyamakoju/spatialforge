@@ -65,6 +65,14 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+ignore = [
+    "B008",    # Depends/File/Form in function defaults — standard FastAPI pattern
+    "N806",    # Uppercase variable names — acceptable for math (X, Y, Z, R, E)
+    "N802",    # Lowercase function name — sometimes matches external APIs
+    "UP035",   # Import from typing vs collections.abc — both valid in 3.11
+    "SIM102",  # Nested if — keep for readability in complex EXIF parsing
+    "SIM108",  # Ternary operator — keep if/else for clarity in multi-line logic
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

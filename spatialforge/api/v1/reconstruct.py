@@ -43,7 +43,7 @@ async def start_reconstruction(
         import os
 
         os.unlink(path)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from None
 
     # Upload to object store for worker access
     obj_store = request.app.state.object_store

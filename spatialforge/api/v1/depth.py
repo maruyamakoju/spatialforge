@@ -68,9 +68,10 @@ async def estimate_depth(
     elif output_format == DepthOutputFormat.NPY:
         encoded = depth_to_npy(result.depth_map)
         ext, ctype = "npy", "application/octet-stream"
-    else:
+    else:  # EXR or unknown — fallback to NPY
         encoded = depth_to_npy(result.depth_map)
         ext, ctype = "npy", "application/octet-stream"
+        # TODO: Add native EXR support via OpenEXR library
 
     # Colorized visualization (always generated)
     colormap_bytes = depth_to_colormap(result.depth_map)
@@ -163,7 +164,7 @@ async def _load_and_validate(image: UploadFile):
     try:
         rgb = load_image_rgb(content)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from None
 
     rgb = resize_if_needed(rgb, max_size=4096)
     return content, rgb

@@ -54,9 +54,10 @@ def extract_focal_from_exif(image_bytes: bytes) -> float | None:
     Most phone cameras have ~4.2mm focal length and ~6.17mm sensor width (1/2.55").
     """
     try:
+        import io
+
         from PIL import Image as PILImage
         from PIL.ExifTags import TAGS
-        import io
 
         img = PILImage.open(io.BytesIO(image_bytes))
         exif_data = img._getexif()

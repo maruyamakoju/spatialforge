@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+import secrets
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_SECRET = "change-me-to-a-random-secret-key-at-least-32-chars"
+_DEFAULT_ADMIN_KEY = "sf_admin_change_me"
 
 
 class Settings(BaseSettings):
@@ -21,8 +28,8 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # Auth
-    api_key_secret: str = "change-me-to-a-random-secret-key-at-least-32-chars"
-    admin_api_key: str = "sf_admin_change_me"
+    api_key_secret: str = _DEFAULT_SECRET
+    admin_api_key: str = _DEFAULT_ADMIN_KEY
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -54,4 +61,19 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.api_key_secret == _DEFAULT_SECRET:
+        logger.warning(
+            "API_KEY_SECRET is using the default value. "
+            "Set a strong random secret via API_KEY_SECRET env var."
+        )
+    if s.admin_api_key == _DEFAULT_ADMIN_KEY:
+        logger.warning(
+            "ADMIN_API_KEY is using the default value. "
+            "Set a unique admin key via ADMIN_API_KEY env var."
+        )
+    if len(s.api_key_secret) < 32:
+        # Generate a secure secret at runtime if too short
+        s.api_key_secret = secrets.token_urlsafe(48)
+        logger.warning("API_KEY_SECRET too short — generated a random runtime secret.")
+    return s

@@ -17,7 +17,7 @@ def _create_test_video(path: str, duration_s: float = 3.0, fps: float = 30.0) ->
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(path, fourcc, fps, (w, h))
     n_frames = int(duration_s * fps)
-    for i in range(n_frames):
+    for _ in range(n_frames):
         frame = np.random.randint(0, 255, (h, w, 3), dtype=np.uint8)
         writer.write(frame)
     writer.release()

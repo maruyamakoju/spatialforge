@@ -86,7 +86,6 @@ MODEL_ALIASES: dict[str, str] = {
     "metric-outdoor": "da3-metric-large-outdoor",
     # Research aliases (only work with research_mode=true)
     "research-large": "da3-large",
-    "research-giant": "da3-giant",
 }
 
 

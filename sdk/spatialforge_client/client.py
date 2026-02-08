@@ -89,7 +89,7 @@ class Client:
     def depth(
         self,
         image: str | Path | bytes,
-        model: str = "giant",
+        model: str = "large",
         output_format: str = "png16",
         metric: bool = True,
     ) -> DepthResult:
@@ -209,9 +209,9 @@ class Client:
             for i, img in enumerate(images):
                 if isinstance(img, (str, Path)):
                     img_path = Path(img)
-                    files[f"images"] = (img_path.name, img_path.read_bytes())
+                    files[f"images_{i}"] = (img_path.name, img_path.read_bytes())
                 else:
-                    files[f"images"] = (f"image_{i}.jpg", img)
+                    files[f"images_{i}"] = (f"image_{i}.jpg", img)
         else:
             raise ValueError("Provide either video or images")
 

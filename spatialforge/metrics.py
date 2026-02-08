@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 # ── Metrics definitions ──────────────────────────────────────
 
 APP_INFO = Info("spatialforge", "SpatialForge application info")
-APP_INFO.info({"version": "0.1.0"})
+APP_INFO.info({"version": "0.1.0"})  # Static init; updated at app startup
 
 REQUEST_LATENCY = Histogram(
     "spatialforge_request_duration_seconds",
@@ -112,7 +112,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         """
         parts = path.strip("/").split("/")
         normalized = []
-        for i, part in enumerate(parts):
+        for _, part in enumerate(parts):
             # Detect UUID-like or hash-like segments
             if len(part) > 8 and not part.startswith("v") and any(c.isdigit() for c in part):
                 normalized.append("{id}")

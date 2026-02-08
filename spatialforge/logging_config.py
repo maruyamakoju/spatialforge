@@ -85,13 +85,15 @@ class RequestTracingMiddleware(BaseHTTPMiddleware):
         logger = structlog.get_logger()
         logger.info("request_started", client=request.client.host if request.client else "unknown")
 
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
+        try:
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
 
-        logger.info(
-            "request_completed",
-            status=response.status_code,
-        )
+            logger.info(
+                "request_completed",
+                status=response.status_code,
+            )
 
-        structlog.contextvars.clear_contextvars()
-        return response
+            return response
+        finally:
+            structlog.contextvars.clear_contextvars()

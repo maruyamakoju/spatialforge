@@ -50,7 +50,9 @@ def test_depth_to_colormap():
 def test_load_image_rgb():
     """Test image loading from bytes."""
     import io
+
     from PIL import Image
+
     from spatialforge.utils.image import load_image_rgb
 
     # Create a test image

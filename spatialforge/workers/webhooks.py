@@ -66,7 +66,7 @@ def send_webhook(
             )
         except httpx.TimeoutException:
             logger.warning("Webhook timeout: %s (attempt %d/%d)", url, attempt + 1, retries)
-        except Exception as e:
+        except (httpx.HTTPError, OSError, ValueError) as e:
             logger.warning("Webhook error: %s — %s (attempt %d/%d)", url, e, attempt + 1, retries)
 
         # Exponential backoff

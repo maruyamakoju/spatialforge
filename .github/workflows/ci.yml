@@ -47,8 +47,8 @@ jobs:
       - name: Install ruff
         run: pip install ruff
 
-      - name: Check formatting
-        run: ruff check spatialforge/ tests/ --select E,F,W
+      - name: Lint check
+        run: ruff check spatialforge/ tests/
 
   docker:
     runs-on: ubuntu-latest

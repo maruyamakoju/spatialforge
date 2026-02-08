@@ -165,7 +165,7 @@ class ReconstructEngine:
         all_points = []
         all_colors = []
 
-        for i, (frame, depth, pose) in enumerate(zip(frames, depth_maps, poses)):
+        for _, (frame, depth, pose) in enumerate(zip(frames, depth_maps, poses, strict=False)):
             h, w = frame.shape[:2]
             focal = pose.fx
             cx, cy = pose.cx, pose.cy

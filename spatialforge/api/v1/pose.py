@@ -51,7 +51,7 @@ async def estimate_pose(
                 rgb = load_image_rgb(data)
                 frames.append(rgb)
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
+                raise HTTPException(status_code=400, detail=f"Invalid image: {e}") from None
     else:
         raise HTTPException(
             status_code=400,

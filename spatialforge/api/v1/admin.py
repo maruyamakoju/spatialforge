@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from ... import __version__
 from ...auth.api_keys import APIKeyRecord, Plan, get_current_user
 
 router = APIRouter()
@@ -23,10 +24,16 @@ async def create_api_key(
     admin: APIKeyRecord = Depends(_require_admin),
 ):
     """Create a new API key for a user."""
+    if not owner or len(owner) > 255:
+        raise HTTPException(status_code=400, detail="Owner must be 1-255 characters")
+
     try:
         plan_enum = Plan(plan)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid plan: {plan}. Use: {[p.value for p in Plan]}")
+        raise HTTPException(status_code=400, detail=f"Invalid plan: {plan}. Use: {[p.value for p in Plan]}") from None
+
+    if plan_enum == Plan.ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot create admin keys via API")
 
     manager = request.app.state.key_manager
     raw_key = await manager.create_key(owner=owner, plan=plan_enum)
@@ -51,7 +58,7 @@ async def system_status(
     import torch
 
     return {
-        "version": "0.1.0",
+        "version": __version__,
         "gpu": gpu_info,
         "loaded_models": mm.loaded_models,
         "torch_version": torch.__version__,

@@ -36,7 +36,7 @@ async def measure_distance(
         p1 = (float(points_data[0]["x"]), float(points_data[0]["y"]))
         p2 = (float(points_data[1]["x"]), float(points_data[1]["y"]))
     except (json.JSONDecodeError, KeyError, TypeError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid points format: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid points format: {e}") from None
 
     # Parse reference object
     ref_type = None
@@ -48,7 +48,7 @@ async def measure_distance(
             bbox = ref_data["bbox"]
             ref_bbox = (float(bbox["x"]), float(bbox["y"]), float(bbox["w"]), float(bbox["h"]))
         except (json.JSONDecodeError, KeyError, TypeError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid reference_object format: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid reference_object format: {e}") from None
 
     # Load image
     content = await image.read()
@@ -60,7 +60,7 @@ async def measure_distance(
     try:
         rgb = load_image_rgb(content)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from None
 
     rgb = resize_if_needed(rgb, max_size=4096)
 

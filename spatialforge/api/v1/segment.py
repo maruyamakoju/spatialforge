@@ -53,7 +53,7 @@ async def start_segment_3d(
         import os
 
         os.unlink(path)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from None
 
     obj_store = request.app.state.object_store
     if obj_store is None:

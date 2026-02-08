@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import make_asgi_app
 
+from . import __version__
 from .auth.api_keys import APIKeyManager
 from .auth.rate_limiter import RateLimiterMiddleware
 from .config import get_settings
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: init and cleanup shared resources."""
     settings = get_settings()
-    logger.info("Starting SpatialForge v0.1.0")
+    logger.info("Starting SpatialForge v%s", __version__)
 
     # Redis
     redis = aioredis.from_url(settings.redis_url, decode_responses=True)
@@ -107,7 +108,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SpatialForge API",
         description="Any Camera. Instant 3D. One API. — Spatial intelligence API powered by Depth Anything 3",
-        version="0.1.0",
+        version=__version__,
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
@@ -149,7 +150,7 @@ def create_app() -> FastAPI:
         models = app.state.model_manager.loaded_models if hasattr(app.state, "model_manager") else []
         return HealthResponse(
             status="ok",
-            version="0.1.0",
+            version=__version__,
             gpu_available=gpu_available,
             models_loaded=models,
         )
@@ -159,7 +160,7 @@ def create_app() -> FastAPI:
         return {
             "name": "SpatialForge",
             "tagline": "Any Camera. Instant 3D. One API.",
-            "version": "0.1.0",
+            "version": __version__,
             "docs": "/docs",
             "demo": "/static/demo/index.html",
         }

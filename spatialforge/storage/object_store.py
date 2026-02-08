@@ -97,7 +97,7 @@ class ObjectStore:
             try:
                 self._redis.delete(f"{TTL_PREFIX}{object_key}")
             except Exception:
-                pass
+                logger.debug("Failed to delete TTL key for %s", object_key)
 
     def list_objects(self, prefix: str = "") -> list[str]:
         """List object keys under a prefix."""
@@ -136,7 +136,8 @@ class ObjectStore:
                         ts = float(ts_str)
                         if ts < cutoff:
                             # Extract object_key from Redis key
-                            object_key = key.removeprefix(TTL_PREFIX)
+                            key_str = key if isinstance(key, str) else key.decode()
+                            object_key = key_str.removeprefix(TTL_PREFIX)
                             expired.append(object_key)
                 if cursor == 0:
                     break

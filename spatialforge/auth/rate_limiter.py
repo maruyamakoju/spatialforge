@@ -1,7 +1,8 @@
-"""Token bucket rate limiter backed by Redis."""
+"""Sliding window rate limiter backed by Redis."""
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 if TYPE_CHECKING:
     from starlette.responses import Response
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimiterMiddleware(BaseHTTPMiddleware):
@@ -27,24 +30,29 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         if request.headers.get("X-API-Key"):
             return await call_next(request)
 
-        # Skip health check
-        if request.url.path in ("/health", "/"):
+        # Skip health check and root
+        if request.url.path in ("/health", "/", "/docs", "/redoc", "/openapi.json"):
             return await call_next(request)
 
-        redis = request.app.state.redis
+        redis = getattr(request.app.state, "redis", None)
         if redis is None:
+            logger.warning("Redis unavailable — rate limiting disabled")
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"
         key = f"ratelimit:{client_ip}"
         now = time.time()
 
-        pipe = redis.pipeline()
-        pipe.zremrangebyscore(key, 0, now - self.WINDOW_S)
-        pipe.zadd(key, {str(now): now})
-        pipe.zcard(key)
-        pipe.expire(key, self.WINDOW_S)
-        results = await pipe.execute()
+        try:
+            pipe = redis.pipeline()
+            pipe.zremrangebyscore(key, 0, now - self.WINDOW_S)
+            pipe.zadd(key, {str(now): now})
+            pipe.zcard(key)
+            pipe.expire(key, self.WINDOW_S)
+            results = await pipe.execute()
+        except Exception:
+            logger.warning("Redis error in rate limiter — allowing request", exc_info=True)
+            return await call_next(request)
 
         request_count = results[2]
         if request_count > self.MAX_REQUESTS:

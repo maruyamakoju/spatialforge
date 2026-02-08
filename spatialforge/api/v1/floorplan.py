@@ -44,7 +44,7 @@ async def start_floorplan(
         import os
 
         os.unlink(path)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from None
 
     if info.duration_s < 10:
         import os
