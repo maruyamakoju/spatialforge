@@ -26,7 +26,7 @@ from .models import (
     Segment3DJob,
 )
 
-DEFAULT_BASE_URL = "https://api.spatialforge.dev"
+DEFAULT_BASE_URL = "https://spatialforge-demo.fly.dev"
 
 
 class SpatialForgeError(Exception):
@@ -112,7 +112,7 @@ class Client:
         Returns:
             DepthResult with depth map URL and metadata.
         """
-        if isinstance(image, (str, Path)):
+        if isinstance(image, str | Path):
             image_path = Path(image)
             file_data = image_path.read_bytes()
             filename = image_path.name
@@ -159,7 +159,7 @@ class Client:
         Returns:
             MeasureResult with distance in meters.
         """
-        if isinstance(image, (str, Path)):
+        if isinstance(image, str | Path):
             image_path = Path(image)
             file_data = image_path.read_bytes()
             filename = image_path.name
@@ -208,14 +208,14 @@ class Client:
         files: dict[str, Any] = {}
 
         if video is not None:
-            if isinstance(video, (str, Path)):
+            if isinstance(video, str | Path):
                 video_path = Path(video)
                 files["video"] = (video_path.name, video_path.read_bytes())
             else:
                 files["video"] = ("video.mp4", video)
         elif images is not None:
             for i, img in enumerate(images):
-                if isinstance(img, (str, Path)):
+                if isinstance(img, str | Path):
                     img_path = Path(img)
                     files[f"images_{i}"] = (img_path.name, img_path.read_bytes())
                 else:
@@ -271,7 +271,7 @@ class Client:
         Returns:
             ReconstructJob — call .wait() to block until complete.
         """
-        if isinstance(video, (str, Path)):
+        if isinstance(video, str | Path):
             video_path = Path(video)
             file_data = video_path.read_bytes()
             filename = video_path.name
@@ -309,7 +309,7 @@ class Client:
         Returns:
             FloorplanJob — call .wait() to block until complete.
         """
-        if isinstance(video, (str, Path)):
+        if isinstance(video, str | Path):
             video_path = Path(video)
             file_data = video_path.read_bytes()
             filename = video_path.name
@@ -347,7 +347,7 @@ class Client:
         Returns:
             Segment3DJob — call .wait() to block until complete.
         """
-        if isinstance(video, (str, Path)):
+        if isinstance(video, str | Path):
             video_path = Path(video)
             file_data = video_path.read_bytes()
             filename = video_path.name
