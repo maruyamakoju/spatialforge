@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpatialForge Pricing — Simple, Usage-Based Plans</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-bright: #818cf8;
+      --green: #34d399;
+      --orange: #fb923c;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--accent-bright); text-decoration: none; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links .demo-btn {
+      background: var(--green);
+      color: #000;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-bright), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle { color: var(--muted); margin-bottom: 3rem; font-size: 1.1rem; }
+
+    /* ── Pricing Grid ─────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 550px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: left;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .plan-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .plan-card.popular {
+      border-color: var(--accent);
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.15);
+    }
+
+    .popular-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.8rem;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .plan-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .plan-price {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+    }
+
+    .plan-price span {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .plan-desc {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+      min-height: 2.4rem;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 2rem;
+    }
+
+    .plan-features li {
+      font-size: 0.85rem;
+      padding: 0.3rem 0;
+      color: var(--text);
+    }
+
+    .plan-features li::before {
+      content: "\2713";
+      color: var(--green);
+      margin-right: 0.5rem;
+      font-weight: 700;
+    }
+
+    .plan-cta {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .plan-cta:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .plan-cta.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .plan-cta.primary:hover {
+      background: var(--accent-bright);
+      border-color: var(--accent-bright);
+    }
+
+    /* ── FAQ ─────────────── */
+    .faq { text-align: left; max-width: 700px; margin: 0 auto 3rem; }
+    .faq h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 0;
+    }
+    .faq-q { font-weight: 600; margin-bottom: 0.5rem; }
+    .faq-a { color: var(--muted); font-size: 0.9rem; }
+
+    /* ── Footer ─────────────── */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+    .footer a { color: var(--accent-bright); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">SpatialForge</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="demo.html" class="demo-btn">Try Demo</a>
+    <a href="https://spatialforge-demo.fly.dev/docs" target="_blank">API Docs</a>
+    <a href="https://github.com/maruyamakoju/spatialforge" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>Simple, Predictable Pricing</h1>
+  <p class="subtitle">Start free. Scale as you grow. No hidden fees.</p>
+
+  <div class="pricing-grid">
+    <!-- Free -->
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">$0 <span>/mo</span></div>
+      <div class="plan-desc">Perfect for prototyping and experimentation.</div>
+      <ul class="plan-features">
+        <li>100 API calls/month</li>
+        <li>Depth estimation (all models)</li>
+        <li>Pose estimation</li>
+        <li>Distance measurement</li>
+        <li>Community support</li>
+      </ul>
+      <a href="https://spatialforge-demo.fly.dev/docs" class="plan-cta">Get Started Free</a>
+    </div>
+
+    <!-- Builder -->
+    <div class="plan-card">
+      <div class="plan-name">Builder</div>
+      <div class="plan-price">$29 <span>/mo</span></div>
+      <div class="plan-desc">For indie devs and small teams shipping products.</div>
+      <ul class="plan-features">
+        <li>5,000 API calls/month</li>
+        <li>All sync endpoints</li>
+        <li>Priority inference queue</li>
+        <li>Email support</li>
+        <li>Usage analytics</li>
+      </ul>
+      <a href="https://spatialforge-demo.fly.dev/docs" class="plan-cta">Start Building</a>
+    </div>
+
+    <!-- Pro (Popular) -->
+    <div class="plan-card popular">
+      <div class="popular-badge">Most Popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$99 <span>/mo</span></div>
+      <div class="plan-desc">For teams that need 3D reconstruction at scale.</div>
+      <ul class="plan-features">
+        <li>50,000 API calls/month</li>
+        <li>All endpoints (sync + async)</li>
+        <li>3D reconstruction</li>
+        <li>Floorplan generation</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="https://spatialforge-demo.fly.dev/docs" class="plan-cta primary">Go Pro</a>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="plan-card">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">$499 <span>/mo</span></div>
+      <div class="plan-desc">For organizations with custom requirements.</div>
+      <ul class="plan-features">
+        <li>Unlimited API calls</li>
+        <li>GPU priority scheduling</li>
+        <li>Custom model deployment</li>
+        <li>SLA guarantee (99.9%)</li>
+        <li>Dedicated support</li>
+      </ul>
+      <a href="mailto:support@spatialforge.dev" class="plan-cta">Contact Sales</a>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">How do API calls work?</div>
+      <div class="faq-a">Each request to any endpoint counts as one API call. Async jobs (reconstruct, floorplan, segment-3d) count as one call when submitted. Polling for results is free.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Can I upgrade or downgrade anytime?</div>
+      <div class="faq-a">Yes. Plan changes take effect immediately. When upgrading, you're charged a prorated amount. When downgrading, the remaining credit is applied to your next billing cycle.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">What happens when I hit my monthly limit?</div>
+      <div class="faq-a">API requests return HTTP 429 with a message to upgrade. Your existing data and results remain accessible. You can upgrade instantly to resume.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Is there a self-hosted option?</div>
+      <div class="faq-a">Yes! SpatialForge is open source (MIT license). Deploy with Docker on your own GPU infrastructure. The API plans are for our hosted service.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">What payment methods do you accept?</div>
+      <div class="faq-a">All major credit cards via Stripe. Enterprise customers can pay by invoice.</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Powered by <a href="https://github.com/maruyamakoju/spatialforge">SpatialForge</a> &mdash; Any Camera. Instant 3D. One API.
+</div>
+
+</body>
+</html>

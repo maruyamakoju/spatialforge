@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     torch_dtype: str = "float16"
     research_mode: bool = False  # DANGER: enables CC-BY-NC models. Never in production.
 
+    # Stripe billing (optional — app works without it)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+
     # Rate limiting (calls per month)
     rate_limit_free: int = 100
     rate_limit_builder: int = 5_000

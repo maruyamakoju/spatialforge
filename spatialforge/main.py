@@ -97,6 +97,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Object store not available — file storage disabled")
         app.state.object_store = None
 
+    # Stripe billing (optional — app works without it)
+    if settings.stripe_secret_key:
+        try:
+            from .billing.stripe_billing import StripeBilling
+
+            billing = StripeBilling(
+                secret_key=settings.stripe_secret_key,
+                webhook_secret=settings.stripe_webhook_secret,
+                redis=getattr(app.state, "redis", None),
+            )
+            await billing.ensure_products()
+            app.state.stripe_billing = billing
+            logger.info("Stripe billing initialized")
+        except Exception:
+            logger.warning("Stripe billing initialization failed", exc_info=True)
+            app.state.stripe_billing = None
+    else:
+        app.state.stripe_billing = None
+
     logger.info("SpatialForge ready (device=%s)", device)
 
     yield
@@ -186,6 +205,11 @@ def create_app() -> FastAPI:
     from .api.v1 import admin
 
     app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
+
+    # Billing routes
+    from .api.v1 import billing
+
+    app.include_router(billing.router, prefix="/v1", tags=["billing"])
 
     return app
 

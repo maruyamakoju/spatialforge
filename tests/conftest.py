@@ -121,7 +121,7 @@ def app(mock_redis, mock_model_manager, mock_object_store):
     test_app.dependency_overrides[get_current_user] = fake_auth
 
     # Register routes (same as main.py)
-    from spatialforge.api.v1 import depth, floorplan, measure, pose, reconstruct, segment
+    from spatialforge.api.v1 import billing, depth, floorplan, measure, pose, reconstruct, segment
     from spatialforge.models.responses import HealthResponse
 
     test_app.include_router(depth.router, prefix="/v1", tags=["depth"])
@@ -130,6 +130,7 @@ def app(mock_redis, mock_model_manager, mock_object_store):
     test_app.include_router(measure.router, prefix="/v1", tags=["measure"])
     test_app.include_router(floorplan.router, prefix="/v1", tags=["floorplan"])
     test_app.include_router(segment.router, prefix="/v1", tags=["segment-3d"])
+    test_app.include_router(billing.router, prefix="/v1", tags=["billing"])
 
     @test_app.get("/health", response_model=HealthResponse, tags=["system"])
     async def health():

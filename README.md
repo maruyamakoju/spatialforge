@@ -53,6 +53,10 @@ Client Request
 | `POST /v1/reconstruct` | Async | 3D reconstruction (point cloud, mesh, gaussian) |
 | `POST /v1/floorplan` | Async | Floor plan generation from walkthrough video |
 | `POST /v1/segment-3d` | Async | 3D segmentation with text prompts |
+| `GET /v1/billing/plans` | Sync | List available plans and pricing |
+| `GET /v1/billing/usage` | Sync | Current usage stats for API key |
+| `POST /v1/billing/checkout` | Sync | Create Stripe Checkout session |
+| `POST /v1/billing/portal` | Sync | Create Stripe Customer Portal session |
 
 ## Quick Start
 
@@ -199,6 +203,8 @@ Key environment variables (see `.env.example` for full list):
 | `API_KEY_SECRET` | (generate one!) | HMAC secret for API keys |
 | `ADMIN_API_KEY` | (generate one!) | Admin API key |
 | `RESEARCH_MODE` | `false` | Enable CC-BY-NC models |
+| `STRIPE_SECRET_KEY` | (optional) | Stripe API secret key for billing |
+| `STRIPE_WEBHOOK_SECRET` | (optional) | Stripe webhook signing secret |
 
 ## Development
 
