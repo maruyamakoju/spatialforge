@@ -108,13 +108,17 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     def _normalize_path(path: str) -> str:
         """Normalize paths to group similar endpoints.
 
-        e.g., /v1/reconstruct/abc123 -> /v1/reconstruct/{job_id}
+        e.g., /v1/reconstruct/abc123-def456 -> /v1/reconstruct/{id}
         """
+        import re
+
+        _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+        _HEX_RE = re.compile(r"^[0-9a-f]{16,}$", re.IGNORECASE)
+
         parts = path.strip("/").split("/")
         normalized = []
-        for _, part in enumerate(parts):
-            # Detect UUID-like or hash-like segments
-            if len(part) > 8 and not part.startswith("v") and any(c.isdigit() for c in part):
+        for part in parts:
+            if _UUID_RE.match(part) or _HEX_RE.match(part):
                 normalized.append("{id}")
             else:
                 normalized.append(part)

@@ -40,29 +40,19 @@ async def start_floorplan(
     path = save_uploaded_video(content)
     try:
         info = validate_video(path, max_duration_s=300)  # Allow up to 5 min for floorplan
+
+        if info.duration_s < 10:
+            raise HTTPException(status_code=400, detail="Video should be at least 10 seconds for floor plan generation")
+
+        obj_store = request.app.state.object_store
+        if obj_store is None:
+            raise HTTPException(status_code=503, detail="Object store not available")
+
+        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
     except ValueError as e:
-        import os
-
-        os.unlink(path)
         raise HTTPException(status_code=400, detail=str(e)) from None
-
-    if info.duration_s < 10:
-        import os
-
-        os.unlink(path)
-        raise HTTPException(status_code=400, detail="Video should be at least 10 seconds for floor plan generation")
-
-    obj_store = request.app.state.object_store
-    if obj_store is None:
-        import os
-
-        os.unlink(path)
-        raise HTTPException(status_code=503, detail="Object store not available")
-
-    video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    import os
-
-    os.unlink(path)
+    finally:
+        path.unlink(missing_ok=True)
 
     from ...workers.tasks import floorplan_task
 

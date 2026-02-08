@@ -70,18 +70,26 @@ class Client:
     def close(self) -> None:
         self._client.close()
 
+    def _parse_error(self, resp) -> str:
+        """Extract error detail from HTTP response."""
+        try:
+            ct = resp.headers.get("content-type", "")
+            if ct.startswith("application/json"):
+                return resp.json().get("detail", resp.text)
+        except Exception:
+            pass
+        return resp.text
+
     def _get(self, path: str) -> dict:
         resp = self._client.get(path)
         if resp.status_code >= 400:
-            detail = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-            raise SpatialForgeError(resp.status_code, detail)
+            raise SpatialForgeError(resp.status_code, self._parse_error(resp))
         return resp.json()
 
     def _post_file(self, path: str, files: dict, data: dict | None = None) -> dict:
         resp = self._client.post(path, files=files, data=data or {})
         if resp.status_code >= 400:
-            detail = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-            raise SpatialForgeError(resp.status_code, detail)
+            raise SpatialForgeError(resp.status_code, self._parse_error(resp))
         return resp.json()
 
     # ── /depth ──────────────────────────────────────────────

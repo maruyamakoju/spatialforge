@@ -68,8 +68,10 @@ class ReconstructEngine:
         if len(frames) < 3:
             raise ValueError("At least 3 frames are required for reconstruction")
 
+        _cleanup_temp = False
         if output_dir is None:
             output_dir = Path(tempfile.mkdtemp(prefix="sf_recon_"))
+            _cleanup_temp = True
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Quality settings

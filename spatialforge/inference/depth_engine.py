@@ -210,6 +210,7 @@ class DepthEngine:
                 tensor = output["predicted_depth"]
                 if isinstance(tensor, _torch.Tensor):
                     depth = tensor.squeeze().cpu().numpy().astype(np.float32)
+                    del tensor  # Free GPU memory
                 else:
                     depth = np.array(tensor, dtype=np.float32)
             elif "depth" in output:

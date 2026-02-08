@@ -195,8 +195,14 @@ class PoseEngine:
                     P1 = K @ np.hstack([np.eye(3), np.zeros((3, 1))])
                     P2 = K @ np.hstack([R, t])
                     points_4d = cv2.triangulatePoints(P1, P2, inlier_pts1.T, inlier_pts2.T)
-                    points_3d = (points_4d[:3] / points_4d[3:]).T.astype(np.float32)
-                    all_3d_points.append(points_3d)
+                    w_coords = points_4d[3:]
+                    valid = np.abs(w_coords[0]) > 1e-10
+                    if np.any(valid):
+                        points_3d = (points_4d[:3, valid] / w_coords[:, valid]).T.astype(np.float32)
+                        # Filter out inf/NaN points
+                        finite_mask = np.all(np.isfinite(points_3d), axis=1)
+                        if np.any(finite_mask):
+                            all_3d_points.append(points_3d[finite_mask])
 
         pointcloud = None
         if output_pointcloud and all_3d_points:

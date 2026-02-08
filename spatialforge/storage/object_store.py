@@ -133,7 +133,10 @@ class ObjectStore:
                 for key in keys:
                     ts_str = self._redis.get(key)
                     if ts_str:
-                        ts = float(ts_str)
+                        try:
+                            ts = float(ts_str)
+                        except (ValueError, TypeError):
+                            continue
                         if ts < cutoff:
                             # Extract object_key from Redis key
                             key_str = key if isinstance(key, str) else key.decode()

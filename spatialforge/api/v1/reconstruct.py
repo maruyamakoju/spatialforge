@@ -39,24 +39,16 @@ async def start_reconstruction(
     path = save_uploaded_video(content)
     try:
         info = validate_video(path, max_duration_s=120)
+
+        obj_store = request.app.state.object_store
+        if obj_store is None:
+            raise HTTPException(status_code=503, detail="Object store not available")
+
+        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
     except ValueError as e:
-        import os
-
-        os.unlink(path)
         raise HTTPException(status_code=400, detail=str(e)) from None
-
-    # Upload to object store for worker access
-    obj_store = request.app.state.object_store
-    if obj_store is None:
-        import os
-
-        os.unlink(path)
-        raise HTTPException(status_code=503, detail="Object store not available")
-
-    video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    import os
-
-    os.unlink(path)
+    finally:
+        path.unlink(missing_ok=True)
 
     # Submit async task
     from ...workers.tasks import reconstruct_task

@@ -49,23 +49,16 @@ async def start_segment_3d(
     path = save_uploaded_video(content)
     try:
         validate_video(path)
+
+        obj_store = request.app.state.object_store
+        if obj_store is None:
+            raise HTTPException(status_code=503, detail="Object store not available")
+
+        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
     except ValueError as e:
-        import os
-
-        os.unlink(path)
         raise HTTPException(status_code=400, detail=str(e)) from None
-
-    obj_store = request.app.state.object_store
-    if obj_store is None:
-        import os
-
-        os.unlink(path)
-        raise HTTPException(status_code=503, detail="Object store not available")
-
-    video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    import os
-
-    os.unlink(path)
+    finally:
+        path.unlink(missing_ok=True)
 
     from ...workers.tasks import segment_3d_task
 
