@@ -1,43 +1,100 @@
 # ============================================================
-# SpatialForge API — Lightweight CPU-only image
+# SpatialForge API — Lightweight CPU-only image (Multi-stage)
 # ============================================================
 # Build:  docker build -f Dockerfile.cpu -t spatialforge:cpu .
 # Run:    docker run -p 8000:8000 --env-file .env spatialforge:cpu
 # ============================================================
-FROM python:3.12-slim AS base
+
+# ============================================================
+# Stage 1: Builder
+# ============================================================
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# System dependencies (headless OpenCV + ffmpeg)
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
-    ffmpeg curl && \
+    gcc g++ make git && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Create venv
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip and install build tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install CPU-only PyTorch first (saves ~1.5GB vs default CUDA wheels)
+RUN pip install --no-cache-dir \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Copy dependency files
+COPY pyproject.toml README.md ./
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir \
+    "fastapi>=0.115.0" \
+    "uvicorn[standard]>=0.32.0" \
+    "python-multipart>=0.0.18" \
+    "pydantic>=2.10.0" \
+    "pydantic-settings>=2.7.0" \
+    "redis>=5.2.0" \
+    "celery[redis]>=5.4.0" \
+    "minio>=7.2.0" \
+    "numpy>=1.26.0" \
+    "Pillow>=11.0.0" \
+    "opencv-python-headless>=4.10.0" \
+    "transformers>=4.47.0" \
+    "safetensors>=0.4.0" \
+    "httpx>=0.28.0" \
+    "prometheus-client>=0.21.0" \
+    "structlog>=24.4.0" \
+    "tenacity>=9.0.0" \
+    "sentry-sdk[fastapi]>=2.19.0" \
+    "stripe>=11.0.0"
+
+# Copy application code
+COPY spatialforge ./spatialforge
+COPY static ./static
+RUN pip install --no-cache-dir -e .
+
+# ============================================================
+# Stage 2: Runtime
+# ============================================================
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgomp1 \
+    ffmpeg \
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install CPU-only PyTorch first (saves ~1.5GB vs default CUDA wheels)
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Copy venv from builder
+COPY --from=builder /opt/venv /opt/venv
 
-# Install remaining dependencies (cached layer)
+# Copy application code
+COPY --from=builder /build/spatialforge ./spatialforge
+COPY --from=builder /build/static ./static
 COPY pyproject.toml README.md ./
-RUN pip install --no-cache-dir \
-    "fastapi>=0.115.0" "uvicorn[standard]>=0.32.0" "python-multipart>=0.0.18" \
-    "pydantic>=2.10.0" "pydantic-settings>=2.7.0" \
-    "redis>=5.2.0" "celery[redis]>=5.4.0" "minio>=7.2.0" \
-    "numpy>=1.26.0" "Pillow>=11.0.0" "opencv-python-headless>=4.10.0" \
-    "transformers>=4.47.0" "safetensors>=0.4.0" \
-    "httpx>=0.28.0" "prometheus-client>=0.21.0" "structlog>=24.4.0"
-
-# Copy application code and install package
-COPY . .
-RUN pip install --no-cache-dir -e .
 
 # Create non-root user and directories
-RUN groupadd -r spatialforge && useradd -r -g spatialforge spatialforge && \
+RUN groupadd -r spatialforge && \
+    useradd -r -g spatialforge spatialforge && \
     mkdir -p /app/models /app/uploads /app/results && \
     chown -R spatialforge:spatialforge /app
 
