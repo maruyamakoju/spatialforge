@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from ...auth.api_keys import APIKeyRecord, Plan, get_current_user
 
@@ -26,7 +26,7 @@ router = APIRouter()
 
 class CheckoutRequest(BaseModel):
     plan: str  # "builder", "pro", "enterprise"
-    email: EmailStr
+    email: str
     success_url: str = "https://spatialforge-demo.fly.dev/docs"
     cancel_url: str = "https://spatialforge-demo.fly.dev/docs"
 
@@ -37,7 +37,7 @@ class CheckoutResponse(BaseModel):
 
 
 class PortalRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class PortalResponse(BaseModel):
