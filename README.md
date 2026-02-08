@@ -7,10 +7,11 @@
 Turn any photo or video into depth maps, 3D measurements, camera poses, and floor plans with a single API call. Production-ready spatial intelligence powered by state-of-the-art depth estimation.
 
 [![CI](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml/badge.svg)](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-94%20passed-brightgreen.svg)](#testing)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![PyPI](https://img.shields.io/badge/PyPI-spatialforge--client-3775A9.svg)](https://pypi.org/project/spatialforge-client/)
+[![PyPI](https://img.shields.io/pypi/v/spatialforge-client?label=SDK&color=3775A9)](https://pypi.org/project/spatialforge-client/)
 
 [Live API](https://spatialforge-demo.fly.dev/docs) &middot;
 [Interactive Demo](https://maruyamakoju.github.io/spatialforge/demo.html) &middot;
@@ -21,16 +22,58 @@ Turn any photo or video into depth maps, 3D measurements, camera poses, and floo
 
 ---
 
+## What It Does
+
+<table>
+<tr>
+<td width="50%">
+
+### Input: Any Photo
+```
+photo.jpg (1920x1080)
+```
+
+</td>
+<td width="50%">
+
+### Output: Metric Depth Map
+```json
+{
+  "min_depth_m": 0.42,
+  "max_depth_m": 8.73,
+  "confidence_mean": 0.94,
+  "processing_time_ms": 47.3
+}
+```
+
+</td>
+</tr>
+</table>
+
+**One API call. Three lines of code.**
+
+```python
+import spatialforge_client as sf
+
+client = sf.Client(api_key="sf_your_key")
+result = client.depth("photo.jpg")
+print(f"Distance range: {result.min_depth_m:.1f}m – {result.max_depth_m:.1f}m")
+```
+
+---
+
 ## Highlights
 
-- **Monocular Depth Estimation** &mdash; Metric depth (meters) from a single image. Models from tiny (edge) to giant (research).
-- **Real-World Measurement** &mdash; Measure distances between any two pixels in an image. Supports reference-object calibration.
-- **Camera Pose Recovery** &mdash; Extract 6-DoF camera poses and intrinsics from video or image sequences.
-- **3D Reconstruction** &mdash; Async Gaussian splatting, point cloud, or mesh generation from video.
-- **Floor Plan Generation** &mdash; Walk through a room with your phone, get a floor plan (SVG/DXF).
-- **3D Semantic Segmentation** &mdash; Open-vocabulary object detection in 3D with natural language prompts.
-- **Self-Service Billing** &mdash; Stripe-powered subscription management with 4 pricing tiers.
-- **Production-Ready** &mdash; API key auth, per-key rate limiting, Prometheus metrics, structured logging, security headers, CI/CD auto-deploy.
+| Feature | Description |
+|---------|-------------|
+| **Depth Estimation** | Metric depth (meters) from a single image. Models: large, base, small |
+| **Distance Measurement** | Measure real-world distance between any two pixels. ±2% with reference objects |
+| **Camera Pose Recovery** | 6-DoF camera poses + intrinsics from video or image sequences |
+| **3D Reconstruction** | Gaussian splatting, point cloud, or mesh from video (async) |
+| **Floor Plans** | Walk through a room → get SVG/DXF floor plan (async) |
+| **3D Segmentation** | Open-vocabulary object detection in 3D via text prompts (async) |
+| **Billing** | Stripe-powered self-service: Free → Builder → Pro → Enterprise |
+| **Production-Ready** | Auth, rate limiting, security headers, timeouts, metrics, CI/CD |
 
 ## Architecture
 
@@ -46,6 +89,7 @@ Turn any photo or video into depth maps, 3D measurements, camera poses, and floo
                           │  │ • Rate Limit│    │ • floorplan      │    │
                           │  │ • Security  │    │ • segment-3d     │    │
                           │  │ • Metrics   │    │                  │    │
+                          │  │ • Timeout   │    │                  │    │
                           │  └─────┬──────┘    └────────┬─────────┘    │
                           │        │                     │              │
                           │        ▼                     ▼              │
@@ -152,18 +196,26 @@ curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
   -F "metric=true"
 ```
 
+<details>
+<summary><strong>Example Response</strong></summary>
+
 ```json
 {
   "depth_map_url": "https://storage.example.com/depth/abc123.png",
   "colormap_url": "https://storage.example.com/depth_vis/abc123.jpg",
   "metadata": {
-    "width": 1920, "height": 1080,
-    "min_depth_m": 0.42, "max_depth_m": 8.73,
-    "focal_length_px": 1440.0, "confidence_mean": 0.82
+    "width": 1920,
+    "height": 1080,
+    "min_depth_m": 0.42,
+    "max_depth_m": 8.73,
+    "focal_length_px": 1440.0,
+    "confidence_mean": 0.82
   },
   "processing_time_ms": 47.3
 }
 ```
+
+</details>
 
 ## Self-Hosted Setup
 
@@ -235,6 +287,7 @@ Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
 | `MINIO_ENDPOINT` | `localhost:9000` | MinIO/S3 endpoint |
 | `API_KEY_SECRET` | (generate!) | HMAC secret for API key hashing |
 | `ADMIN_API_KEY` | (generate!) | Admin API key |
+| `DEMO_MODE` | `false` | Allow unauthenticated access (demos only) |
 | `RESEARCH_MODE` | `false` | Enable CC-BY-NC models |
 | `STRIPE_SECRET_KEY` | (optional) | Stripe secret for billing |
 | `STRIPE_WEBHOOK_SECRET` | (optional) | Stripe webhook signing |
@@ -244,15 +297,17 @@ Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
 
 - **Authentication**: HMAC-based API key validation via Redis
 - **Rate Limiting**: Sliding window per-IP (unauthenticated) + monthly quota per-key (authenticated)
-- **Security Headers**: HSTS, X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy
+- **Security Headers**: HSTS, X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy, X-API-Version
+- **Request Timeouts**: 120s timeout on inference endpoints (returns 504)
+- **Input Validation**: File size limits (20MB images, 120s video), content-type checks, image dimension caps (4096px), coordinate bounds checking, NaN/Inf rejection
 - **CORS**: Configurable allowed origins (restrictive by default)
-- **Input Validation**: File size limits (20MB images, 120s video), content-type checks, image dimension caps (4096px)
 - **Billing**: Stripe webhook signature verification, plan-based access control
+- **Docker**: Runs as non-root user (`spatialforge`)
 
 ## Testing
 
 ```bash
-# Server tests (44 tests)
+# Server tests (45 tests)
 pytest tests/ -v
 
 # SDK tests (49 tests)
@@ -262,7 +317,7 @@ cd sdk && pytest tests/ -v
 ruff check --config pyproject.toml spatialforge/ tests/
 ```
 
-93 total tests covering API endpoints, billing, depth processing, video handling, middleware (security headers, timeouts), input validation, SDK sync/async clients, and data models.
+**94 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), SDK sync/async clients, and data models.
 
 ## Project Structure
 
@@ -283,7 +338,7 @@ spatialforge/
 sdk/               # Python SDK (spatialforge-client) — sync, async, CLI
 site/              # Landing page, docs, demo, pricing
 infra/             # Redis infrastructure (Fly.io deployment)
-tests/             # pytest test suite (44 server + 49 SDK)
+tests/             # pytest test suite (45 server + 49 SDK)
 monitoring/        # Prometheus + Grafana configs
 .github/workflows/ # CI/CD (test, lint, docker, deploy, SDK publish)
 ```
@@ -298,7 +353,7 @@ monitoring/        # Prometheus + Grafana configs
 | Auth & Cache | Redis (API keys, rate limiting, billing state) |
 | Object Storage | MinIO / S3 |
 | Billing | Stripe (Checkout, Webhooks, Customer Portal) |
-| Monitoring | Prometheus + Grafana |
+| Monitoring | Prometheus + Grafana (12-panel dashboard) |
 | CI/CD | GitHub Actions (test, lint, deploy to Fly.io) |
 | SDK | httpx + pydantic + click + rich |
 | Deployment | Docker + Fly.io |
