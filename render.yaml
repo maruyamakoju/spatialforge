@@ -3,9 +3,7 @@ services:
     name: spatialforge
     runtime: docker
     dockerfilePath: ./Dockerfile.cpu
-    plan: starter
     region: oregon
-    healthCheckPath: /health
     envVars:
       - key: DEVICE
         value: cpu
@@ -28,7 +26,6 @@ services:
   - type: keyvalue
     name: spatialforge-redis
     region: oregon
-    plan: free
     maxmemoryPolicy: allkeys-lru
     ipAllowList:
       - source: 0.0.0.0/0
