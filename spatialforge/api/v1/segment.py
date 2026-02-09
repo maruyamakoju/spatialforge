@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
 from ...models.responses import Segment3DJobResponse, Segment3DResultResponse, SegmentedObject
+from ._video_job_utils import validate_and_store_video
 
 router = APIRouter()
 
@@ -47,30 +48,17 @@ async def start_segment_3d(
     if not prompt or len(prompt.strip()) == 0:
         raise HTTPException(status_code=400, detail="Prompt is required")
 
-    content = await video.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Video exceeds 500MB limit")
-
-    from ...utils.video import save_uploaded_video, validate_video
-
-    path = save_uploaded_video(content)
-    try:
-        validate_video(path)
-
-        obj_store = request.app.state.object_store
-        if obj_store is None:
-            raise HTTPException(status_code=503, detail="Object store not available")
-
-        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from None
-    finally:
-        path.unlink(missing_ok=True)
+    uploaded = await validate_and_store_video(
+        request,
+        video,
+        max_file_size=MAX_FILE_SIZE,
+        max_duration_s=120,
+    )
 
     from ...workers.tasks import segment_3d_task
 
     task = segment_3d_task.delay(
-        video_object_key=video_key,
+        video_object_key=uploaded.video_key,
         prompt=prompt,
         output_3d_mask=output_3d_mask,
         output_bbox=output_bbox,

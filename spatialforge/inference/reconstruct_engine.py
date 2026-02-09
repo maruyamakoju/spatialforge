@@ -68,10 +68,8 @@ class ReconstructEngine:
         if len(frames) < 3:
             raise ValueError("At least 3 frames are required for reconstruction")
 
-        _cleanup_temp = False
         if output_dir is None:
             output_dir = Path(tempfile.mkdtemp(prefix="sf_recon_"))
-            _cleanup_temp = True
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Quality settings
@@ -89,8 +87,8 @@ class ReconstructEngine:
         depth_engine = DepthEngine(self._mm)
         depth_maps = []
         for frame in frames:
-            result = depth_engine.estimate(frame, model_size=cfg["depth_model"])
-            depth_maps.append(result.depth_map)
+            depth_result = depth_engine.estimate(frame, model_size=cfg["depth_model"])
+            depth_maps.append(depth_result.depth_map)
 
         # Step 2: Estimate camera poses
         from .pose_engine import PoseEngine
@@ -112,7 +110,7 @@ class ReconstructEngine:
         if output_format == "pointcloud":
             out_path = output_dir / "scene.ply"
             self._save_ply(out_path, all_points, all_colors)
-            result = ReconstructResult(
+            recon_result = ReconstructResult(
                 output_path=out_path,
                 output_format="pointcloud",
                 num_points=len(all_points),
@@ -124,7 +122,7 @@ class ReconstructEngine:
             # Full 3DGS training can be added with gsplat/nerfstudio integration
             out_path = output_dir / "scene_gaussian.ply"
             self._save_gaussian_ply(out_path, all_points, all_colors)
-            result = ReconstructResult(
+            recon_result = ReconstructResult(
                 output_path=out_path,
                 output_format="gaussian",
                 num_gaussians=len(all_points),
@@ -134,7 +132,7 @@ class ReconstructEngine:
         else:  # mesh
             out_path = output_dir / "scene.ply"
             self._save_ply(out_path, all_points, all_colors)
-            result = ReconstructResult(
+            recon_result = ReconstructResult(
                 output_path=out_path,
                 output_format="mesh",
                 num_vertices=len(all_points),
@@ -151,11 +149,11 @@ class ReconstructEngine:
                 "translation": p.translation.tolist(),
                 "intrinsics": {"fx": p.fx, "fy": p.fy, "cx": p.cx, "cy": p.cy},
             })
-        result.camera_poses_json = json.dumps(poses_json)
+        recon_result.camera_poses_json = json.dumps(poses_json)
         poses_path = output_dir / "cameras.json"
-        poses_path.write_text(result.camera_poses_json)
+        poses_path.write_text(recon_result.camera_poses_json)
 
-        return result
+        return recon_result
 
     def _depth_to_pointcloud(
         self,

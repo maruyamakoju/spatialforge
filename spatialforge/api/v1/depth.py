@@ -88,10 +88,10 @@ async def estimate_depth(
     # Upload to object store (or fallback to base64)
     obj_store = request.app.state.object_store
     if obj_store is not None:
-        key = obj_store.upload_bytes(encoded, content_type=ctype, prefix="depth", extension=ext)
+        key = await obj_store.async_upload_bytes(encoded, content_type=ctype, prefix="depth", extension=ext)
         depth_map_url = obj_store.get_presigned_url(key)
 
-        color_key = obj_store.upload_bytes(
+        color_key = await obj_store.async_upload_bytes(
             colormap_bytes, content_type="image/jpeg", prefix="depth_vis", extension="jpg",
         )
         colormap_url = obj_store.get_presigned_url(color_key)

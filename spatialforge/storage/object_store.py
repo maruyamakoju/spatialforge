@@ -11,9 +11,10 @@ import logging
 import time
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from minio import Minio
+from starlette.concurrency import run_in_threadpool
 
 if TYPE_CHECKING:
     from redis import Redis as SyncRedis
@@ -75,17 +76,40 @@ class ObjectStore:
         self._track_ttl(object_key)
         return object_key
 
+    async def async_upload_bytes(
+        self,
+        data: bytes,
+        content_type: str,
+        prefix: str = "results",
+        extension: str = "bin",
+    ) -> str:
+        """Async wrapper for upload_bytes to avoid blocking the event loop."""
+        return cast(
+            str,
+            await run_in_threadpool(
+                self.upload_bytes,
+                data,
+                content_type,
+                prefix,
+                extension,
+            ),
+        )
+
+    async def async_upload_file(self, file_path: str, content_type: str, prefix: str = "uploads") -> str:
+        """Async wrapper for upload_file to avoid blocking the event loop."""
+        return cast(str, await run_in_threadpool(self.upload_file, file_path, content_type, prefix))
+
     def get_presigned_url(self, object_key: str, expires: timedelta | None = None) -> str:
         """Generate a presigned download URL."""
         if expires is None:
             expires = timedelta(hours=24)
-        return self._client.presigned_get_object(self._bucket, object_key, expires=expires)
+        return cast(str, self._client.presigned_get_object(self._bucket, object_key, expires=expires))
 
     def download_bytes(self, object_key: str) -> bytes:
         """Download an object as bytes."""
         response = self._client.get_object(self._bucket, object_key)
         try:
-            return response.read()
+            return cast(bytes, response.read())
         finally:
             response.close()
             response.release_conn()

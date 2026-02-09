@@ -5,12 +5,14 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from spatialforge.middleware.security_headers import SecurityHeadersMiddleware
 from spatialforge.middleware.timeout import RequestTimeoutMiddleware
+from spatialforge.middleware.webhook_rate_limiter import WebhookRateLimiterMiddleware
 
 
 def _make_app_with_middleware(*middlewares):
@@ -174,3 +176,69 @@ class TestRequestTimeout:
         client = TestClient(app, raise_server_exceptions=False)
         resp = client.post("/v1/pose")
         assert resp.status_code == 504
+
+
+class TestWebhookRateLimiter:
+    """Tests for WebhookRateLimiterMiddleware."""
+
+    def test_in_memory_limiter_blocks_after_limit(self):
+        app = _make_app_with_middleware((WebhookRateLimiterMiddleware, {"max_requests": 1, "window_seconds": 60}))
+
+        @app.post("/v1/billing/webhooks")
+        async def webhooks():
+            return {"ok": True}
+
+        client = TestClient(app)
+        first = client.post("/v1/billing/webhooks")
+        second = client.post("/v1/billing/webhooks")
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert "Retry-After" in second.headers
+
+    def test_redis_limiter_blocks(self):
+        app = _make_app_with_middleware((WebhookRateLimiterMiddleware, {"max_requests": 2, "window_seconds": 60}))
+
+        pipe = MagicMock()
+        pipe.zremrangebyscore = MagicMock()
+        pipe.zcard = MagicMock()
+        pipe.zadd = MagicMock()
+        pipe.expire = MagicMock()
+        pipe.execute = AsyncMock(return_value=[0, 2, 1, True])  # current_count == limit -> blocked
+
+        redis = MagicMock()
+        redis.pipeline = MagicMock(return_value=pipe)
+        app.state.redis = redis
+
+        @app.post("/v1/billing/webhooks")
+        async def webhooks():
+            return {"ok": True}
+
+        client = TestClient(app)
+        resp = client.post("/v1/billing/webhooks")
+        assert resp.status_code == 429
+
+    def test_redis_failure_falls_back_to_in_memory(self):
+        app = _make_app_with_middleware((WebhookRateLimiterMiddleware, {"max_requests": 1, "window_seconds": 60}))
+
+        pipe = MagicMock()
+        pipe.zremrangebyscore = MagicMock()
+        pipe.zcard = MagicMock()
+        pipe.zadd = MagicMock()
+        pipe.expire = MagicMock()
+        pipe.execute = AsyncMock(side_effect=RuntimeError("redis down"))
+
+        redis = MagicMock()
+        redis.pipeline = MagicMock(return_value=pipe)
+        app.state.redis = redis
+
+        @app.post("/v1/billing/webhooks")
+        async def webhooks():
+            return {"ok": True}
+
+        client = TestClient(app)
+        first = client.post("/v1/billing/webhooks")
+        second = client.post("/v1/billing/webhooks")
+
+        assert first.status_code == 200
+        assert second.status_code == 429

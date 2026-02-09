@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
+import torch
 from PIL import Image
 
 if TYPE_CHECKING:

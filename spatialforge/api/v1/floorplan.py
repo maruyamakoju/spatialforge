@@ -6,11 +6,12 @@ Accuracy improves with longer, slower walkthrough videos.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
 from ...models.requests import FloorplanOutputFormat
 from ...models.responses import FloorplanJobResponse, FloorplanResultResponse
+from ._video_job_utils import validate_and_store_video
 
 router = APIRouter()
 
@@ -38,40 +39,26 @@ async def start_floorplan(
 
     Output includes auto-generated floor plan (SVG/DXF) and floor area in m².
     """
-    content = await video.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Video exceeds 500MB limit")
-
-    from ...utils.video import save_uploaded_video, validate_video
-
-    path = save_uploaded_video(content)
-    try:
-        info = validate_video(path, max_duration_s=300)  # Allow up to 5 min for floorplan
-
-        if info.duration_s < 10:
-            raise HTTPException(status_code=400, detail="Video should be at least 10 seconds for floor plan generation")
-
-        obj_store = request.app.state.object_store
-        if obj_store is None:
-            raise HTTPException(status_code=503, detail="Object store not available")
-
-        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from None
-    finally:
-        path.unlink(missing_ok=True)
+    uploaded = await validate_and_store_video(
+        request,
+        video,
+        max_file_size=MAX_FILE_SIZE,
+        max_duration_s=300,  # Allow up to 5 min for floorplan
+        min_duration_s=10,
+        min_duration_error="Video should be at least 10 seconds for floor plan generation",
+    )
 
     from ...workers.tasks import floorplan_task
 
     task = floorplan_task.delay(
-        video_object_key=video_key,
+        video_object_key=uploaded.video_key,
         output_format=output_format.value,
     )
 
     return FloorplanJobResponse(
         job_id=task.id,
         status="processing",
-        estimated_time_s=round(info.duration_s * 3.0, 1),
+        estimated_time_s=round(uploaded.info.duration_s * 3.0, 1),
     )
 
 

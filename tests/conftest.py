@@ -10,8 +10,16 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient
 from PIL import Image
+
+SECURITY_TXT = (
+    "Contact: mailto:security@spatialforge.example.com\n"
+    "Expires: 2027-02-09T00:00:00Z\n"
+    "Preferred-Languages: en,ja\n"
+    "Canonical: https://spatialforge-demo.fly.dev/.well-known/security.txt\n"
+)
 
 
 @pytest.fixture
@@ -80,8 +88,10 @@ def mock_object_store():
     """Mock ObjectStore."""
     store = MagicMock()
     store.upload_bytes = MagicMock(return_value="results/test.png")
+    store.async_upload_bytes = AsyncMock(return_value="results/test.png")
     store.get_presigned_url = MagicMock(return_value="http://localhost:9000/spatialforge/results/test.png")
     store.upload_file = MagicMock(return_value="uploads/test.mp4")
+    store.async_upload_file = AsyncMock(return_value="uploads/test.mp4")
     store.download_bytes = MagicMock(return_value=b"fake_video")
     return store
 
@@ -149,6 +159,10 @@ def app(mock_redis, mock_model_manager, mock_object_store):
             "version": "0.1.0",
             "docs": "/docs",
         }
+
+    @test_app.get("/.well-known/security.txt", response_class=PlainTextResponse)
+    async def security_txt():
+        return SECURITY_TXT
 
     yield test_app
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import secrets
 from functools import lru_cache
 from pathlib import Path
 
@@ -13,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_SECRET = "change-me-to-a-random-secret-key-at-least-32-chars"
 _DEFAULT_ADMIN_KEY = "sf_admin_change_me"
+_DEFAULT_SECURITY_CONTACT = "mailto:security@spatialforge.example.com"
+_DEFAULT_SECURITY_CANONICAL = "https://spatialforge-demo.fly.dev/.well-known/security.txt"
 
 
 class Settings(BaseSettings):
@@ -31,6 +32,11 @@ class Settings(BaseSettings):
         "https://maruyamakoju.github.io",
         "https://spatialforge-demo.fly.dev",
     ]
+    security_contact: str = _DEFAULT_SECURITY_CONTACT
+    security_expires: str = "2027-02-09T00:00:00Z"
+    security_preferred_languages: str = "en,ja"
+    security_canonical_url: str = _DEFAULT_SECURITY_CANONICAL
+    security_encryption_url: str = ""
 
     # Auth
     api_key_secret: str = _DEFAULT_SECRET
@@ -110,5 +116,26 @@ def get_settings() -> Settings:
             "API_KEY_SECRET must be at least 32 characters. "
             f"Current length: {len(s.api_key_secret)}"
         )
+
+    if "*" in s.allowed_origins:
+        if s.demo_mode:
+            logger.warning("Demo mode: ALLOWED_ORIGINS contains '*'")
+        else:
+            raise RuntimeError(
+                "CORS SECURITY ERROR: ALLOWED_ORIGINS contains wildcard '*'. "
+                "Use explicit origins in production or set DEMO_MODE=true only for demos."
+            )
+
+    if not s.demo_mode:
+        if s.security_contact == _DEFAULT_SECURITY_CONTACT:
+            logger.warning(
+                "SECURITY WARNING: SECURITY_CONTACT is using a placeholder address. "
+                "Set SECURITY_CONTACT to a monitored mailbox."
+            )
+        if s.security_canonical_url == _DEFAULT_SECURITY_CANONICAL:
+            logger.warning(
+                "SECURITY WARNING: SECURITY_CANONICAL_URL points to demo host. "
+                "Set SECURITY_CANONICAL_URL to your production API domain."
+            )
 
     return s

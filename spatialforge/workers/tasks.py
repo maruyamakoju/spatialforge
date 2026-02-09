@@ -8,8 +8,6 @@ import os
 import tempfile
 import traceback
 
-import torch
-
 from .celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -23,6 +21,14 @@ class GPUOutOfMemoryError(Exception):
 # Lazy-initialized shared resources (initialized once per worker process)
 _model_manager = None
 _object_store = None
+_redis_sync = None
+
+
+def _is_final_retry(task) -> bool:
+    """Return True when the task has reached its final retry attempt."""
+    retries = int(getattr(task.request, "retries", 0))
+    max_retries = int(getattr(task, "max_retries", 0))
+    return retries >= max_retries
 
 
 def _get_model_manager():
@@ -43,18 +49,29 @@ def _get_model_manager():
 
 def _get_object_store():
     """Lazy-init object store."""
-    global _object_store
+    global _object_store, _redis_sync
     if _object_store is None:
+        import redis
+
         from ..config import get_settings
         from ..storage.object_store import ObjectStore
 
         settings = get_settings()
+        if _redis_sync is None:
+            try:
+                _redis_sync = redis.from_url(settings.redis_url, decode_responses=True)
+                _redis_sync.ping()
+            except Exception:
+                logger.warning("Sync Redis unavailable in worker — object TTL tracking disabled")
+                _redis_sync = None
+
         _object_store = ObjectStore(
             endpoint=settings.minio_endpoint,
             access_key=settings.minio_access_key,
             secret_key=settings.minio_secret_key,
             bucket=settings.minio_bucket,
             secure=settings.minio_secure,
+            redis=_redis_sync,
         )
     return _object_store
 
@@ -145,9 +162,11 @@ def reconstruct_task(
 
     except Exception as exc:
         logger.error("Reconstruction failed: %s", traceback.format_exc())
-        err = {"status": "failed", "error": str(exc)}
-        _fire_webhook(webhook_url, self.request.id, "reconstruct", err)
-        return err
+        if _is_final_retry(self):
+            err = {"status": "failed", "error": str(exc)}
+            _fire_webhook(webhook_url, self.request.id, "reconstruct", err)
+            return err
+        raise
 
 
 @celery_app.task(
@@ -191,17 +210,10 @@ def floorplan_task(
             validate_video(tmp_video.name)
             frames = extract_keyframes(tmp_video.name, target_fps=1.0, max_frames=60)
 
-            # Step 1: Get depth maps and poses
-            from ..inference.depth_engine import DepthEngine
+            # Step 1: Estimate poses and sparse geometry
             from ..inference.pose_engine import PoseEngine
 
-            depth_engine = DepthEngine(mm)
             pose_engine = PoseEngine(mm)
-
-            depth_maps = []
-            for frame in frames:
-                dr = depth_engine.estimate(frame, model_size="large")
-                depth_maps.append(dr.depth_map)
 
             pose_result = pose_engine.estimate_poses(frames, output_pointcloud=True)
 
@@ -239,7 +251,9 @@ def floorplan_task(
 
     except Exception as exc:
         logger.error("Floorplan generation failed: %s", traceback.format_exc())
-        return {"status": "failed", "error": str(exc)}
+        if _is_final_retry(self):
+            return {"status": "failed", "error": str(exc)}
+        raise
 
 
 @celery_app.task(
@@ -296,8 +310,8 @@ def segment_3d_task(
                         "confidence": 0.5,
                         "mask_url": None,
                         "bbox_3d": {
-                            "min_point": [0.0, 0.0, float(depth_result.min_depth_m)],
-                            "max_point": [1.0, 1.0, float(depth_result.max_depth_m)],
+                            "min_point": [0.0, 0.0, float(depth_result.min_depth)],
+                            "max_point": [1.0, 1.0, float(depth_result.max_depth)],
                         },
                     }
                 ],
@@ -308,7 +322,9 @@ def segment_3d_task(
 
     except Exception as exc:
         logger.error("3D segmentation failed: %s", traceback.format_exc())
-        return {"status": "failed", "error": str(exc)}
+        if _is_final_retry(self):
+            return {"status": "failed", "error": str(exc)}
+        raise
 
 
 def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:

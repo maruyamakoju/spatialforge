@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
 from ...models.requests import ReconstructOutput, ReconstructQuality
 from ...models.responses import ReconstructJobResponse, ReconstructResultResponse, ReconstructStats
+from ._video_job_utils import validate_and_store_video
 
 router = APIRouter()
 
@@ -36,32 +37,18 @@ async def start_reconstruction(
 
     Returns a job_id to poll for results via GET /v1/reconstruct/{job_id}.
     """
-    content = await video.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Video exceeds 500MB limit")
-
-    # Validate video
-    from ...utils.video import save_uploaded_video, validate_video
-
-    path = save_uploaded_video(content)
-    try:
-        info = validate_video(path, max_duration_s=120)
-
-        obj_store = request.app.state.object_store
-        if obj_store is None:
-            raise HTTPException(status_code=503, detail="Object store not available")
-
-        video_key = obj_store.upload_file(str(path), content_type="video/mp4", prefix="uploads")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from None
-    finally:
-        path.unlink(missing_ok=True)
+    uploaded = await validate_and_store_video(
+        request,
+        video,
+        max_file_size=MAX_FILE_SIZE,
+        max_duration_s=120,
+    )
 
     # Submit async task
     from ...workers.tasks import reconstruct_task
 
     task = reconstruct_task.delay(
-        video_object_key=video_key,
+        video_object_key=uploaded.video_key,
         quality=quality.value,
         output_format=output.value,
         webhook_url=webhook_url,
@@ -69,7 +56,7 @@ async def start_reconstruction(
 
     # Estimate processing time based on video duration and quality
     time_multiplier = {"draft": 1.0, "standard": 2.0, "high": 4.0}
-    estimated = info.duration_s * time_multiplier.get(quality.value, 2.0)
+    estimated = uploaded.info.duration_s * time_multiplier.get(quality.value, 2.0)
 
     return ReconstructJobResponse(
         job_id=task.id,

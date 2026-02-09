@@ -9,18 +9,20 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import redis
 import redis.asyncio as aioredis
 import torch
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import make_asgi_app
 
 from . import __version__
 from .auth.api_keys import APIKeyManager
 from .auth.rate_limiter import RateLimiterMiddleware
-from .config import get_settings
+from .config import Settings, get_settings
 from .inference.model_manager import ModelManager
 from .logging_config import RequestTracingMiddleware, setup_logging
 from .metrics import MetricsMiddleware
@@ -31,6 +33,19 @@ from .models.responses import HealthResponse
 from .storage.object_store import ObjectStore
 
 logger = logging.getLogger(__name__)
+
+
+def build_security_txt(settings: Settings) -> str:
+    """Build RFC 9116 security.txt payload from settings."""
+    lines = [
+        f"Contact: {settings.security_contact}",
+        f"Expires: {settings.security_expires}",
+        f"Preferred-Languages: {settings.security_preferred_languages}",
+        f"Canonical: {settings.security_canonical_url}",
+    ]
+    if settings.security_encryption_url:
+        lines.append(f"Encryption: {settings.security_encryption_url}")
+    return "\n".join(lines) + "\n"
 
 
 def init_sentry() -> None:
@@ -74,12 +89,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Redis (optional — app starts without it, but auth is disabled)
     try:
-        redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-        await redis.ping()
-        app.state.redis = redis
+        redis_async = aioredis.from_url(settings.redis_url, decode_responses=True)
+        await redis_async.ping()
+        app.state.redis = redis_async
 
         # API key manager
-        key_manager = APIKeyManager(redis, settings.api_key_secret)
+        key_manager = APIKeyManager(redis_async, settings.api_key_secret)
         app.state.key_manager = key_manager
 
         # Ensure an admin key exists
@@ -88,7 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             from .auth.api_keys import Plan, hash_api_key
 
             key_hash = hash_api_key(settings.admin_api_key, settings.api_key_secret)
-            await redis.hset(
+            await redis_async.hset(
                 f"apikey:{key_hash}",
                 mapping={
                     "key_hash": key_hash,
@@ -105,6 +120,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("Redis not available — auth and rate limiting disabled")
         app.state.redis = None
         app.state.key_manager = None
+
+    # Sync Redis client for ObjectStore TTL tracking (best effort)
+    try:
+        redis_sync = redis.from_url(settings.redis_url, decode_responses=True)
+        redis_sync.ping()
+        app.state.redis_sync = redis_sync
+    except Exception:
+        logger.warning("Sync Redis not available — object TTL tracking disabled")
+        app.state.redis_sync = None
 
     # Model manager
     device = settings.device if torch.cuda.is_available() else "cpu"
@@ -127,6 +151,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             secret_key=settings.minio_secret_key,
             bucket=settings.minio_bucket,
             secure=settings.minio_secure,
+            redis=getattr(app.state, "redis_sync", None),
         )
         app.state.object_store = obj_store
         logger.info("Object store connected: %s/%s", settings.minio_endpoint, settings.minio_bucket)
@@ -161,6 +186,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     model_manager.unload_all()
     if app.state.redis is not None:
         await app.state.redis.close()
+    if getattr(app.state, "redis_sync", None) is not None:
+        app.state.redis_sync.close()
     logger.info("SpatialForge shutdown complete")
 
 
@@ -195,11 +222,13 @@ def create_app() -> FastAPI:
         license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
     )
 
+    allow_credentials = "*" not in settings.allowed_origins
+
     # CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["X-API-Key", "Content-Type", "Authorization"],
         expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
@@ -255,6 +284,10 @@ def create_app() -> FastAPI:
             "docs": "/docs",
             "demo": "/static/demo/index.html",
         }
+
+    @app.get("/.well-known/security.txt", include_in_schema=False, response_class=PlainTextResponse)
+    async def security_txt():
+        return build_security_txt(settings)
 
     # Register API v1 routes
     from .api.v1 import depth, floorplan, measure, pose, reconstruct, segment

@@ -11,6 +11,7 @@ primary_region = 'nrt'
 
 [env]
   ALLOWED_ORIGINS = '["*"]'
+  DEMO_MODE = 'true'
   DEVICE = 'cpu'
   RESEARCH_MODE = 'false'
   TORCH_DTYPE = 'float32'

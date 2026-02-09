@@ -20,6 +20,16 @@ def test_root(client):
     assert data["name"] == "SpatialForge"
 
 
+def test_security_txt(client):
+    """security.txt endpoint is present for vulnerability disclosure."""
+    resp = client.get("/.well-known/security.txt")
+    assert resp.status_code == 200
+    assert "text/plain" in resp.headers["content-type"]
+    body = resp.text
+    assert "Contact: mailto:security@spatialforge.example.com" in body
+    assert "Canonical: https://spatialforge-demo.fly.dev/.well-known/security.txt" in body
+
+
 def test_depth_with_auth(client, api_key, sample_image_bytes):
     """Depth endpoint succeeds with valid image (auth overridden in test)."""
     resp = client.post(
