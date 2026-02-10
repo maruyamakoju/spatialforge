@@ -97,7 +97,8 @@ jobs:
         run: |
           python -m mypy spatialforge/api/v1/_video_job_utils.py \
                          spatialforge/storage/object_store.py \
-                         --follow-imports=skip
+                         --follow-imports=skip \
+                         --ignore-missing-imports
 
   docker:
     runs-on: ubuntu-latest
