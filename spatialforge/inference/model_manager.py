@@ -385,3 +385,23 @@ class ModelManager:
             result["research_cc_by_nc"] = research
 
         return result
+
+
+def create_model_manager_from_settings(settings: Any) -> ModelManager:
+    """Create ModelManager from app settings with consistent runtime defaults.
+
+    This helper keeps API server and worker initialization paths in sync.
+    """
+    runtime_device = settings.device if torch.cuda.is_available() else "cpu"
+    if runtime_device == "cpu":
+        logger.warning("CUDA not available — running on CPU (slow)")
+
+    runtime_dtype = settings.torch_dtype if runtime_device != "cpu" else "float32"
+
+    return ModelManager(
+        model_dir=settings.model_dir,
+        device=runtime_device,
+        dtype=runtime_dtype,
+        research_mode=settings.research_mode,
+        depth_backend=settings.depth_backend,
+    )
