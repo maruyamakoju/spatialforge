@@ -85,6 +85,30 @@ class PoseResponse(BaseModel):
     )
 
 
+# ── Shared async job base models ────────────────────────────
+
+
+class AsyncJobSubmitResponse(BaseModel):
+    """Base model for async job submission responses."""
+
+    job_id: str = Field(..., description="Unique job identifier for polling")
+    status: str = Field(
+        "processing", description="Job status: processing, complete, failed"
+    )
+    estimated_time_s: float | None = Field(
+        None, description="Estimated completion time in seconds"
+    )
+
+
+class AsyncJobResultResponse(BaseModel):
+    """Base model for async job result responses."""
+
+    job_id: str
+    status: str
+    processing_time_ms: float | None = None
+    error: str | None = None
+
+
 # ── /reconstruct ────────────────────────────────────────────
 
 
@@ -106,23 +130,13 @@ class ReconstructStats(BaseModel):
     )
 
 
-class ReconstructJobResponse(BaseModel):
+class ReconstructJobResponse(AsyncJobSubmitResponse):
     """Async reconstruction job submission response."""
 
-    job_id: str = Field(..., description="Unique job identifier for polling")
-    status: str = Field(
-        "processing", description="Job status: processing, complete, failed"
-    )
-    estimated_time_s: float | None = Field(
-        None, description="Estimated completion time in seconds"
-    )
 
-
-class ReconstructResultResponse(BaseModel):
+class ReconstructResultResponse(AsyncJobResultResponse):
     """Reconstruction job result (returned when polling a complete job)."""
 
-    job_id: str
-    status: str
     scene_url: str | None = Field(
         None, description="URL to download the reconstructed 3D scene"
     )
@@ -130,8 +144,6 @@ class ReconstructResultResponse(BaseModel):
         None, description="URL to interactive 3D viewer"
     )
     stats: ReconstructStats | None = None
-    processing_time_ms: float | None = None
-    error: str | None = None
 
 
 # ── /measure ────────────────────────────────────────────────
@@ -164,23 +176,13 @@ class MeasureResponse(BaseModel):
 # ── /floorplan ──────────────────────────────────────────────
 
 
-class FloorplanJobResponse(BaseModel):
+class FloorplanJobResponse(AsyncJobSubmitResponse):
     """Async floorplan generation job submission response."""
 
-    job_id: str = Field(..., description="Unique job identifier for polling")
-    status: str = Field(
-        "processing", description="Job status: processing, complete, failed"
-    )
-    estimated_time_s: float | None = Field(
-        None, description="Estimated completion time in seconds"
-    )
 
-
-class FloorplanResultResponse(BaseModel):
+class FloorplanResultResponse(AsyncJobResultResponse):
     """Floorplan job result."""
 
-    job_id: str
-    status: str
     floorplan_url: str | None = Field(
         None, description="URL to download the floor plan (SVG/DXF/JSON)"
     )
@@ -190,8 +192,6 @@ class FloorplanResultResponse(BaseModel):
     room_count: int | None = Field(
         None, description="Number of detected rooms"
     )
-    processing_time_ms: float | None = None
-    error: str | None = None
 
 
 # ── /segment-3d ─────────────────────────────────────────────
@@ -219,28 +219,16 @@ class SegmentedObject(BaseModel):
     )
 
 
-class Segment3DJobResponse(BaseModel):
+class Segment3DJobResponse(AsyncJobSubmitResponse):
     """Async 3D segmentation job submission response."""
 
-    job_id: str = Field(..., description="Unique job identifier for polling")
-    status: str = Field(
-        "processing", description="Job status: processing, complete, failed"
-    )
-    estimated_time_s: float | None = Field(
-        None, description="Estimated completion time in seconds"
-    )
 
-
-class Segment3DResultResponse(BaseModel):
+class Segment3DResultResponse(AsyncJobResultResponse):
     """3D segmentation job result."""
 
-    job_id: str
-    status: str
     objects: list[SegmentedObject] | None = Field(
         None, description="List of segmented 3D objects"
     )
-    processing_time_ms: float | None = None
-    error: str | None = None
 
 
 # ── Common ──────────────────────────────────────────────────
@@ -266,3 +254,31 @@ class ErrorResponse(BaseModel):
     error_code: str | None = Field(
         None, description="Machine-readable error code"
     )
+
+
+# ── /billing ───────────────────────────────────────────────
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+    plan: str
+
+
+class PortalResponse(BaseModel):
+    portal_url: str
+
+
+class PlanInfo(BaseModel):
+    name: str
+    plan_id: str
+    price_usd: float
+    monthly_limit: int
+    features: list[str]
+
+
+class UsageResponse(BaseModel):
+    plan: str
+    monthly_calls: int
+    monthly_limit: int
+    usage_pct: float
+    owner: str

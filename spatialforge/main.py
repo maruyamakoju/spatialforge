@@ -23,7 +23,7 @@ from . import __version__
 from .auth.api_keys import APIKeyManager
 from .auth.rate_limiter import RateLimiterMiddleware
 from .config import Settings, get_settings
-from .inference.model_manager import ModelManager
+from .inference.model_manager import create_model_manager_from_settings
 from .logging_config import RequestTracingMiddleware, setup_logging
 from .metrics import MetricsMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
@@ -131,17 +131,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.redis_sync = None
 
     # Model manager
-    device = settings.device if torch.cuda.is_available() else "cpu"
-    if device == "cpu":
-        logger.warning("CUDA not available — running on CPU (slow)")
-
-    model_manager = ModelManager(
-        model_dir=settings.model_dir,
-        device=device,
-        dtype=settings.torch_dtype if device != "cpu" else "float32",
-        research_mode=settings.research_mode,
-        depth_backend=settings.depth_backend,
-    )
+    model_manager = create_model_manager_from_settings(settings)
     app.state.model_manager = model_manager
 
     # Object store
@@ -179,7 +169,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         app.state.stripe_billing = None
 
-    logger.info("SpatialForge ready (device=%s)", device)
+    logger.info("SpatialForge ready (device=%s)", model_manager.device)
 
     yield
 

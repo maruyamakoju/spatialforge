@@ -95,8 +95,13 @@ COPY --from=builder /build/spatialforge ./spatialforge
 COPY --from=builder /build/static ./static
 COPY pyproject.toml README.md ./
 
-# Create directories
-RUN mkdir -p /app/models /app/uploads /app/results
+# Create non-root user and directories
+RUN groupadd -r spatialforge && \
+    useradd -r -g spatialforge spatialforge && \
+    mkdir -p /app/models /app/uploads /app/results && \
+    chown -R spatialforge:spatialforge /app
+
+USER spatialforge
 
 # Run Celery worker with GPU-heavy queue
 CMD ["celery", "-A", "spatialforge.workers.celery_app", "worker", \

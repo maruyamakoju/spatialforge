@@ -13,51 +13,14 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 
 from ...auth.api_keys import APIKeyRecord, Plan, get_current_user
+from ...models.requests import CheckoutRequest, PortalRequest
+from ...models.responses import CheckoutResponse, PlanInfo, PortalResponse, UsageResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-# ── Request / Response models ─────────────────────────────────
-
-class CheckoutRequest(BaseModel):
-    plan: str  # "builder", "pro", "enterprise"
-    email: str
-    success_url: str = "https://spatialforge-demo.fly.dev/docs"
-    cancel_url: str = "https://spatialforge-demo.fly.dev/docs"
-
-
-class CheckoutResponse(BaseModel):
-    checkout_url: str
-    plan: str
-
-
-class PortalRequest(BaseModel):
-    email: str
-
-
-class PortalResponse(BaseModel):
-    portal_url: str
-
-
-class PlanInfo(BaseModel):
-    name: str
-    plan_id: str
-    price_usd: float
-    monthly_limit: int
-    features: list[str]
-
-
-class UsageResponse(BaseModel):
-    plan: str
-    monthly_calls: int
-    monthly_limit: int
-    usage_pct: float
-    owner: str
 
 
 # ── Endpoints ─────────────────────────────────────────────────

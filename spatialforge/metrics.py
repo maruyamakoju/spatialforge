@@ -10,20 +10,28 @@ Exposes:
 
 from __future__ import annotations
 
+import re
 import time
 from typing import TYPE_CHECKING
 
 from prometheus_client import Counter, Gauge, Histogram, Info
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from . import __version__
+
 if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
 
+# ── Pre-compiled regexes for path normalization ──────────────
+
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+_HEX_RE = re.compile(r"^[0-9a-f]{16,}$", re.IGNORECASE)
+
 # ── Metrics definitions ──────────────────────────────────────
 
 APP_INFO = Info("spatialforge", "SpatialForge application info")
-APP_INFO.info({"version": "0.1.0"})  # Static init; updated at app startup
+APP_INFO.info({"version": __version__})
 
 REQUEST_LATENCY = Histogram(
     "spatialforge_request_duration_seconds",
@@ -129,11 +137,6 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         e.g., /v1/reconstruct/abc123-def456 -> /v1/reconstruct/{id}
         """
-        import re
-
-        _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
-        _HEX_RE = re.compile(r"^[0-9a-f]{16,}$", re.IGNORECASE)
-
         parts = path.strip("/").split("/")
         normalized = []
         for part in parts:

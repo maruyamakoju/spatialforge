@@ -10,6 +10,11 @@ from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
 
+# ── Upload size limits ───────────────────────────────────
+MAX_IMAGE_FILE_SIZE = 20 * 1024 * 1024  # 20 MB — depth, measure
+MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024  # 100 MB — pose
+MAX_ASYNC_VIDEO_FILE_SIZE = 500 * 1024 * 1024  # 500 MB — reconstruct, floorplan, segment
+
 _DEFAULT_SECRET = "change-me-to-a-random-secret-key-at-least-32-chars"
 _DEFAULT_ADMIN_KEY = "sf_admin_change_me"
 _DEFAULT_SECURITY_CONTACT = "mailto:security@spatialforge.example.com"

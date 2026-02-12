@@ -5,20 +5,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
+from ...config import MAX_ASYNC_VIDEO_FILE_SIZE
 from ...models.requests import ReconstructOutput, ReconstructQuality
 from ...models.responses import ReconstructJobResponse, ReconstructResultResponse, ReconstructStats
-from ._video_job_utils import validate_and_store_video
+from ._video_job_utils import build_error_responses, validate_and_store_video
 
 router = APIRouter()
 
-MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
-
-_ERROR_RESPONSES = {
-    400: {"description": "Invalid input (video too short, unsupported format)"},
-    401: {"description": "Missing or invalid API key"},
-    413: {"description": "Video exceeds 500MB size limit"},
-    429: {"description": "Monthly rate limit exceeded"},
-}
+_ERROR_RESPONSES = build_error_responses({
+    400: "Invalid input (video too short, unsupported format)",
+    413: "Video exceeds 500MB size limit",
+})
 
 
 @router.post("/reconstruct", response_model=ReconstructJobResponse, responses=_ERROR_RESPONSES)
@@ -40,7 +37,7 @@ async def start_reconstruction(
     uploaded = await validate_and_store_video(
         request,
         video,
-        max_file_size=MAX_FILE_SIZE,
+        max_file_size=MAX_ASYNC_VIDEO_FILE_SIZE,
         max_duration_s=120,
     )
 
@@ -72,49 +69,18 @@ async def get_reconstruction_result(
     user: APIKeyRecord = Depends(get_current_user),
 ):
     """Poll for reconstruction job result."""
-    from ...workers.celery_app import celery_app
+    from ._video_job_utils import poll_celery_job
 
-    result = celery_app.AsyncResult(job_id)
-
-    if result.state == "PENDING":
-        return ReconstructResultResponse(job_id=job_id, status="pending")
-
-    if result.state == "PROCESSING":
-        meta = result.info or {}
-        return ReconstructResultResponse(
-            job_id=job_id,
-            status=f"processing:{meta.get('step', 'unknown')}",
-        )
-
-    if result.state == "SUCCESS":
-        data = result.result or {}
-        if data.get("status") == "failed":
-            return ReconstructResultResponse(
-                job_id=job_id,
-                status="failed",
-                error=data.get("error", "Unknown error"),
-            )
-
+    def _map_success(data: dict) -> dict:
         stats = data.get("stats", {})
-        return ReconstructResultResponse(
-            job_id=job_id,
-            status="complete",
-            scene_url=data.get("scene_url"),
-            viewer_url=None,  # TODO: 3D viewer hosting
-            stats=ReconstructStats(
+        return {
+            "scene_url": data.get("scene_url"),
+            "stats": ReconstructStats(
                 num_gaussians=stats.get("num_gaussians"),
                 num_points=stats.get("num_points"),
                 num_vertices=stats.get("num_vertices"),
                 bounding_box=stats.get("bounding_box"),
             ),
-            processing_time_ms=data.get("processing_time_ms"),
-        )
+        }
 
-    if result.state == "FAILURE":
-        return ReconstructResultResponse(
-            job_id=job_id,
-            status="failed",
-            error=str(result.result),
-        )
-
-    return ReconstructResultResponse(job_id=job_id, status=result.state.lower())
+    return poll_celery_job(job_id, ReconstructResultResponse, success_mapper=_map_success)

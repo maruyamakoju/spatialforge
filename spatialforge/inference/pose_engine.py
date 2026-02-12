@@ -80,27 +80,18 @@ class PoseEngine:
         cx, cy = w / 2.0, h / 2.0
         K = np.array([[focal, 0, cx], [0, focal, cy], [0, 0, 1]], dtype=np.float64)
 
+        def _make_pose(idx: int, R: NDArray, t: NDArray) -> CameraPoseResult:  # noqa: N803
+            return CameraPoseResult(
+                frame_index=idx, rotation=R.copy(), translation=t.copy(),
+                fx=focal, fy=focal, cx=cx, cy=cy, width=w, height=h,
+            )
+
         # Feature detection (ORB for speed, can upgrade to SuperPoint)
         orb = cv2.ORB_create(nfeatures=2000)
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
-        poses: list[CameraPoseResult] = []
+        poses: list[CameraPoseResult] = [_make_pose(0, np.eye(3), np.zeros(3))]
         all_3d_points: list[NDArray[np.float32]] = []
-
-        # First frame is at origin
-        poses.append(
-            CameraPoseResult(
-                frame_index=0,
-                rotation=np.eye(3),
-                translation=np.zeros(3),
-                fx=focal,
-                fy=focal,
-                cx=cx,
-                cy=cy,
-                width=w,
-                height=h,
-            )
-        )
 
         cumulative_R = np.eye(3)
         cumulative_t = np.zeros(3)
@@ -113,39 +104,14 @@ class PoseEngine:
             kp2, des2 = orb.detectAndCompute(gray_curr, None)
 
             if des1 is None or des2 is None or len(kp1) < 8 or len(kp2) < 8:
-                # Not enough features, copy previous pose
-                poses.append(
-                    CameraPoseResult(
-                        frame_index=i,
-                        rotation=cumulative_R.copy(),
-                        translation=cumulative_t.copy(),
-                        fx=focal,
-                        fy=focal,
-                        cx=cx,
-                        cy=cy,
-                        width=w,
-                        height=h,
-                    )
-                )
+                poses.append(_make_pose(i, cumulative_R, cumulative_t))
                 continue
 
             matches = bf.match(des1, des2)
             matches = sorted(matches, key=lambda m: m.distance)[:500]
 
             if len(matches) < 8:
-                poses.append(
-                    CameraPoseResult(
-                        frame_index=i,
-                        rotation=cumulative_R.copy(),
-                        translation=cumulative_t.copy(),
-                        fx=focal,
-                        fy=focal,
-                        cx=cx,
-                        cy=cy,
-                        width=w,
-                        height=h,
-                    )
-                )
+                poses.append(_make_pose(i, cumulative_R, cumulative_t))
                 continue
 
             pts1 = np.float32([kp1[m.queryIdx].pt for m in matches])
@@ -153,19 +119,7 @@ class PoseEngine:
 
             E, mask = cv2.findEssentialMat(pts1, pts2, K, method=cv2.RANSAC, prob=0.999, threshold=1.0)
             if E is None:
-                poses.append(
-                    CameraPoseResult(
-                        frame_index=i,
-                        rotation=cumulative_R.copy(),
-                        translation=cumulative_t.copy(),
-                        fx=focal,
-                        fy=focal,
-                        cx=cx,
-                        cy=cy,
-                        width=w,
-                        height=h,
-                    )
-                )
+                poses.append(_make_pose(i, cumulative_R, cumulative_t))
                 continue
 
             _, R, t, mask_pose = cv2.recoverPose(E, pts1, pts2, K)
@@ -173,19 +127,7 @@ class PoseEngine:
             cumulative_R = R @ cumulative_R
             cumulative_t = cumulative_t + cumulative_R @ t.flatten()
 
-            poses.append(
-                CameraPoseResult(
-                    frame_index=i,
-                    rotation=cumulative_R.copy(),
-                    translation=cumulative_t.copy(),
-                    fx=focal,
-                    fy=focal,
-                    cx=cx,
-                    cy=cy,
-                    width=w,
-                    height=h,
-                )
-            )
+            poses.append(_make_pose(i, cumulative_R, cumulative_t))
 
             # Triangulate points for point cloud
             if output_pointcloud and mask_pose is not None:
@@ -199,7 +141,6 @@ class PoseEngine:
                     valid = np.abs(w_coords[0]) > 1e-10
                     if np.any(valid):
                         points_3d = (points_4d[:3, valid] / w_coords[:, valid]).T.astype(np.float32)
-                        # Filter out inf/NaN points
                         finite_mask = np.all(np.isfinite(points_3d), axis=1)
                         if np.any(finite_mask):
                             all_3d_points.append(points_3d[finite_mask])

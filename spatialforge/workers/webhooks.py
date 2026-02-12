@@ -10,6 +10,8 @@ import time
 
 import httpx
 
+from .. import __version__
+
 logger = logging.getLogger(__name__)
 
 WEBHOOK_TIMEOUT = 10.0  # seconds
@@ -37,7 +39,7 @@ def send_webhook(
 
     headers: dict[str, str] = {
         "Content-Type": "application/json",
-        "User-Agent": "SpatialForge-Webhook/0.1.0",
+        "User-Agent": f"SpatialForge-Webhook/{__version__}",
         "X-SpatialForge-Event": payload.get("event", "job.completed"),
         "X-SpatialForge-Timestamp": str(int(time.time())),
     }

@@ -9,19 +9,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
+from ...config import MAX_ASYNC_VIDEO_FILE_SIZE
 from ...models.responses import Segment3DJobResponse, Segment3DResultResponse, SegmentedObject
-from ._video_job_utils import validate_and_store_video
+from ._video_job_utils import build_error_responses, validate_and_store_video
 
 router = APIRouter()
 
-MAX_FILE_SIZE = 500 * 1024 * 1024
-
-_ERROR_RESPONSES = {
-    400: {"description": "Invalid input (video too short, prompt empty)"},
-    401: {"description": "Missing or invalid API key"},
-    413: {"description": "Video exceeds 500MB size limit"},
-    429: {"description": "Monthly rate limit exceeded"},
-}
+_ERROR_RESPONSES = build_error_responses({
+    400: "Invalid input (video too short, prompt empty)",
+    413: "Video exceeds 500MB size limit",
+})
 
 BETA_NOTICE = (
     "This endpoint is in BETA. SAM3 integration is pending "
@@ -51,7 +48,7 @@ async def start_segment_3d(
     uploaded = await validate_and_store_video(
         request,
         video,
-        max_file_size=MAX_FILE_SIZE,
+        max_file_size=MAX_ASYNC_VIDEO_FILE_SIZE,
         max_duration_s=120,
     )
 
@@ -78,33 +75,12 @@ async def get_segment_3d_result(
     user: APIKeyRecord = Depends(get_current_user),
 ):
     """Poll for 3D segmentation result."""
-    from ...workers.celery_app import celery_app
+    from ...models.responses import BBox3D
+    from ._video_job_utils import poll_celery_job
 
-    result = celery_app.AsyncResult(job_id)
-
-    if result.state == "PENDING":
-        return Segment3DResultResponse(job_id=job_id, status="pending")
-
-    if result.state == "PROCESSING":
-        meta = result.info or {}
-        return Segment3DResultResponse(
-            job_id=job_id,
-            status=f"processing:{meta.get('step', 'unknown')}",
-        )
-
-    if result.state == "SUCCESS":
-        data = result.result or {}
-        if data.get("status") == "failed":
-            return Segment3DResultResponse(
-                job_id=job_id,
-                status="failed",
-                error=data.get("error"),
-            )
-
+    def _map_success(data: dict) -> dict:
         objects = []
         for obj in data.get("objects", []):
-            from ...models.responses import BBox3D
-
             bbox_3d = None
             if obj.get("bbox_3d"):
                 bbox_3d = BBox3D(
@@ -119,18 +95,6 @@ async def get_segment_3d_result(
                     bbox_3d=bbox_3d,
                 )
             )
+        return {"objects": objects}
 
-        return Segment3DResultResponse(
-            job_id=job_id,
-            status="complete",
-            objects=objects,
-        )
-
-    if result.state == "FAILURE":
-        return Segment3DResultResponse(
-            job_id=job_id,
-            status="failed",
-            error=str(result.result),
-        )
-
-    return Segment3DResultResponse(job_id=job_id, status=result.state.lower())
+    return poll_celery_job(job_id, Segment3DResultResponse, success_mapper=_map_success)

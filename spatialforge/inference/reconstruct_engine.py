@@ -165,7 +165,7 @@ class ReconstructEngine:
         all_points = []
         all_colors = []
 
-        for _, (frame, depth, pose) in enumerate(zip(frames, depth_maps, poses, strict=False)):
+        for frame, depth, pose in zip(frames, depth_maps, poses, strict=False):
             h, w = frame.shape[:2]
             focal = pose.fx
             cx, cy = pose.cx, pose.cy
@@ -208,7 +208,7 @@ class ReconstructEngine:
         return np.vstack(all_points), np.vstack(all_colors).astype(np.uint8)
 
     def _save_ply(self, path: Path, points: NDArray[np.float32], colors: NDArray[np.uint8]) -> None:
-        """Save point cloud as PLY file."""
+        """Save point cloud as PLY file (vectorized binary write)."""
         n = len(points)
         header = (
             "ply\n"
@@ -223,22 +223,26 @@ class ReconstructEngine:
             "end_header\n"
         )
 
+        # Pack xyz (float32) + rgb (uint8) into a structured array for single write
+        vertex_dtype = np.dtype([("xyz", np.float32, 3), ("rgb", np.uint8, 3)])
+        vertices = np.empty(n, dtype=vertex_dtype)
+        vertices["xyz"] = points
+        vertices["rgb"] = colors
+
         with open(path, "wb") as f:
             f.write(header.encode())
-            for i in range(n):
-                f.write(points[i].tobytes())
-                f.write(colors[i].tobytes())
+            f.write(vertices.tobytes())
 
     def _save_gaussian_ply(self, path: Path, points: NDArray[np.float32], colors: NDArray[np.uint8]) -> None:
-        """Save as PLY with Gaussian splat attributes (position, color, scale, rotation, opacity).
+        """Save as PLY with Gaussian splat attributes (vectorized binary write).
 
         This is a simplified version; full 3DGS training would produce optimized splats.
         """
         n = len(points)
 
         # Initialize Gaussian attributes
-        scales = np.full((n, 3), 0.01, dtype=np.float32)  # Small uniform scale
-        rotations = np.zeros((n, 4), dtype=np.float32)  # Quaternion identity
+        scales = np.full((n, 3), 0.01, dtype=np.float32)
+        rotations = np.zeros((n, 4), dtype=np.float32)
         rotations[:, 0] = 1.0
         opacities = np.full((n, 1), 0.8, dtype=np.float32)
 
@@ -263,11 +267,21 @@ class ReconstructEngine:
             "end_header\n"
         )
 
+        # Pack all fields into a structured array for single write
+        gs_dtype = np.dtype([
+            ("xyz", np.float32, 3),
+            ("rgb", np.uint8, 3),
+            ("scale", np.float32, 3),
+            ("rot", np.float32, 4),
+            ("opacity", np.float32, 1),
+        ])
+        vertices = np.empty(n, dtype=gs_dtype)
+        vertices["xyz"] = points
+        vertices["rgb"] = colors
+        vertices["scale"] = scales
+        vertices["rot"] = rotations
+        vertices["opacity"] = opacities
+
         with open(path, "wb") as f:
             f.write(header.encode())
-            for i in range(n):
-                f.write(points[i].tobytes())
-                f.write(colors[i].tobytes())
-                f.write(scales[i].tobytes())
-                f.write(rotations[i].tobytes())
-                f.write(opacities[i].tobytes())
+            f.write(vertices.tobytes())

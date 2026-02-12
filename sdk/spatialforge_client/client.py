@@ -10,7 +10,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from pathlib import Path
@@ -18,9 +17,19 @@ from typing import Any
 
 import httpx
 
+from ._helpers import (
+    build_measure_form_data,
+    build_pose_files,
+    get_retry_after,
+    load_file_data,
+    make_async_job,
+    parse_depth_response,
+    parse_error,
+    parse_measure_response,
+    parse_pose_response,
+)
 from .exceptions import RETRYABLE_STATUS_CODES, SpatialForgeError, raise_for_status
 from .models import (
-    CameraPose,
     DepthResult,
     FloorplanJob,
     MeasureResult,
@@ -72,26 +81,6 @@ class Client:
     def close(self) -> None:
         self._client.close()
 
-    def _parse_error(self, resp: httpx.Response) -> str:
-        """Extract error detail from HTTP response."""
-        try:
-            ct = resp.headers.get("content-type", "")
-            if ct.startswith("application/json"):
-                return resp.json().get("detail", resp.text)
-        except Exception:
-            pass
-        return resp.text
-
-    def _get_retry_after(self, resp: httpx.Response) -> float | None:
-        """Extract Retry-After header value in seconds."""
-        val = resp.headers.get("retry-after")
-        if val is not None:
-            try:
-                return float(val)
-            except ValueError:
-                pass
-        return None
-
     def _request_with_retry(
         self,
         method: str,
@@ -119,10 +108,9 @@ class Client:
             if resp.status_code < 400:
                 return resp
 
-            # Check if we should retry
             if resp.status_code in RETRYABLE_STATUS_CODES and attempt < self._max_retries:
-                retry_after = self._get_retry_after(resp)
-                delay = retry_after if retry_after is not None else self._retry_base_delay * (2 ** attempt)
+                retry = get_retry_after(resp)
+                delay = retry if retry is not None else self._retry_base_delay * (2 ** attempt)
                 logger.warning(
                     "HTTP %d (attempt %d/%d), retrying in %.1fs",
                     resp.status_code, attempt + 1, self._max_retries + 1, delay,
@@ -130,14 +118,12 @@ class Client:
                 time.sleep(delay)
                 continue
 
-            # Non-retryable or exhausted retries
             raise_for_status(
                 resp.status_code,
-                self._parse_error(resp),
-                retry_after=self._get_retry_after(resp),
+                parse_error(resp),
+                retry_after=get_retry_after(resp),
             )
 
-        # Should not reach here, but just in case
         raise SpatialForgeError(500, "Unexpected retry exhaustion") from last_exc
 
     def _get(self, path: str) -> dict:
@@ -168,32 +154,13 @@ class Client:
         Returns:
             DepthResult with depth map URL and metadata.
         """
-        if isinstance(image, str | Path):
-            image_path = Path(image)
-            file_data = image_path.read_bytes()
-            filename = image_path.name
-        else:
-            file_data = image
-            filename = "image.jpg"
-
+        file_data, filename = load_file_data(image, "image.jpg")
         data = self._post_file(
             "/v1/depth",
             files={"image": (filename, file_data)},
             data={"model": model, "output_format": output_format, "metric": str(metric).lower()},
         )
-
-        meta = data.get("metadata", {})
-        return DepthResult(
-            depth_map_url=data["depth_map_url"],
-            width=meta.get("width", 0),
-            height=meta.get("height", 0),
-            min_depth_m=meta.get("min_depth_m", 0),
-            max_depth_m=meta.get("max_depth_m", 0),
-            focal_length_px=meta.get("focal_length_px"),
-            confidence_mean=meta.get("confidence_mean", 0),
-            processing_time_ms=data.get("processing_time_ms", 0),
-            _raw=data,
-        )
+        return parse_depth_response(data)
 
     # ── /measure ────────────────────────────────────────────
 
@@ -215,33 +182,13 @@ class Client:
         Returns:
             MeasureResult with distance in meters.
         """
-        if isinstance(image, str | Path):
-            image_path = Path(image)
-            file_data = image_path.read_bytes()
-            filename = image_path.name
-        else:
-            file_data = image
-            filename = "image.jpg"
-
-        form_data: dict[str, str] = {
-            "points": json.dumps([{"x": point1[0], "y": point1[1]}, {"x": point2[0], "y": point2[1]}]),
-        }
-        if reference_object:
-            form_data["reference_object"] = json.dumps(reference_object)
-
+        file_data, filename = load_file_data(image, "image.jpg")
         data = self._post_file(
             "/v1/measure",
             files={"image": (filename, file_data)},
-            data=form_data,
+            data=build_measure_form_data(point1, point2, reference_object),
         )
-
-        return MeasureResult(
-            distance_m=data["distance_m"],
-            confidence=data["confidence"],
-            depth_at_points=data["depth_at_points"],
-            calibration_method=data["calibration_method"],
-            processing_time_ms=data.get("processing_time_ms", 0),
-        )
+        return parse_measure_response(data)
 
     # ── /pose ───────────────────────────────────────────────
 
@@ -261,53 +208,12 @@ class Client:
         Returns:
             PoseResult with camera poses.
         """
-        files: dict[str, Any] = {}
-
-        if video is not None:
-            if isinstance(video, str | Path):
-                video_path = Path(video)
-                files["video"] = (video_path.name, video_path.read_bytes())
-            else:
-                files["video"] = ("video.mp4", video)
-        elif images is not None:
-            for i, img in enumerate(images):
-                if isinstance(img, str | Path):
-                    img_path = Path(img)
-                    files[f"images_{i}"] = (img_path.name, img_path.read_bytes())
-                else:
-                    files[f"images_{i}"] = (f"image_{i}.jpg", img)
-        else:
-            raise ValueError("Provide either video or images")
-
         data = self._post_file(
             "/v1/pose",
-            files=files,
+            files=build_pose_files(video, images),
             data={"output_pointcloud": str(output_pointcloud).lower()},
         )
-
-        poses = []
-        for p in data.get("camera_poses", []):
-            intr = p.get("intrinsics", {})
-            poses.append(
-                CameraPose(
-                    frame_index=p["frame_index"],
-                    rotation=p["rotation"],
-                    translation=p["translation"],
-                    fx=intr.get("fx", 0),
-                    fy=intr.get("fy", 0),
-                    cx=intr.get("cx", 0),
-                    cy=intr.get("cy", 0),
-                    width=intr.get("width", 0),
-                    height=intr.get("height", 0),
-                )
-            )
-
-        return PoseResult(
-            camera_poses=poses,
-            pointcloud_url=data.get("pointcloud_url"),
-            num_frames=data.get("num_frames", len(poses)),
-            processing_time_ms=data.get("processing_time_ms", 0),
-        )
+        return parse_pose_response(data)
 
     # ── /reconstruct ────────────────────────────────────────
 
@@ -327,27 +233,13 @@ class Client:
         Returns:
             ReconstructJob — call .wait() to block until complete.
         """
-        if isinstance(video, str | Path):
-            video_path = Path(video)
-            file_data = video_path.read_bytes()
-            filename = video_path.name
-        else:
-            file_data = video
-            filename = "video.mp4"
-
+        file_data, filename = load_file_data(video, "video.mp4")
         data = self._post_file(
             "/v1/reconstruct",
             files={"video": (filename, file_data)},
             data={"quality": quality, "output": output},
         )
-
-        return ReconstructJob(
-            job_id=data["job_id"],
-            status=data["status"],
-            estimated_time_s=data.get("estimated_time_s"),
-            _client=self,
-            _endpoint="/v1/reconstruct",
-        )
+        return make_async_job(data, ReconstructJob, self, "/v1/reconstruct")
 
     # ── /floorplan ──────────────────────────────────────────
 
@@ -365,27 +257,13 @@ class Client:
         Returns:
             FloorplanJob — call .wait() to block until complete.
         """
-        if isinstance(video, str | Path):
-            video_path = Path(video)
-            file_data = video_path.read_bytes()
-            filename = video_path.name
-        else:
-            file_data = video
-            filename = "video.mp4"
-
+        file_data, filename = load_file_data(video, "video.mp4")
         data = self._post_file(
             "/v1/floorplan",
             files={"video": (filename, file_data)},
             data={"output_format": output_format},
         )
-
-        return FloorplanJob(
-            job_id=data["job_id"],
-            status=data["status"],
-            estimated_time_s=data.get("estimated_time_s"),
-            _client=self,
-            _endpoint="/v1/floorplan",
-        )
+        return make_async_job(data, FloorplanJob, self, "/v1/floorplan")
 
     # ── /segment-3d ─────────────────────────────────────────
 
@@ -403,24 +281,10 @@ class Client:
         Returns:
             Segment3DJob — call .wait() to block until complete.
         """
-        if isinstance(video, str | Path):
-            video_path = Path(video)
-            file_data = video_path.read_bytes()
-            filename = video_path.name
-        else:
-            file_data = video
-            filename = "video.mp4"
-
+        file_data, filename = load_file_data(video, "video.mp4")
         data = self._post_file(
             "/v1/segment-3d",
             files={"video": (filename, file_data)},
             data={"prompt": prompt},
         )
-
-        return Segment3DJob(
-            job_id=data["job_id"],
-            status=data["status"],
-            estimated_time_s=data.get("estimated_time_s"),
-            _client=self,
-            _endpoint="/v1/segment-3d",
-        )
+        return make_async_job(data, Segment3DJob, self, "/v1/segment-3d")

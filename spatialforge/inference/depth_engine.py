@@ -61,8 +61,8 @@ def extract_focal_from_exif(image_bytes: bytes) -> float | None:
         from PIL.ExifTags import TAGS
 
         img = PILImage.open(io.BytesIO(image_bytes))
-        exif_data = img._getexif()
-        if exif_data is None:
+        exif_data = img.getexif()
+        if not exif_data:
             return None
 
         focal_mm = None

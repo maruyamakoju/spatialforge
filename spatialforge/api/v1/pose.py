@@ -5,19 +5,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
+from ...config import MAX_VIDEO_FILE_SIZE
 from ...models.responses import CameraIntrinsics, CameraPose, PoseResponse
+from ._video_job_utils import build_error_responses
 
 router = APIRouter()
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB for video
-
-_ERROR_RESPONSES = {
-    400: {"description": "Invalid input (must provide video or images, not both)"},
-    401: {"description": "Missing or invalid API key"},
-    413: {"description": "File exceeds size limit"},
-    429: {"description": "Monthly rate limit exceeded"},
-    504: {"description": "Inference timed out"},
-}
+_ERROR_RESPONSES = build_error_responses({
+    400: "Invalid input (must provide video or images, not both)",
+    413: "File exceeds size limit",
+    504: "Inference timed out",
+})
 
 
 @router.post("/pose", response_model=PoseResponse, responses=_ERROR_RESPONSES)
@@ -37,7 +35,7 @@ async def estimate_pose(
 
     if video is not None:
         content = await video.read()
-        if len(content) > MAX_FILE_SIZE:
+        if len(content) > MAX_VIDEO_FILE_SIZE:
             raise HTTPException(status_code=413, detail="Video exceeds 100MB limit")
 
         from ...utils.video import extract_keyframes, save_uploaded_video, validate_video

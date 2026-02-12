@@ -8,17 +8,17 @@ import math
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
+from ...config import MAX_IMAGE_FILE_SIZE
 from ...models.responses import MeasureResponse
+from ._video_job_utils import build_error_responses
 
 router = APIRouter()
 
-_ERROR_RESPONSES = {
-    400: {"description": "Invalid input (bad points format, coordinates out of bounds, NaN/Inf)"},
-    401: {"description": "Missing or invalid API key"},
-    413: {"description": "Image exceeds 20MB size limit"},
-    429: {"description": "Monthly rate limit exceeded"},
-    504: {"description": "Inference timed out"},
-}
+_ERROR_RESPONSES = build_error_responses({
+    400: "Invalid input (bad points format, coordinates out of bounds, NaN/Inf)",
+    413: "Image exceeds 20MB size limit",
+    504: "Inference timed out",
+})
 
 
 @router.post("/measure", response_model=MeasureResponse, responses=_ERROR_RESPONSES)
@@ -64,7 +64,7 @@ async def measure_distance(
 
     # Load image
     content = await image.read()
-    if len(content) > 20 * 1024 * 1024:
+    if len(content) > MAX_IMAGE_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Image exceeds 20MB limit")
 
     from ...utils.image import load_image_rgb, resize_if_needed

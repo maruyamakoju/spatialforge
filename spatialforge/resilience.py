@@ -24,61 +24,33 @@ MINIO_RETRYABLE_EXCEPTIONS = (ConnectionError, TimeoutError, OSError)
 STRIPE_RETRYABLE_EXCEPTIONS = (ConnectionError, TimeoutError)
 
 
-def with_redis_retry(func: Callable[..., T]) -> Callable[..., T]:
-    """Decorator to add exponential backoff retry for Redis operations."""
+def _make_retry_decorator(
+    retryable_exceptions: tuple[type[Exception], ...],
+    service_name: str,
+    max_attempts: int = 3,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Factory for service-specific retry decorators with exponential backoff."""
 
-    @retry(
-        retry=retry_if_exception_type(REDIS_RETRYABLE_EXCEPTIONS),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        stop=stop_after_attempt(3),
-        reraise=True,
-    )
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.warning(f"Redis operation failed: {func.__name__}, error: {e}")
-            raise
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @retry(
+            retry=retry_if_exception_type(retryable_exceptions),
+            wait=wait_exponential(multiplier=1, min=1, max=10),
+            stop=stop_after_attempt(max_attempts),
+            reraise=True,
+        )
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.warning("%s operation failed: %s, error: %s", service_name, func.__name__, e)
+                raise
 
-    return wrapper
+        return wrapper
 
-
-def with_minio_retry(func: Callable[..., T]) -> Callable[..., T]:
-    """Decorator to add exponential backoff retry for MinIO/S3 operations."""
-
-    @retry(
-        retry=retry_if_exception_type(MINIO_RETRYABLE_EXCEPTIONS),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        stop=stop_after_attempt(3),
-        reraise=True,
-    )
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.warning(f"MinIO operation failed: {func.__name__}, error: {e}")
-            raise
-
-    return wrapper
+    return decorator
 
 
-def with_stripe_retry(func: Callable[..., T]) -> Callable[..., T]:
-    """Decorator to add exponential backoff retry for Stripe API calls."""
-
-    @retry(
-        retry=retry_if_exception_type(STRIPE_RETRYABLE_EXCEPTIONS),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        stop=stop_after_attempt(3),
-        reraise=True,
-    )
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.warning(f"Stripe operation failed: {func.__name__}, error: {e}")
-            raise
-
-    return wrapper
+with_redis_retry = _make_retry_decorator(REDIS_RETRYABLE_EXCEPTIONS, "Redis")
+with_minio_retry = _make_retry_decorator(MINIO_RETRYABLE_EXCEPTIONS, "MinIO")
+with_stripe_retry = _make_retry_decorator(STRIPE_RETRYABLE_EXCEPTIONS, "Stripe")

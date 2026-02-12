@@ -98,3 +98,16 @@ class Segment3DRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=500, description="Text prompt describing objects to segment")
     output_3d_mask: bool = True
     output_bbox: bool = True
+
+
+# ── /billing ───────────────────────────────────────────────
+
+class CheckoutRequest(BaseModel):
+    plan: str  # "builder", "pro", "enterprise"
+    email: str
+    success_url: str = "https://spatialforge-demo.fly.dev/docs"
+    cancel_url: str = "https://spatialforge-demo.fly.dev/docs"
+
+
+class PortalRequest(BaseModel):
+    email: str

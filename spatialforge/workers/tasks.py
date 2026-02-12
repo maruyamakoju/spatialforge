@@ -7,16 +7,12 @@ import logging
 import os
 import tempfile
 import traceback
+from contextlib import contextmanager
+from typing import Any
 
 from .celery_app import celery_app
 
 logger = logging.getLogger(__name__)
-
-
-class GPUOutOfMemoryError(Exception):
-    """Raised when GPU runs out of memory."""
-
-    pass
 
 # Lazy-initialized shared resources (initialized once per worker process)
 _model_manager = None
@@ -36,14 +32,10 @@ def _get_model_manager():
     global _model_manager
     if _model_manager is None:
         from ..config import get_settings
-        from ..inference.model_manager import ModelManager
+        from ..inference.model_manager import create_model_manager_from_settings
 
         settings = get_settings()
-        _model_manager = ModelManager(
-            model_dir=settings.model_dir,
-            device=settings.device,
-            dtype=settings.torch_dtype,
-        )
+        _model_manager = create_model_manager_from_settings(settings)
     return _model_manager
 
 
@@ -76,15 +68,41 @@ def _get_object_store():
     return _object_store
 
 
-@celery_app.task(
-    bind=True,
-    name="spatialforge.workers.tasks.reconstruct_task",
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-    retry_jitter=True,
-    max_retries=3,
-)
+@contextmanager
+def _download_video_to_temp(video_object_key: str):
+    """Download video from object store to a temp file, cleanup on exit."""
+    store = _get_object_store()
+    video_bytes = store.download_bytes(video_object_key)
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
+        tmp_video.write(video_bytes)
+    try:
+        yield tmp_video.name, store
+    finally:
+        os.unlink(tmp_video.name)
+
+
+def _extract_frames(video_path: str, target_fps: float = 2.0, max_frames: int = 200):
+    """Validate video and extract keyframes."""
+    from ..utils.video import extract_keyframes, validate_video
+
+    validate_video(video_path)
+    return extract_keyframes(video_path, target_fps=target_fps, max_frames=max_frames)
+
+
+# ── Task definitions ─────────────────────────────────────────
+
+
+_GPU_TASK_OPTS: dict[str, Any] = {
+    "bind": True,
+    "autoretry_for": (Exception,),
+    "retry_backoff": True,
+    "retry_backoff_max": 600,
+    "retry_jitter": True,
+    "max_retries": 3,
+}
+
+
+@celery_app.task(name="spatialforge.workers.tasks.reconstruct_task", **_GPU_TASK_OPTS)
 def reconstruct_task(
     self,
     video_object_key: str,
@@ -92,31 +110,14 @@ def reconstruct_task(
     output_format: str = "gaussian",
     webhook_url: str | None = None,
 ) -> dict:
-    """Async 3D reconstruction from uploaded video.
-
-    Args:
-        video_object_key: MinIO key for the uploaded video.
-        quality: 'draft', 'standard', or 'high'.
-        output_format: 'gaussian', 'pointcloud', or 'mesh'.
-    """
+    """Async 3D reconstruction from uploaded video."""
     try:
         self.update_state(state="PROCESSING", meta={"step": "downloading_video"})
-
-        store = _get_object_store()
         mm = _get_model_manager()
 
-        # Download video from object store
-        video_bytes = store.download_bytes(video_object_key)
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
-            tmp_video.write(video_bytes)
-
-        try:
+        with _download_video_to_temp(video_object_key) as (video_path, store):
             self.update_state(state="PROCESSING", meta={"step": "extracting_keyframes"})
-
-            from ..utils.video import extract_keyframes, validate_video
-
-            validate_video(tmp_video.name)
-            frames = extract_keyframes(tmp_video.name, target_fps=2.0)
+            frames = _extract_frames(video_path, target_fps=2.0)
 
             self.update_state(
                 state="PROCESSING",
@@ -126,15 +127,10 @@ def reconstruct_task(
             from ..inference.reconstruct_engine import ReconstructEngine
 
             engine = ReconstructEngine(mm)
-            result = engine.reconstruct(
-                frames=frames,
-                quality=quality,
-                output_format=output_format,
-            )
+            result = engine.reconstruct(frames=frames, quality=quality, output_format=output_format)
 
             self.update_state(state="PROCESSING", meta={"step": "uploading_result"})
 
-            # Upload result to object store
             scene_key = store.upload_file(
                 str(result.output_path),
                 content_type="application/octet-stream",
@@ -155,10 +151,8 @@ def reconstruct_task(
                 "processing_time_ms": result.processing_time_ms,
             }
 
-            _fire_webhook(webhook_url, self.request.id, "reconstruct", result_data)
-            return result_data
-        finally:
-            os.unlink(tmp_video.name)
+        _fire_webhook(webhook_url, self.request.id, "reconstruct", result_data)
+        return result_data
 
     except Exception as exc:
         logger.error("Reconstruction failed: %s", traceback.format_exc())
@@ -169,62 +163,32 @@ def reconstruct_task(
         raise
 
 
-@celery_app.task(
-    bind=True,
-    name="spatialforge.workers.tasks.floorplan_task",
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-    retry_jitter=True,
-    max_retries=3,
-)
+@celery_app.task(name="spatialforge.workers.tasks.floorplan_task", **_GPU_TASK_OPTS)
 def floorplan_task(
     self,
     video_object_key: str,
     output_format: str = "svg",
 ) -> dict:
-    """Async floorplan generation from room walkthrough video.
-
-    Pipeline:
-    1. Extract keyframes
-    2. Estimate depth for each frame
-    3. Estimate camera poses
-    4. Project floor plane
-    5. Detect walls and generate 2D floorplan
-    """
+    """Async floorplan generation from room walkthrough video."""
     try:
         self.update_state(state="PROCESSING", meta={"step": "downloading_video"})
-
-        store = _get_object_store()
         mm = _get_model_manager()
 
-        video_bytes = store.download_bytes(video_object_key)
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
-            tmp_video.write(video_bytes)
-
-        try:
+        with _download_video_to_temp(video_object_key) as (video_path, store):
             self.update_state(state="PROCESSING", meta={"step": "processing"})
+            frames = _extract_frames(video_path, target_fps=1.0, max_frames=60)
 
-            from ..utils.video import extract_keyframes, validate_video
-
-            validate_video(tmp_video.name)
-            frames = extract_keyframes(tmp_video.name, target_fps=1.0, max_frames=60)
-
-            # Step 1: Estimate poses and sparse geometry
             from ..inference.pose_engine import PoseEngine
 
             pose_engine = PoseEngine(mm)
-
             pose_result = pose_engine.estimate_poses(frames, output_pointcloud=True)
 
             self.update_state(state="PROCESSING", meta={"step": "generating_floorplan"})
 
-            # Step 2: Generate floorplan from point cloud projection
             floorplan_data = _generate_floorplan_from_pointcloud(
                 pose_result.pointcloud, output_format
             )
 
-            # Upload result
             ext = output_format if output_format != "json" else "json"
             content_type = {
                 "svg": "image/svg+xml",
@@ -240,14 +204,12 @@ def floorplan_task(
             )
             url = store.get_presigned_url(key)
 
-            return {
-                "status": "complete",
-                "floorplan_url": url,
-                "floor_area_m2": None,  # TODO: calculate from detected walls
-                "room_count": None,
-            }
-        finally:
-            os.unlink(tmp_video.name)
+        return {
+            "status": "complete",
+            "floorplan_url": url,
+            "floor_area_m2": None,
+            "room_count": None,
+        }
 
     except Exception as exc:
         logger.error("Floorplan generation failed: %s", traceback.format_exc())
@@ -256,15 +218,7 @@ def floorplan_task(
         raise
 
 
-@celery_app.task(
-    bind=True,
-    name="spatialforge.workers.tasks.segment_3d_task",
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-    retry_jitter=True,
-    max_retries=3,
-)
+@celery_app.task(name="spatialforge.workers.tasks.segment_3d_task", **_GPU_TASK_OPTS)
 def segment_3d_task(
     self,
     video_object_key: str,
@@ -278,30 +232,19 @@ def segment_3d_task(
     """
     try:
         self.update_state(state="PROCESSING", meta={"step": "downloading"})
-
-        store = _get_object_store()
         mm = _get_model_manager()
 
-        video_bytes = store.download_bytes(video_object_key)
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
-            tmp_video.write(video_bytes)
-
-        try:
-            from ..utils.video import extract_keyframes, validate_video
-
-            validate_video(tmp_video.name)
-            frames = extract_keyframes(tmp_video.name, target_fps=1.0, max_frames=10)
+        with _download_video_to_temp(video_object_key) as (video_path, _store):
+            frames = _extract_frames(video_path, target_fps=1.0, max_frames=10)
 
             self.update_state(state="PROCESSING", meta={"step": "segmenting"})
 
-            # For MVP: run depth estimation on first frame
             from ..inference.depth_engine import DepthEngine
 
             depth_engine = DepthEngine(mm)
             depth_result = depth_engine.estimate(frames[0], model_size="large")
 
             # TODO: Integrate SAM3 + Grounding DINO for real text-prompted segmentation
-            # For now, return a placeholder response
             return {
                 "status": "complete",
                 "objects": [
@@ -317,8 +260,6 @@ def segment_3d_task(
                 ],
                 "note": "SAM3 integration pending. Currently returns depth-based placeholder.",
             }
-        finally:
-            os.unlink(tmp_video.name)
 
     except Exception as exc:
         logger.error("3D segmentation failed: %s", traceback.format_exc())
@@ -327,15 +268,11 @@ def segment_3d_task(
         raise
 
 
-def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
-    """Generate a 2D floorplan SVG/DXF from a 3D point cloud.
+# ── Floorplan generation helper ──────────────────────────────
 
-    Simplified approach:
-    1. Project points onto XZ plane (floor)
-    2. Create occupancy grid
-    3. Detect walls via edge detection
-    4. Generate SVG output
-    """
+
+def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
+    """Generate a 2D floorplan SVG/DXF from a 3D point cloud."""
     import numpy as np
 
     if pointcloud is None or len(pointcloud) == 0:
@@ -344,21 +281,18 @@ def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
         return _empty_svg_floorplan()
 
     # Project to floor plane (XZ)
-    xz = pointcloud[:, [0, 2]]  # X and Z coordinates
+    xz = pointcloud[:, [0, 2]]
 
     # Create occupancy grid
     resolution = 0.05  # 5cm per pixel
     x_min, z_min = xz.min(axis=0) - 0.5
     x_max, z_max = xz.max(axis=0) + 0.5
 
-    grid_w = int((x_max - x_min) / resolution)
-    grid_h = int((z_max - z_min) / resolution)
-    grid_w = max(10, min(grid_w, 2000))
-    grid_h = max(10, min(grid_h, 2000))
+    grid_w = max(10, min(int((x_max - x_min) / resolution), 2000))
+    grid_h = max(10, min(int((z_max - z_min) / resolution), 2000))
 
     grid = np.zeros((grid_h, grid_w), dtype=np.uint8)
 
-    # Fill occupancy grid
     xi = ((xz[:, 0] - x_min) / resolution).astype(int)
     zi = ((xz[:, 1] - z_min) / resolution).astype(int)
     valid = (xi >= 0) & (xi < grid_w) & (zi >= 0) & (zi < grid_h)
@@ -381,7 +315,6 @@ def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
         '<g transform="scale(2)">',
     ]
 
-    # Draw occupied cells
     for y in range(grid_h):
         for x in range(grid_w):
             if grid[y, x] > 0:
@@ -389,9 +322,7 @@ def _generate_floorplan_from_pointcloud(pointcloud, output_format: str) -> str:
 
     svg_lines.append("</g>")
 
-    # Add scale bar
-    scale_bar_m = 1.0
-    scale_bar_px = int(scale_bar_m / resolution) * 2
+    scale_bar_px = int(1.0 / resolution) * 2
     svg_lines.append(
         f'<line x1="10" y1="{svg_h - 10}" x2="{10 + scale_bar_px}" y2="{svg_h - 10}" '
         f'stroke="black" stroke-width="2"/>'
@@ -430,6 +361,9 @@ def _fire_webhook(
         notify_job_complete(webhook_url, job_id, job_type, result)
     except Exception:
         logger.warning("Webhook delivery failed for job %s", job_id, exc_info=True)
+
+
+# ── Periodic tasks ───────────────────────────────────────────
 
 
 @celery_app.task(name="spatialforge.workers.tasks.cleanup_expired_results")

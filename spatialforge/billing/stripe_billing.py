@@ -16,6 +16,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import stripe
+from starlette.concurrency import run_in_threadpool
 
 from ..auth.api_keys import Plan
 
@@ -72,11 +73,14 @@ class StripeBilling:
         Uses lookup_keys so prices are idempotent across deploys.
         """
         # Create the SpatialForge product (idempotent via metadata search)
-        products = stripe.Product.search(query="metadata['app']:'spatialforge'", limit=1)
+        products = await run_in_threadpool(
+            stripe.Product.search, query="metadata['app']:'spatialforge'", limit=1,
+        )
         if products.data:
             product = products.data[0]
         else:
-            product = stripe.Product.create(
+            product = await run_in_threadpool(
+                stripe.Product.create,
                 name="SpatialForge API",
                 description="Spatial intelligence API — depth estimation, 3D reconstruction, and more.",
                 metadata={"app": "spatialforge"},
@@ -91,13 +95,16 @@ class StripeBilling:
             lookup_key = config["lookup_key"]
 
             # Check if price already exists
-            existing = stripe.Price.list(lookup_keys=[lookup_key], limit=1)
+            existing = await run_in_threadpool(
+                stripe.Price.list, lookup_keys=[lookup_key], limit=1,
+            )
             if existing.data:
                 self._price_ids[lookup_key] = existing.data[0].id
                 logger.debug("Found existing price for %s: %s", lookup_key, existing.data[0].id)
                 continue
 
-            price = stripe.Price.create(
+            price = await run_in_threadpool(
+                stripe.Price.create,
                 product=product.id,
                 unit_amount=config["amount"],
                 currency="usd",
@@ -134,7 +141,8 @@ class StripeBilling:
         # Find or create Stripe customer
         customer_id = await self._get_or_create_customer(owner_email, api_key_hash)
 
-        session = stripe.checkout.Session.create(
+        session = await run_in_threadpool(
+            stripe.checkout.Session.create,
             customer=customer_id,
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
@@ -151,11 +159,14 @@ class StripeBilling:
         Returns the portal URL.
         """
         # Find customer by email
-        customers = stripe.Customer.search(query=f"email:'{owner_email}'", limit=1)
+        customers = await run_in_threadpool(
+            stripe.Customer.search, query=f"email:'{owner_email}'", limit=1,
+        )
         if not customers.data:
             raise ValueError(f"No Stripe customer found for email: {owner_email}")
 
-        session = stripe.billing_portal.Session.create(
+        session = await run_in_threadpool(
+            stripe.billing_portal.Session.create,
             customer=customers.data[0].id,
             return_url="https://spatialforge-demo.fly.dev/docs",
         )
@@ -241,7 +252,7 @@ class StripeBilling:
 
         # Find the API key hash from subscription metadata
         try:
-            sub = stripe.Subscription.retrieve(subscription_id)
+            sub = await run_in_threadpool(stripe.Subscription.retrieve, subscription_id)
             api_key_hash = sub.metadata.get("api_key_hash")
             if api_key_hash and self._redis:
                 # Reset monthly call counter
@@ -268,11 +279,14 @@ class StripeBilling:
                 return cached
 
         # Search Stripe
-        customers = stripe.Customer.search(query=f"email:'{email}'", limit=1)
+        customers = await run_in_threadpool(
+            stripe.Customer.search, query=f"email:'{email}'", limit=1,
+        )
         if customers.data:
             customer_id = customers.data[0].id
         else:
-            customer = stripe.Customer.create(
+            customer = await run_in_threadpool(
+                stripe.Customer.create,
                 email=email,
                 metadata={"api_key_hash": api_key_hash, "source": "spatialforge"},
             )

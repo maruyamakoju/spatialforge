@@ -13,6 +13,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -20,7 +21,7 @@ API_KEY_ENV = "SPATIALFORGE_API_KEY"
 BASE_URL_ENV = "SPATIALFORGE_BASE_URL"
 
 
-def _get_client(**kwargs):
+def _get_client(**kwargs: Any) -> Any:
     """Create a SpatialForge client from env vars or options."""
     from .client import Client
 
@@ -33,7 +34,7 @@ def _get_client(**kwargs):
         sys.exit(1)
 
     base_url = kwargs.get("base_url") or os.environ.get(BASE_URL_ENV)
-    kw = {"api_key": api_key}
+    kw: dict[str, Any] = {"api_key": api_key}
     if base_url:
         kw["base_url"] = base_url
 
@@ -74,17 +75,47 @@ def _print_table(title: str, rows: list[tuple[str, str]]) -> None:
         console.print(table)
     except ImportError:
         click.echo(f"\n  {title}")
-        click.echo("  " + "─" * 40)
+        click.echo("  " + "-" * 40)
         for k, v in rows:
             click.echo(f"  {k:20s} {v}")
         click.echo()
 
 
+def _wait_for_job(
+    client: Any,
+    job: Any,
+    wait: bool,
+    as_json: bool,
+    complete_message: str,
+) -> None:
+    """Shared logic for async job CLI commands: submit, optionally wait, print result."""
+    click.echo(f"Job {job.job_id} submitted (status: {job.status})")
+    if job.estimated_time_s:
+        click.echo(f"Estimated time: {job.estimated_time_s:.0f}s")
+
+    if not wait:
+        client.close()
+        return
+
+    try:
+        click.echo("Waiting for completion...")
+        result = job.wait(poll_interval=5.0)
+    except (RuntimeError, TimeoutError) as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+    finally:
+        client.close()
+
+    if as_json:
+        _print_json(result)
+    else:
+        click.echo(complete_message.format_map(result))
+
+
 @click.group()
 @click.version_option(package_name="spatialforge-client")
-def main():
+def main() -> None:
     """SpatialForge CLI — spatial intelligence from any camera."""
-    pass
 
 
 @main.command()
@@ -252,27 +283,7 @@ def reconstruct(video, quality, output_type, wait, as_json, api_key, base_url):
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    click.echo(f"Job {job.job_id} submitted (status: {job.status})")
-    if job.estimated_time_s:
-        click.echo(f"Estimated time: {job.estimated_time_s:.0f}s")
-
-    if not wait:
-        client.close()
-        return
-
-    try:
-        click.echo("Waiting for completion...")
-        result = job.wait(poll_interval=5.0)
-    except (RuntimeError, TimeoutError) as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-    finally:
-        client.close()
-
-    if as_json:
-        _print_json(result)
-    else:
-        click.echo(f"Complete! Scene URL: {result.get('scene_url', 'N/A')}")
+    _wait_for_job(client, job, wait, as_json, "Complete! Scene URL: {scene_url}")
 
 
 @main.command()
@@ -292,25 +303,7 @@ def floorplan(video, output_format, wait, as_json, api_key, base_url):
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    click.echo(f"Job {job.job_id} submitted (status: {job.status})")
-
-    if not wait:
-        client.close()
-        return
-
-    try:
-        click.echo("Waiting for completion...")
-        result = job.wait(poll_interval=5.0)
-    except (RuntimeError, TimeoutError) as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-    finally:
-        client.close()
-
-    if as_json:
-        _print_json(result)
-    else:
-        click.echo(f"Complete! Floor area: {result.get('floor_area_m2', 'N/A')} m2")
+    _wait_for_job(client, job, wait, as_json, "Complete! Floor area: {floor_area_m2} m2")
 
 
 @main.command("segment-3d")
@@ -330,25 +323,7 @@ def segment_3d(video, prompt, wait, as_json, api_key, base_url):
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    click.echo(f"Job {job.job_id} submitted (status: {job.status})")
-
-    if not wait:
-        client.close()
-        return
-
-    try:
-        click.echo("Waiting for completion...")
-        result = job.wait(poll_interval=5.0)
-    except (RuntimeError, TimeoutError) as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-    finally:
-        client.close()
-
-    if as_json:
-        _print_json(result)
-    else:
-        click.echo(f"Complete! Segments: {result.get('num_segments', 'N/A')}")
+    _wait_for_job(client, job, wait, as_json, "Complete! Segments: {num_segments}")
 
 
 if __name__ == "__main__":

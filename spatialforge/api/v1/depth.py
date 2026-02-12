@@ -11,21 +11,19 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import Response
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
+from ...config import MAX_IMAGE_FILE_SIZE
 from ...models.requests import DepthModel, DepthOutputFormat
 from ...models.responses import DepthMetadata, DepthResponse
+from ._video_job_utils import build_error_responses
 
 router = APIRouter()
 
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
-
-_ERROR_RESPONSES = {
-    400: {"description": "Invalid input (bad image format, unsupported content type)"},
-    401: {"description": "Missing or invalid API key"},
-    413: {"description": "Image exceeds 20MB size limit"},
-    429: {"description": "Monthly rate limit exceeded"},
-    503: {"description": "Auth service unavailable (Redis down)"},
-    504: {"description": "Inference timed out (try a smaller image or faster model)"},
-}
+_ERROR_RESPONSES = build_error_responses({
+    400: "Invalid input (bad image format, unsupported content type)",
+    413: "Image exceeds 20MB size limit",
+    503: "Auth service unavailable (Redis down)",
+    504: "Inference timed out (try a smaller image or faster model)",
+})
 
 
 @router.post("/depth", response_model=DepthResponse, responses=_ERROR_RESPONSES)
@@ -161,7 +159,7 @@ async def depth_visualize(
 async def _load_and_validate(image: UploadFile):
     """Read, validate, return (raw_bytes, rgb_array)."""
     content = await image.read()
-    if len(content) > MAX_FILE_SIZE:
+    if len(content) > MAX_IMAGE_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Image exceeds 20MB limit")
 
     content_type = image.content_type or ""
