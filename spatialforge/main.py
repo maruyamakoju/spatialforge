@@ -140,6 +140,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         device=device,
         dtype=settings.torch_dtype if device != "cpu" else "float32",
         research_mode=settings.research_mode,
+        depth_backend=settings.depth_backend,
     )
     app.state.model_manager = model_manager
 

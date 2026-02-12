@@ -56,3 +56,19 @@ def test_security_fields_can_be_overridden(monkeypatch):
     assert s.security_expires == "2027-12-31T00:00:00Z"
     assert s.security_preferred_languages == "en,ja"
     assert s.security_encryption_url == "https://api.example.org/.well-known/pgp-key.txt"
+
+
+def test_depth_backend_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "true")
+    monkeypatch.setenv("DEPTH_BACKEND", "da3")
+
+    s = get_settings()
+    assert s.depth_backend == "da3"
+
+
+def test_depth_backend_invalid_rejected(monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "true")
+    monkeypatch.setenv("DEPTH_BACKEND", "invalid-backend")
+
+    with pytest.raises(ValueError, match="DEPTH_BACKEND"):
+        get_settings()

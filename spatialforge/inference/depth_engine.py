@@ -171,10 +171,12 @@ class DepthEngine:
         # Convert to metric if applicable
         is_metric = model_info.task == "metric_depth"
         if is_metric:
-            # Metric models output depth directly in meters (or close to it).
-            # The transformers pipeline for DA2 Metric models already outputs
-            # metric depth. We just need to ensure correct scaling.
-            depth_map = raw_depth.astype(np.float32)
+            # DA3 metric model returns depth-ray scale; convert with focal (README formula).
+            if "DA3METRIC" in model_info.repo.upper():
+                depth_map = (raw_depth.astype(np.float32) * (float(focal) / 300.0))
+            else:
+                # DA2 metric models from HF pipeline are already meter-scaled.
+                depth_map = raw_depth.astype(np.float32)
         else:
             # Relative depth models output disparity (inverse depth).
             # Higher values = closer. Normalize to [0, 1] range.

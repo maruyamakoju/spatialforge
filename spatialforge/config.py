@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     # Models
     model_dir: Path = Path("./models")
     default_depth_model: str = "large"  # large | base | small (Apache 2.0 only)
+    depth_backend: str = "hf"  # hf | da3
     device: str = "cuda"
     torch_dtype: str = "float16"
     research_mode: bool = False  # DANGER: enables CC-BY-NC models. Never in production.
@@ -115,6 +116,13 @@ def get_settings() -> Settings:
         raise ValueError(
             "API_KEY_SECRET must be at least 32 characters. "
             f"Current length: {len(s.api_key_secret)}"
+        )
+
+    s.depth_backend = s.depth_backend.lower()
+    if s.depth_backend not in {"hf", "da3"}:
+        raise ValueError(
+            "DEPTH_BACKEND must be one of ['hf', 'da3']. "
+            f"Current value: {s.depth_backend}"
         )
 
     if "*" in s.allowed_origins:
