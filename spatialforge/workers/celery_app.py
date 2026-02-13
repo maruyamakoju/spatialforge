@@ -14,8 +14,8 @@ from .. import __version__
 logger = logging.getLogger(__name__)
 
 
-@celeryd_init.connect
-def init_sentry_for_celery(**_kwargs) -> None:
+@celeryd_init.connect  # type: ignore[untyped-decorator]
+def init_sentry_for_celery(**_kwargs: object) -> None:
     """Initialize Sentry for Celery workers."""
     sentry_dsn = os.getenv("SENTRY_DSN", "")
     if not sentry_dsn:
