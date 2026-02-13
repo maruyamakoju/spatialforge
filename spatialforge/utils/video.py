@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import cv2
 import numpy as np
@@ -56,7 +56,7 @@ def extract_keyframes(
                 break
             if frame_idx % frame_interval == 0:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frames.append(rgb)
+                frames.append(cast("NDArray[np.uint8]", rgb))
             frame_idx += 1
     finally:
         cap.release()

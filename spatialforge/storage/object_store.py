@@ -11,17 +11,31 @@ import logging
 import time
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING, cast
+from typing import Protocol
 
 from minio import Minio
 from starlette.concurrency import run_in_threadpool
 
-if TYPE_CHECKING:
-    from redis import Redis as SyncRedis
-
 logger = logging.getLogger(__name__)
 
 TTL_PREFIX = "object_ttl:"
+
+
+class SyncRedis(Protocol):
+    """Subset of sync Redis API required by ObjectStore."""
+
+    def set(self, key: str, value: str) -> object: ...
+
+    def get(self, key: str | bytes) -> str | bytes | None: ...
+
+    def delete(self, key: str) -> object: ...
+
+    def scan(
+        self,
+        cursor: int = 0,
+        match: str | None = None,
+        count: int | None = None,
+    ) -> tuple[int, list[str | bytes]]: ...
 
 
 class ObjectStore:
@@ -84,32 +98,29 @@ class ObjectStore:
         extension: str = "bin",
     ) -> str:
         """Async wrapper for upload_bytes to avoid blocking the event loop."""
-        return cast(
-            str,
-            await run_in_threadpool(
-                self.upload_bytes,
-                data,
-                content_type,
-                prefix,
-                extension,
-            ),
+        return await run_in_threadpool(
+            self.upload_bytes,
+            data,
+            content_type,
+            prefix,
+            extension,
         )
 
     async def async_upload_file(self, file_path: str, content_type: str, prefix: str = "uploads") -> str:
         """Async wrapper for upload_file to avoid blocking the event loop."""
-        return cast(str, await run_in_threadpool(self.upload_file, file_path, content_type, prefix))
+        return await run_in_threadpool(self.upload_file, file_path, content_type, prefix)
 
     def get_presigned_url(self, object_key: str, expires: timedelta | None = None) -> str:
         """Generate a presigned download URL."""
         if expires is None:
             expires = timedelta(hours=24)
-        return cast(str, self._client.presigned_get_object(self._bucket, object_key, expires=expires))
+        return self._client.presigned_get_object(self._bucket, object_key, expires=expires)
 
     def download_bytes(self, object_key: str) -> bytes:
         """Download an object as bytes."""
         response = self._client.get_object(self._bucket, object_key)
         try:
-            return cast(bytes, response.read())
+            return response.read()
         finally:
             response.close()
             response.release_conn()

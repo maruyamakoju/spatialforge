@@ -103,8 +103,7 @@ jobs:
       - name: Run boundary type checks
         run: |
           python -m mypy spatialforge/api/v1/_video_job_utils.py \
-                         spatialforge/storage/object_store.py \
-                         --follow-imports=skip
+                         spatialforge/storage/object_store.py
 
   docker:
     runs-on: ubuntu-latest

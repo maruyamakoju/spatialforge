@@ -2,3 +2,7 @@ mypy>=1.13.0
 fastapi>=0.115.0
 minio>=7.2.0
 redis>=5.2.0
+celery[redis]>=5.4.0
+numpy>=1.26.0
+opencv-python-headless>=4.10.0
+sentry-sdk[fastapi]>=2.19.0
