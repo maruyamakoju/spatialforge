@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
 
 # ── /depth ──────────────────────────────────────────────────
@@ -106,12 +108,29 @@ class ReconstructStats(BaseModel):
     )
 
 
+class AsyncJobState(str, Enum):
+    """Stable async job lifecycle state."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETE = "complete"
+    FAILED = "failed"
+
+
 class ReconstructJobResponse(BaseModel):
     """Async reconstruction job submission response."""
 
     job_id: str = Field(..., description="Unique job identifier for polling")
     status: str = Field(
         "processing", description="Job status: processing, complete, failed"
+    )
+    state: AsyncJobState = Field(
+        AsyncJobState.PROCESSING,
+        description="Stable job state enum for clients",
+    )
+    step: str | None = Field(
+        None,
+        description="Optional processing step when state is processing",
     )
     estimated_time_s: float | None = Field(
         None, description="Estimated completion time in seconds"
@@ -123,6 +142,8 @@ class ReconstructResultResponse(BaseModel):
 
     job_id: str
     status: str
+    state: AsyncJobState
+    step: str | None = None
     scene_url: str | None = Field(
         None, description="URL to download the reconstructed 3D scene"
     )
@@ -171,6 +192,14 @@ class FloorplanJobResponse(BaseModel):
     status: str = Field(
         "processing", description="Job status: processing, complete, failed"
     )
+    state: AsyncJobState = Field(
+        AsyncJobState.PROCESSING,
+        description="Stable job state enum for clients",
+    )
+    step: str | None = Field(
+        None,
+        description="Optional processing step when state is processing",
+    )
     estimated_time_s: float | None = Field(
         None, description="Estimated completion time in seconds"
     )
@@ -181,6 +210,8 @@ class FloorplanResultResponse(BaseModel):
 
     job_id: str
     status: str
+    state: AsyncJobState
+    step: str | None = None
     floorplan_url: str | None = Field(
         None, description="URL to download the floor plan (SVG/DXF/JSON)"
     )
@@ -226,6 +257,14 @@ class Segment3DJobResponse(BaseModel):
     status: str = Field(
         "processing", description="Job status: processing, complete, failed"
     )
+    state: AsyncJobState = Field(
+        AsyncJobState.PROCESSING,
+        description="Stable job state enum for clients",
+    )
+    step: str | None = Field(
+        None,
+        description="Optional processing step when state is processing",
+    )
     estimated_time_s: float | None = Field(
         None, description="Estimated completion time in seconds"
     )
@@ -236,6 +275,8 @@ class Segment3DResultResponse(BaseModel):
 
     job_id: str
     status: str
+    state: AsyncJobState
+    step: str | None = None
     objects: list[SegmentedObject] | None = Field(
         None, description="List of segmented 3D objects"
     )

@@ -351,6 +351,8 @@ class AsyncClient:
         return ReconstructJob(
             job_id=data["job_id"],
             status=data["status"],
+            state=data.get("state"),
+            step=data.get("step"),
             estimated_time_s=data.get("estimated_time_s"),
             _client=self,
             _endpoint="/v1/reconstruct",
@@ -389,6 +391,8 @@ class AsyncClient:
         return FloorplanJob(
             job_id=data["job_id"],
             status=data["status"],
+            state=data.get("state"),
+            step=data.get("step"),
             estimated_time_s=data.get("estimated_time_s"),
             _client=self,
             _endpoint="/v1/floorplan",
@@ -427,6 +431,8 @@ class AsyncClient:
         return Segment3DJob(
             job_id=data["job_id"],
             status=data["status"],
+            state=data.get("state"),
+            step=data.get("step"),
             estimated_time_s=data.get("estimated_time_s"),
             _client=self,
             _endpoint="/v1/segment-3d",

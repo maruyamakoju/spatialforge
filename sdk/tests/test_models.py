@@ -141,3 +141,58 @@ class TestAsyncJob:
         job = AsyncJob(job_id="j1", status="pending")
         with pytest.raises(RuntimeError, match="not associated"):
             await job.async_poll()
+
+    def test_wait_prefers_state_field_when_present(self):
+        class _FakeClient:
+            def _get(self, _path: str) -> dict:
+                return {"job_id": "j1", "state": "complete", "scene_url": "https://example.com/s.glb"}
+
+        job = AsyncJob(
+            job_id="j1",
+            status="processing",
+            state="processing",
+            _client=_FakeClient(),
+            _endpoint="/v1/reconstruct",
+        )
+        result = job.wait(poll_interval=0.0, timeout=1.0)
+        assert result["scene_url"].endswith(".glb")
+        assert job.state == "complete"
+        assert job.status == "processing"  # preserved when payload omits legacy status
+
+    def test_wait_parses_legacy_processing_step(self):
+        class _FakeClient:
+            def __init__(self):
+                self._calls = 0
+
+            def _get(self, _path: str) -> dict:
+                self._calls += 1
+                if self._calls == 1:
+                    return {"job_id": "j1", "status": "processing:triangulation"}
+                return {"job_id": "j1", "status": "complete", "scene_url": "https://example.com/s.glb"}
+
+        job = AsyncJob(
+            job_id="j1",
+            status="processing",
+            _client=_FakeClient(),
+            _endpoint="/v1/reconstruct",
+        )
+        result = job.wait(poll_interval=0.0, timeout=1.0)
+        assert result["status"] == "complete"
+        assert job.state == "complete"
+
+    @pytest.mark.asyncio
+    async def test_async_wait_prefers_state_field_when_present(self):
+        class _FakeAsyncClient:
+            async def _get(self, _path: str) -> dict:
+                return {"job_id": "j1", "state": "complete", "scene_url": "https://example.com/s.glb"}
+
+        job = AsyncJob(
+            job_id="j1",
+            status="processing",
+            state="processing",
+            _client=_FakeAsyncClient(),
+            _endpoint="/v1/reconstruct",
+        )
+        result = await job.async_wait(poll_interval=0.0, timeout=1.0)
+        assert result["scene_url"].endswith(".glb")
+        assert job.state == "complete"

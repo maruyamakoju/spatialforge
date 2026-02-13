@@ -65,12 +65,16 @@ POSE_RESPONSE = {
 ASYNC_JOB_RESPONSE = {
     "job_id": "job_abc123",
     "status": "processing",
+    "state": "processing",
+    "step": "queued",
     "estimated_time_s": 30.0,
 }
 
 ASYNC_JOB_COMPLETE = {
     "job_id": "job_abc123",
     "status": "complete",
+    "state": "complete",
+    "step": None,
     "scene_url": "https://example.com/scene.ply",
     "floor_area_m2": 45.2,
 }
@@ -78,6 +82,8 @@ ASYNC_JOB_COMPLETE = {
 ASYNC_JOB_FAILED = {
     "job_id": "job_abc123",
     "status": "failed",
+    "state": "failed",
+    "step": None,
     "error": "Video too short for reconstruction",
 }
 

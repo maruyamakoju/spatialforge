@@ -82,14 +82,49 @@ class AsyncJob:
 
     job_id: str
     status: str
+    state: str | None = None
+    step: str | None = None
     _client: Any = field(default=None, repr=False)
     _endpoint: str = field(default="", repr=False)
+
+    @staticmethod
+    def _extract_state_step(result: dict[str, Any]) -> tuple[str, str | None]:
+        """Normalize job state from either new (`state`) or legacy (`status`) fields."""
+        raw_state = result.get("state")
+        if isinstance(raw_state, str) and raw_state:
+            raw_step = result.get("step")
+            step = raw_step if isinstance(raw_step, str) and raw_step else None
+            return raw_state, step
+
+        raw_status = result.get("status")
+        status = raw_status if isinstance(raw_status, str) else ""
+        if status.startswith("processing:"):
+            _, _, step = status.partition(":")
+            return "processing", step or None
+        if status in {"pending", "processing", "complete", "failed"}:
+            return status, None
+        if status:
+            return status, None
+        return "processing", None
+
+    def _update_job_state(self, result: dict[str, Any]) -> str:
+        """Persist current status/state on the job object and return normalized state."""
+        raw_status = result.get("status")
+        if isinstance(raw_status, str) and raw_status:
+            self.status = raw_status
+
+        state, step = self._extract_state_step(result)
+        self.state = state
+        self.step = step
+        return state
 
     def poll(self) -> dict:
         """Check current job status (sync)."""
         if self._client is None:
             raise RuntimeError("Job not associated with a client")
-        return self._client._get(f"{self._endpoint}/{self.job_id}")
+        result = self._client._get(f"{self._endpoint}/{self.job_id}")
+        self._update_job_state(result)
+        return result
 
     def wait(self, poll_interval: float = 3.0, timeout: float = 600.0) -> dict:
         """Block until job completes or times out (sync)."""
@@ -98,10 +133,10 @@ class AsyncJob:
         start = time.time()
         while time.time() - start < timeout:
             result = self.poll()
-            status = result.get("status", "")
-            if status == "complete":
+            state = self._update_job_state(result)
+            if state == "complete":
                 return result
-            if status == "failed":
+            if state == "failed":
                 raise RuntimeError(f"Job failed: {result.get('error', 'Unknown error')}")
             time.sleep(poll_interval)
         raise TimeoutError(f"Job {self.job_id} did not complete within {timeout}s")
@@ -110,7 +145,9 @@ class AsyncJob:
         """Check current job status (async)."""
         if self._client is None:
             raise RuntimeError("Job not associated with a client")
-        return await self._client._get(f"{self._endpoint}/{self.job_id}")
+        result = await self._client._get(f"{self._endpoint}/{self.job_id}")
+        self._update_job_state(result)
+        return result
 
     async def async_wait(
         self, poll_interval: float = 3.0, timeout: float = 600.0
@@ -122,10 +159,10 @@ class AsyncJob:
         start = time.time()
         while time.time() - start < timeout:
             result = await self.async_poll()
-            status = result.get("status", "")
-            if status == "complete":
+            state = self._update_job_state(result)
+            if state == "complete":
                 return result
-            if status == "failed":
+            if state == "failed":
                 raise RuntimeError(f"Job failed: {result.get('error', 'Unknown error')}")
             await asyncio.sleep(poll_interval)
         raise TimeoutError(f"Job {self.job_id} did not complete within {timeout}s")
