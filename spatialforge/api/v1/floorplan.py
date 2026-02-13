@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
 from ...auth.api_keys import APIKeyRecord, get_current_user
 from ...models.requests import FloorplanOutputFormat
-from ...models.responses import FloorplanJobResponse, FloorplanResultResponse
-from ._video_job_utils import validate_and_store_video
+from ...models.responses import AsyncJobState, FloorplanJobResponse, FloorplanResultResponse
+from ._video_job_utils import poll_celery_job, validate_and_store_video
 
 router = APIRouter()
 
@@ -23,6 +23,15 @@ _ERROR_RESPONSES = {
     413: {"description": "Video exceeds 500MB size limit"},
     429: {"description": "Monthly rate limit exceeded"},
 }
+
+
+def _map_floorplan_success(data: dict[str, object]) -> dict[str, object]:
+    """Map worker payload to floorplan response fields."""
+    return {
+        "floorplan_url": data.get("floorplan_url"),
+        "floor_area_m2": data.get("floor_area_m2"),
+        "room_count": data.get("room_count"),
+    }
 
 
 @router.post("/floorplan", response_model=FloorplanJobResponse, responses=_ERROR_RESPONSES)
@@ -58,6 +67,8 @@ async def start_floorplan(
     return FloorplanJobResponse(
         job_id=task.id,
         status="processing",
+        state=AsyncJobState.PROCESSING,
+        step=None,
         estimated_time_s=round(uploaded.info.duration_s * 3.0, 1),
     )
 
@@ -69,41 +80,8 @@ async def get_floorplan_result(
     user: APIKeyRecord = Depends(get_current_user),
 ):
     """Poll for floor plan generation result."""
-    from ...workers.celery_app import celery_app
-
-    result = celery_app.AsyncResult(job_id)
-
-    if result.state == "PENDING":
-        return FloorplanResultResponse(job_id=job_id, status="pending")
-
-    if result.state == "PROCESSING":
-        meta = result.info or {}
-        return FloorplanResultResponse(
-            job_id=job_id,
-            status=f"processing:{meta.get('step', 'unknown')}",
-        )
-
-    if result.state == "SUCCESS":
-        data = result.result or {}
-        if data.get("status") == "failed":
-            return FloorplanResultResponse(
-                job_id=job_id,
-                status="failed",
-                error=data.get("error"),
-            )
-        return FloorplanResultResponse(
-            job_id=job_id,
-            status="complete",
-            floorplan_url=data.get("floorplan_url"),
-            floor_area_m2=data.get("floor_area_m2"),
-            room_count=data.get("room_count"),
-        )
-
-    if result.state == "FAILURE":
-        return FloorplanResultResponse(
-            job_id=job_id,
-            status="failed",
-            error=str(result.result),
-        )
-
-    return FloorplanResultResponse(job_id=job_id, status=result.state.lower())
+    return poll_celery_job(
+        job_id=job_id,
+        response_cls=FloorplanResultResponse,
+        success_mapper=_map_floorplan_success,
+    )

@@ -5,9 +5,11 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable
 
 from fastapi import HTTPException, Request, UploadFile
 
+from ...models.responses import AsyncJobState
 from ...utils.video import VideoInfo, validate_video
 
 
@@ -76,3 +78,97 @@ async def validate_and_store_video(
         raise HTTPException(status_code=400, detail=str(e)) from None
     finally:
         path.unlink(missing_ok=True)
+
+
+def _legacy_status(state: AsyncJobState, step: str | None = None) -> str:
+    """Keep backward-compatible status strings while exposing stable state."""
+    if state is AsyncJobState.PROCESSING:
+        return f"processing:{step}" if step else "processing"
+    return str(state.value)
+
+
+def poll_celery_job(
+    job_id: str,
+    response_cls: type,
+    *,
+    success_mapper: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    async_result_getter: Callable[[str], Any] | None = None,
+) -> Any:
+    """Generic Celery job polling for async endpoints.
+
+    The API keeps the legacy `status` string for compatibility and also emits
+    stable `state` and optional `step` fields for SDK/client correctness.
+    """
+    if async_result_getter is None:
+        from ...workers.celery_app import celery_app
+
+        async_result_getter = celery_app.AsyncResult
+
+    result = async_result_getter(job_id)
+
+    if result.state == "PENDING":
+        state = AsyncJobState.PENDING
+        return response_cls(
+            job_id=job_id,
+            status=_legacy_status(state),
+            state=state,
+            step=None,
+        )
+
+    if result.state == "PROCESSING":
+        meta = result.info or {}
+        step = str(meta.get("step") or "unknown")
+        state = AsyncJobState.PROCESSING
+        return response_cls(
+            job_id=job_id,
+            status=_legacy_status(state, step),
+            state=state,
+            step=step,
+        )
+
+    if result.state == "SUCCESS":
+        data = result.result or {}
+        if data.get("status") == "failed" or data.get("state") == AsyncJobState.FAILED.value:
+            state = AsyncJobState.FAILED
+            return response_cls(
+                job_id=job_id,
+                status=_legacy_status(state),
+                state=state,
+                step=None,
+                error=data.get("error", "Unknown error"),
+            )
+
+        extra_kwargs: dict[str, Any] = {}
+        if success_mapper is not None:
+            extra_kwargs = success_mapper(data)
+        state = AsyncJobState.COMPLETE
+        return response_cls(
+            job_id=job_id,
+            status=_legacy_status(state),
+            state=state,
+            step=None,
+            processing_time_ms=data.get("processing_time_ms"),
+            **extra_kwargs,
+        )
+
+    if result.state == "FAILURE":
+        state = AsyncJobState.FAILED
+        return response_cls(
+            job_id=job_id,
+            status=_legacy_status(state),
+            state=state,
+            step=None,
+            error=str(result.result),
+        )
+
+    # Unknown Celery state (e.g. RETRY) is exposed via legacy status while
+    # mapped to `processing` for stable state semantics.
+    raw_state = str(result.state or "").lower()
+    step = raw_state or "unknown"
+    state = AsyncJobState.PROCESSING
+    return response_cls(
+        job_id=job_id,
+        status=raw_state or _legacy_status(state, step),
+        state=state,
+        step=step,
+    )

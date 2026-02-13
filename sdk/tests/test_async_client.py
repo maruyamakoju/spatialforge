@@ -80,6 +80,8 @@ class TestAsyncJobs:
         job = await async_client.reconstruct(tiny_video)
         assert isinstance(job, ReconstructJob)
         assert job.job_id == "job_abc123"
+        assert job.state == "processing"
+        assert job.step == "queued"
 
     async def test_reconstruct_async_poll(self, async_client, tiny_video):
         job = await async_client.reconstruct(tiny_video)
