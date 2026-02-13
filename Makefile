@@ -69,6 +69,12 @@ benchmark: ## Run inference benchmark (default: giant @ 1080p)
 benchmark-all: ## Benchmark all model sizes
 	python scripts/benchmark.py --model all
 
+benchmark-depth-json: ## Reproducible depth benchmark (JSON output)
+	python benchmarks/bench_depth.py --backend da3 --models small,base,large --resolutions 512,768,1024
+
+benchmark-reconstruct-json: ## Reconstruct baseline benchmark (JSON output)
+	python benchmarks/bench_reconstruct.py --backend da3 --frame-counts 30,60,120 --width 960 --height 540
+
 # ── Admin ────────────────────────────────────────────────────
 
 create-key: ## Create a new API key (usage: make create-key OWNER=myapp PLAN=builder)

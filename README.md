@@ -321,6 +321,19 @@ ruff check --config pyproject.toml spatialforge/ tests/
 
 **139 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
 
+## Benchmarks
+
+Reproducible local benchmark scripts are available in `benchmarks/` and write JSON outputs with
+latency percentiles, VRAM usage, runtime metadata, and commit hash.
+
+```bash
+# /depth benchmark (RTX4090-ready output format)
+python benchmarks/bench_depth.py --backend da3 --models small,base,large --resolutions 512,768,1024
+
+# /reconstruct baseline benchmark
+python benchmarks/bench_reconstruct.py --backend da3 --frame-counts 30,60,120 --width 960 --height 540
+```
+
 ## Project Structure
 
 ```
