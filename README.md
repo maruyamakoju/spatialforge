@@ -276,6 +276,7 @@ All production models are **Apache 2.0** licensed (safe for commercial use).
 | DA2 Small | `small` | Relative depth | Fastest | Apache 2.0 |
 
 Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
+When `RESEARCH_MODE=false`, any research model key/alias is rejected at startup and request time.
 
 ## Configuration
 
@@ -289,6 +290,7 @@ Research-only models (CC-BY-NC) are gated behind `RESEARCH_MODE=true`.
 | `ADMIN_API_KEY` | (generate!) | Admin API key |
 | `DEMO_MODE` | `false` | Allow unauthenticated access (demos only) |
 | `RESEARCH_MODE` | `false` | Enable CC-BY-NC models |
+| `DEPTH_BACKEND` | `hf` | `hf` (transformers) or `da3` (Depth Anything 3 backend) |
 | `STRIPE_SECRET_KEY` | (optional) | Stripe secret for billing |
 | `STRIPE_WEBHOOK_SECRET` | (optional) | Stripe webhook signing |
 | `ALLOWED_ORIGINS` | `localhost` | CORS allowed origins (JSON list) |

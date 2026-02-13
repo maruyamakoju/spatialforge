@@ -43,6 +43,44 @@ def test_model_manager_list_models_includes_backend(tmp_path):
     assert "commercial_apache2" in available
 
 
+def test_research_model_rejected_when_research_mode_disabled(tmp_path):
+    mm = ModelManager(
+        model_dir=tmp_path,
+        device="cpu",
+        dtype="float32",
+        depth_backend="da3",
+        research_mode=False,
+    )
+
+    with pytest.raises(ValueError, match="research-only"):
+        mm.resolve_model_name("da3-large")
+
+
+def test_research_alias_rejected_when_research_mode_disabled(tmp_path):
+    mm = ModelManager(
+        model_dir=tmp_path,
+        device="cpu",
+        dtype="float32",
+        depth_backend="da3",
+        research_mode=False,
+    )
+
+    with pytest.raises(ValueError, match="research-only"):
+        mm.resolve_model_name("research-large")
+
+
+def test_research_alias_allowed_when_research_mode_enabled(tmp_path):
+    mm = ModelManager(
+        model_dir=tmp_path,
+        device="cpu",
+        dtype="float32",
+        depth_backend="da3",
+        research_mode=True,
+    )
+
+    assert mm.resolve_model_name("research-large") == "da3-large"
+
+
 def test_create_model_manager_from_settings_cpu_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr(model_manager_module.torch.cuda, "is_available", lambda: False)
     settings = SimpleNamespace(
@@ -51,6 +89,7 @@ def test_create_model_manager_from_settings_cpu_fallback(tmp_path, monkeypatch):
         torch_dtype="float16",
         research_mode=True,
         depth_backend="da3",
+        default_depth_model="large",
     )
 
     mm = create_model_manager_from_settings(settings)
@@ -69,6 +108,7 @@ def test_create_model_manager_from_settings_gpu_uses_configured_dtype(tmp_path, 
         torch_dtype="float16",
         research_mode=False,
         depth_backend="hf",
+        default_depth_model="large",
     )
 
     mm = create_model_manager_from_settings(settings)
@@ -77,3 +117,18 @@ def test_create_model_manager_from_settings_gpu_uses_configured_dtype(tmp_path, 
     assert mm.research_mode is False
     assert mm.depth_backend == "hf"
     assert mm.dtype == model_manager_module.torch.float16
+
+
+def test_create_model_manager_rejects_research_default_when_disabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(model_manager_module.torch.cuda, "is_available", lambda: False)
+    settings = SimpleNamespace(
+        model_dir=tmp_path,
+        device="cuda",
+        torch_dtype="float16",
+        research_mode=False,
+        depth_backend="da3",
+        default_depth_model="research-large",
+    )
+
+    with pytest.raises(ValueError, match="research-only"):
+        create_model_manager_from_settings(settings)

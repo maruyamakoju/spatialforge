@@ -217,16 +217,19 @@ class ModelManager:
         commercial_models = self._commercial_models()
         research_models = self._research_models()
 
+        def _raise_research_only(input_name: str, model_key: str) -> None:
+            raise ValueError(
+                f"Model '{input_name}' maps to research-only '{model_key}' (CC-BY-NC 4.0). "
+                "Set RESEARCH_MODE=true to use research models, "
+                "or choose an Apache-2.0 model."
+            )
+
         # Direct registry key
         if user_input in commercial_models:
             return user_input
         if user_input in research_models:
             if not self._research_mode:
-                raise ValueError(
-                    f"Model '{user_input}' is CC-BY-NC (research only). "
-                    f"Enable research_mode=true in config to use it. "
-                    f"DO NOT use CC-BY-NC models with paying customers."
-                )
+                _raise_research_only(user_input, user_input)
             return user_input
 
         # Alias lookup
@@ -241,12 +244,7 @@ class ModelManager:
 
         # Check license
         if registry_key in research_models and not self._research_mode:
-            # Silently remap to the best commercial alternative
-            logger.info(
-                "Model '%s' maps to research-only '%s'. Remapping to 'da3-metric-large' (Apache 2.0).",
-                user_input, registry_key,
-            )
-            return "da3-metric-large"
+            _raise_research_only(user_input, registry_key)
 
         return registry_key
 
@@ -398,10 +396,14 @@ def create_model_manager_from_settings(settings: Any) -> ModelManager:
 
     runtime_dtype = settings.torch_dtype if runtime_device != "cpu" else "float32"
 
-    return ModelManager(
+    manager = ModelManager(
         model_dir=settings.model_dir,
         device=runtime_device,
         dtype=runtime_dtype,
         research_mode=settings.research_mode,
         depth_backend=settings.depth_backend,
     )
+    # Fail fast at startup if configured default model violates license policy.
+    configured_default = getattr(settings, "default_depth_model", "large")
+    manager.resolve_model_name(configured_default)
+    return manager
