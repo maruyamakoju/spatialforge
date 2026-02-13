@@ -59,6 +59,16 @@ async with sf.AsyncClient(api_key="sf_your_key") as client:
     scene = await job.async_wait()
 ```
 
+## Async Job Status Contract
+
+For async endpoints (`reconstruct`, `floorplan`, `segment_3d`), responses include:
+
+- `state` (recommended): stable lifecycle enum (`pending`, `processing`, `complete`, `failed`)
+- `step`: optional processing phase when `state == "processing"`
+- `status` (legacy): backward-compatible string, sometimes `processing:<step>`
+
+The SDK's `wait()` / `async_wait()` methods prefer `state` when present and fall back to legacy `status`.
+
 ## CLI
 
 ```bash

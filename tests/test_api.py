@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 
 def test_health(client):
     """Health endpoint returns OK."""
@@ -91,3 +95,59 @@ def test_redoc_accessible(client):
     """ReDoc is accessible."""
     resp = client.get("/redoc")
     assert resp.status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "form_data"),
+    [
+        ("/v1/reconstruct", {"quality": "standard", "output": "gaussian"}),
+        ("/v1/floorplan", {"output_format": "svg"}),
+        ("/v1/segment-3d", {"prompt": "chair", "output_3d_mask": "true", "output_bbox": "true"}),
+    ],
+)
+def test_async_job_post_includes_state_step_contract(client, api_key, monkeypatch, endpoint, form_data):
+    """Async job submission endpoints expose stable state/step fields."""
+    from spatialforge.api.v1 import floorplan, reconstruct, segment
+    from spatialforge.api.v1._video_job_utils import UploadedVideoJob
+    from spatialforge.workers import tasks
+
+    async def fake_validate_and_store_video(*_args, **_kwargs):
+        return UploadedVideoJob(
+            video_key="uploads/test.mp4",
+            info=SimpleNamespace(duration_s=12.0),
+        )
+
+    monkeypatch.setattr(reconstruct, "validate_and_store_video", fake_validate_and_store_video)
+    monkeypatch.setattr(floorplan, "validate_and_store_video", fake_validate_and_store_video)
+    monkeypatch.setattr(segment, "validate_and_store_video", fake_validate_and_store_video)
+
+    monkeypatch.setattr(
+        tasks,
+        "reconstruct_task",
+        SimpleNamespace(delay=lambda **_kwargs: SimpleNamespace(id="job_reconstruct")),
+    )
+    monkeypatch.setattr(
+        tasks,
+        "floorplan_task",
+        SimpleNamespace(delay=lambda **_kwargs: SimpleNamespace(id="job_floorplan")),
+    )
+    monkeypatch.setattr(
+        tasks,
+        "segment_3d_task",
+        SimpleNamespace(delay=lambda **_kwargs: SimpleNamespace(id="job_segment3d")),
+    )
+
+    resp = client.post(
+        endpoint,
+        headers={"X-API-Key": api_key},
+        files={"video": ("test.mp4", b"fake video bytes", "video/mp4")},
+        data=form_data,
+    )
+    assert resp.status_code == 200
+
+    body = resp.json()
+    assert body["job_id"].startswith("job_")
+    assert body["status"] == "processing"
+    assert body["state"] == "processing"
+    assert "step" in body
+    assert body["step"] is None
