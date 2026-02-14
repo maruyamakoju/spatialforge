@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .model_manager import ModelManager
 
 logger = logging.getLogger(__name__)
+_SUPPORTED_RECONSTRUCT_BACKENDS = {"legacy", "tsdf", "da3"}
 
 
 @dataclass
@@ -31,6 +32,8 @@ class ReconstructResult:
     num_vertices: int | None = None
     bounding_box: list[list[float]] | None = None  # [[min_x,min_y,min_z],[max_x,max_y,max_z]]
     camera_poses_json: str | None = None
+    requested_backend: str = "legacy"
+    backend_used: str = "legacy"
     processing_time_ms: float = 0.0
 
 
@@ -45,8 +48,19 @@ class ReconstructEngine:
     5. (Optional) Train 3D Gaussian Splatting / convert to mesh
     """
 
-    def __init__(self, model_manager: ModelManager) -> None:
+    def __init__(self, model_manager: ModelManager, backend: str = "legacy") -> None:
         self._mm = model_manager
+        normalized = backend.lower()
+        if normalized not in _SUPPORTED_RECONSTRUCT_BACKENDS:
+            raise ValueError(
+                f"Unsupported reconstruct backend: '{backend}'. "
+                f"Supported values: {sorted(_SUPPORTED_RECONSTRUCT_BACKENDS)}"
+            )
+        self._backend = normalized
+
+    @property
+    def backend(self) -> str:
+        return self._backend
 
     def reconstruct(
         self,
@@ -63,6 +77,17 @@ class ReconstructEngine:
             output_format: 'gaussian', 'pointcloud', or 'mesh'.
             output_dir: Where to save results. Uses temp dir if None.
         """
+        requested_backend = self._backend
+        backend_used = requested_backend
+
+        if requested_backend in {"tsdf", "da3"}:
+            # PR-A skeleton: keep behavior stable while opening backend extension points.
+            logger.warning(
+                "Reconstruct backend '%s' is not implemented yet; falling back to legacy pipeline",
+                requested_backend,
+            )
+            backend_used = "legacy"
+
         t0 = time.perf_counter()
 
         if len(frames) < 3:
@@ -115,6 +140,8 @@ class ReconstructEngine:
                 output_format="pointcloud",
                 num_points=len(all_points),
                 bounding_box=[bbox_min, bbox_max],
+                requested_backend=requested_backend,
+                backend_used=backend_used,
                 processing_time_ms=(time.perf_counter() - t0) * 1000,
             )
         elif output_format == "gaussian":
@@ -127,6 +154,8 @@ class ReconstructEngine:
                 output_format="gaussian",
                 num_gaussians=len(all_points),
                 bounding_box=[bbox_min, bbox_max],
+                requested_backend=requested_backend,
+                backend_used=backend_used,
                 processing_time_ms=(time.perf_counter() - t0) * 1000,
             )
         else:  # mesh
@@ -137,6 +166,8 @@ class ReconstructEngine:
                 output_format="mesh",
                 num_vertices=len(all_points),
                 bounding_box=[bbox_min, bbox_max],
+                requested_backend=requested_backend,
+                backend_used=backend_used,
                 processing_time_ms=(time.perf_counter() - t0) * 1000,
             )
 

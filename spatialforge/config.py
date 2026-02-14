@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     model_dir: Path = Path("./models")
     default_depth_model: str = "large"  # large | base | small (Apache 2.0 only)
     depth_backend: str = "hf"  # hf | da3
+    reconstruct_backend: str = "legacy"  # legacy | tsdf | da3
     device: str = "cuda"
     torch_dtype: str = "float16"
     research_mode: bool = False  # DANGER: enables CC-BY-NC models. Never in production.
@@ -123,6 +124,13 @@ def get_settings() -> Settings:
         raise ValueError(
             "DEPTH_BACKEND must be one of ['hf', 'da3']. "
             f"Current value: {s.depth_backend}"
+        )
+
+    s.reconstruct_backend = s.reconstruct_backend.lower()
+    if s.reconstruct_backend not in {"legacy", "tsdf", "da3"}:
+        raise ValueError(
+            "RECONSTRUCT_BACKEND must be one of ['legacy', 'tsdf', 'da3']. "
+            f"Current value: {s.reconstruct_backend}"
         )
 
     if "*" in s.allowed_origins:

@@ -222,6 +222,12 @@ def main() -> None:
     parser.add_argument("--warmup", type=int, default=1)
     parser.add_argument("--quality", choices=["draft", "standard", "high"], default="standard")
     parser.add_argument("--output-format", choices=["pointcloud", "gaussian", "mesh"], default="pointcloud")
+    parser.add_argument(
+        "--reconstruct-backend",
+        choices=["legacy", "tsdf", "da3"],
+        default="legacy",
+        help="Reconstruction backend selector (currently legacy is implemented).",
+    )
     parser.add_argument("--backend", choices=["hf", "da3"], default="da3")
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--dtype", choices=["auto", "float16", "bfloat16", "float32"], default="auto")
@@ -243,13 +249,14 @@ def main() -> None:
         research_mode=False,
         depth_backend=args.backend,
     )
-    engine = ReconstructEngine(manager)
+    engine = ReconstructEngine(manager, backend=args.reconstruct_backend)
 
     records: list[dict[str, Any]] = []
     for frame_count in frame_counts:
         print(
             f"[reconstruct] frames={frame_count} res={args.width}x{args.height} "
-            f"backend={args.backend} device={device} dtype={dtype} "
+            f"depth_backend={args.backend} reconstruct_backend={args.reconstruct_backend} "
+            f"device={device} dtype={dtype} "
             f"mock_depth={args.mock_depth} mock_pose={args.mock_pose}"
         )
         try:
@@ -297,6 +304,7 @@ def main() -> None:
             "quality": args.quality,
             "output_format": args.output_format,
             "backend": args.backend,
+            "reconstruct_backend": args.reconstruct_backend,
             "device": device,
             "dtype": dtype,
             "seed": args.seed,

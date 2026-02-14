@@ -75,6 +75,9 @@ benchmark-depth-json: ## Reproducible depth benchmark (JSON output)
 benchmark-reconstruct-json: ## Reconstruct baseline benchmark (JSON output)
 	python benchmarks/bench_reconstruct.py --backend da3 --frame-counts 30,60,120 --width 960 --height 540
 
+benchmark-reconstruct-quality-json: ## Reconstruct quality-eval skeleton (JSON output)
+	python benchmarks/quality_reconstruct.py --reconstruct-backend legacy --depth-backend da3
+
 # ── Admin ────────────────────────────────────────────────────
 
 create-key: ## Create a new API key (usage: make create-key OWNER=myapp PLAN=builder)
