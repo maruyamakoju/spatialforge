@@ -69,6 +69,12 @@ python benchmarks/quality_reconstruct.py \
   --real-depth --real-pose
 ```
 
+The quality JSON now includes `rendered_depth_fit` (GT-free):
+- `coverage` (rendered depth overlap ratio)
+- `abs_depth_error_m`
+- `rel_depth_error`
+- `inlier_ratio` (`|depth_error| < threshold`)
+
 ## Notes
 
 - These scripts are for local/experimental use and are not part of CI.

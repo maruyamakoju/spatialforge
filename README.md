@@ -7,7 +7,7 @@
 Turn any photo or video into depth maps, 3D measurements, camera poses, and floor plans with a single API call. Production-ready spatial intelligence powered by state-of-the-art depth estimation.
 
 [![CI](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml/badge.svg)](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-185%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-192%20passed-brightgreen.svg)](#testing)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
@@ -312,7 +312,7 @@ When `RESEARCH_MODE=false`, any research model key/alias is rejected at startup 
 ## Testing
 
 ```bash
-# Server tests (105 tests)
+# Server tests (112 tests)
 pytest tests/ -v
 
 # SDK tests (80 tests)
@@ -322,7 +322,7 @@ cd sdk && pytest tests/ -v
 ruff check --config pyproject.toml spatialforge/ tests/
 ```
 
-**185 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), async job contracts, backend selection, error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
+**192 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), async job contracts, backend selection, rendered-depth fit quality metrics, error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
 
 ## Benchmarks
 
@@ -341,6 +341,10 @@ python benchmarks/bench_reconstruct.py --backend da3 --reconstruct-backend tsdf 
 
 # /reconstruct quality-eval skeleton (JSON contract for future geometry metrics)
 python benchmarks/quality_reconstruct.py --reconstruct-backend legacy --depth-backend da3
+
+# Compare backend quality on same sequence set (GT-free rendered-depth fit)
+python benchmarks/quality_reconstruct.py --dataset-dir ./datasets/reconstruct_eval --reconstruct-backend legacy --depth-backend da3
+python benchmarks/quality_reconstruct.py --dataset-dir ./datasets/reconstruct_eval --reconstruct-backend tsdf --depth-backend da3
 ```
 
 ## Project Structure
@@ -362,7 +366,7 @@ spatialforge/
 sdk/               # Python SDK (spatialforge-client) — sync, async, CLI
 site/              # Landing page, docs, demo, pricing
 infra/             # Redis infrastructure (Fly.io deployment)
-tests/             # pytest test suite (105 server + 80 SDK)
+tests/             # pytest test suite (112 server + 80 SDK)
 monitoring/        # Prometheus + Grafana configs
 .github/workflows/ # CI/CD (test, lint, docker, deploy, SDK publish)
 ```

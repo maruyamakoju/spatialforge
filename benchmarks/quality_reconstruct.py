@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Quality-evaluation skeleton for reconstruction backends.
-
-This is intentionally lightweight for PR-A:
-- keeps legacy behavior unchanged
-- provides reproducible JSON output for future geometry/GT metrics
-- supports synthetic fixtures by default and optional real frame folders
-"""
+"""Quality-evaluation harness for reconstruction backend comparisons."""
 
 from __future__ import annotations
 
@@ -20,10 +14,13 @@ import numpy as np
 import torch
 from _common import ensure_output_path, git_commit_short, system_info, utc_timestamp, write_json
 
-from spatialforge.inference.depth_engine import DepthResult
+from spatialforge.evaluation.reconstruct_quality import compute_rendered_depth_fit
+from spatialforge.inference.depth_engine import DepthEngine, DepthResult
 from spatialforge.inference.model_manager import ModelManager
-from spatialforge.inference.pose_engine import CameraPoseResult, PoseEstimationResult
+from spatialforge.inference.pose_engine import CameraPoseResult, PoseEngine, PoseEstimationResult
 from spatialforge.inference.reconstruct_engine import ReconstructEngine
+
+_QUALITY_DEPTH_MODEL = {"draft": "small", "standard": "large", "high": "giant"}
 
 
 def _resolve_device(device_arg: str) -> str:
@@ -121,7 +118,30 @@ def _fake_pose(_self: Any, frames: list[np.ndarray], output_pointcloud: bool = F
     return PoseEstimationResult(poses=poses, pointcloud=None, processing_time_ms=1.0)
 
 
-def _sequence_metrics(name: str, frame_count: int, result, output_size_bytes: int) -> dict[str, Any]:
+def _estimate_observations(
+    manager: ModelManager,
+    frames: list[np.ndarray],
+    quality: str,
+) -> tuple[list[np.ndarray], PoseEstimationResult]:
+    depth_model = _QUALITY_DEPTH_MODEL.get(quality, "large")
+    depth_engine = DepthEngine(manager)
+    depth_maps: list[np.ndarray] = []
+    for frame in frames:
+        depth_result = depth_engine.estimate(frame, model_size=depth_model)
+        depth_maps.append(np.asarray(depth_result.depth_map, dtype=np.float32))
+
+    pose_engine = PoseEngine(manager)
+    pose_result = pose_engine.estimate_poses(frames, output_pointcloud=True)
+    return depth_maps, pose_result
+
+
+def _sequence_metrics(
+    name: str,
+    frame_count: int,
+    result,
+    output_size_bytes: int,
+    rendered_depth_fit: dict[str, Any],
+) -> dict[str, Any]:
     bbox = result.bounding_box or [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
     min_pt = np.asarray(bbox[0], dtype=np.float64)
     max_pt = np.asarray(bbox[1], dtype=np.float64)
@@ -156,6 +176,7 @@ def _sequence_metrics(name: str, frame_count: int, result, output_size_bytes: in
         "bbox_volume_m3_like": round(bbox_volume, 6),
         "camera_pose_count": pose_count,
         "camera_path_length_like": round(camera_path_length, 6),
+        "rendered_depth_fit": rendered_depth_fit,
     }
 
 
@@ -171,6 +192,18 @@ def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     processing = np.asarray([float(r["processing_time_ms"]) for r in ok], dtype=np.float64)
     points = np.asarray([float(r["point_like_count"]) for r in ok], dtype=np.float64)
     volume = np.asarray([float(r["bbox_volume_m3_like"]) for r in ok], dtype=np.float64)
+    fit_coverage = np.asarray(
+        [float(r["rendered_depth_fit"]["coverage"]["mean"]) for r in ok if r["rendered_depth_fit"]["coverage"]["mean"]],
+        dtype=np.float64,
+    )
+    fit_abs = np.asarray(
+        [
+            float(r["rendered_depth_fit"]["abs_depth_error_m"]["mean"])
+            for r in ok
+            if r["rendered_depth_fit"]["abs_depth_error_m"]["mean"]
+        ],
+        dtype=np.float64,
+    )
 
     return {
         "num_sequences": len(results),
@@ -189,9 +222,13 @@ def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         "bbox_volume_m3_like": {
             "mean": round(float(np.mean(volume)), 6),
         },
+        "rendered_depth_fit": {
+            "coverage_mean": round(float(np.mean(fit_coverage)), 6) if fit_coverage.size else None,
+            "abs_depth_error_mean_m": round(float(np.mean(fit_abs)), 6) if fit_abs.size else None,
+        },
         "notes": [
-            "PR-A skeleton metric set; GT-based geometry metrics are next PR.",
-            "Use this JSON format as the stable contract for longitudinal comparisons.",
+            "Rendered-Depth Fit compares reconstructed geometry against observed depth without GT meshes.",
+            "Use the same sequence set to compare legacy and tsdf backends quantitatively.",
         ],
     }
 
@@ -212,6 +249,8 @@ def main() -> None:
     parser.add_argument("--synthetic-frame-count", type=int, default=12)
     parser.add_argument("--synthetic-width", type=int, default=640)
     parser.add_argument("--synthetic-height", type=int, default=384)
+    parser.add_argument("--render-downscale", type=float, default=0.5)
+    parser.add_argument("--depth-inlier-threshold-m", type=float, default=0.05)
     parser.add_argument("--output", default=None, help="Path to output JSON")
     args = parser.parse_args()
 
@@ -262,11 +301,29 @@ def main() -> None:
         for name, frames in sequences:
             try:
                 with TemporaryDirectory(prefix="sf_reconstruct_quality_") as tmp:
+                    eval_points: dict[str, np.ndarray] = {}
+
+                    def _eval_hook(points_world: np.ndarray, store: dict[str, np.ndarray] = eval_points) -> None:
+                        store["points"] = np.asarray(points_world, dtype=np.float32)
+
                     result = engine.reconstruct(
                         frames=frames,
                         quality=args.quality,
                         output_format=args.output_format,
                         output_dir=Path(tmp),
+                        eval_hook=_eval_hook,
+                    )
+                    observed_depth_maps, observed_pose_result = _estimate_observations(
+                        manager,
+                        frames,
+                        quality=args.quality,
+                    )
+                    rendered_fit = compute_rendered_depth_fit(
+                        points_world=eval_points.get("points", np.zeros((0, 3), dtype=np.float32)),
+                        observed_depth_maps=observed_depth_maps,
+                        poses=observed_pose_result.poses,
+                        downscale=args.render_downscale,
+                        inlier_threshold_m=args.depth_inlier_threshold_m,
                     )
                     output_size = result.output_path.stat().st_size if result.output_path.exists() else 0
                     per_sequence.append(
@@ -275,6 +332,7 @@ def main() -> None:
                             frame_count=len(frames),
                             result=result,
                             output_size_bytes=output_size,
+                            rendered_depth_fit=rendered_fit,
                         )
                     )
             except Exception as exc:
@@ -303,6 +361,8 @@ def main() -> None:
             "synthetic_frame_count": args.synthetic_frame_count,
             "synthetic_width": args.synthetic_width,
             "synthetic_height": args.synthetic_height,
+            "render_downscale": args.render_downscale,
+            "depth_inlier_threshold_m": args.depth_inlier_threshold_m,
         },
         "results": per_sequence,
         "summary": _aggregate(per_sequence),
