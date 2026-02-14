@@ -72,3 +72,19 @@ def test_depth_backend_invalid_rejected(monkeypatch):
 
     with pytest.raises(ValueError, match="DEPTH_BACKEND"):
         get_settings()
+
+
+def test_reconstruct_backend_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "true")
+    monkeypatch.setenv("RECONSTRUCT_BACKEND", "tsdf")
+
+    s = get_settings()
+    assert s.reconstruct_backend == "tsdf"
+
+
+def test_reconstruct_backend_invalid_rejected(monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "true")
+    monkeypatch.setenv("RECONSTRUCT_BACKEND", "invalid-backend")
+
+    with pytest.raises(ValueError, match="RECONSTRUCT_BACKEND"):
+        get_settings()

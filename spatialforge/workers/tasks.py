@@ -114,6 +114,9 @@ def reconstruct_task(
     try:
         self.update_state(state="PROCESSING", meta={"step": "downloading_video"})
         mm = _get_model_manager()
+        from ..config import get_settings
+
+        settings = get_settings()
 
         with _download_video_to_temp(video_object_key) as (video_path, store):
             self.update_state(state="PROCESSING", meta={"step": "extracting_keyframes"})
@@ -126,7 +129,7 @@ def reconstruct_task(
 
             from ..inference.reconstruct_engine import ReconstructEngine
 
-            engine = ReconstructEngine(mm)
+            engine = ReconstructEngine(mm, backend=settings.reconstruct_backend)
             result = engine.reconstruct(frames=frames, quality=quality, output_format=output_format)
 
             self.update_state(state="PROCESSING", meta={"step": "uploading_result"})

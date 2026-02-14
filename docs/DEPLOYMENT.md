@@ -102,6 +102,7 @@ MINIO_SECURE=false
 MODEL_DIR=./models
 DEFAULT_DEPTH_MODEL=large
 DEPTH_BACKEND=hf  # "hf" or "da3" (requires optional DA3 dependency)
+RECONSTRUCT_BACKEND=legacy  # "legacy", "tsdf", or "da3" (non-legacy currently falls back to legacy)
 DEVICE=cuda  # or "cpu"
 TORCH_DTYPE=float16  # or "float32"
 RESEARCH_MODE=false  # DANGER: enables CC-BY-NC models
