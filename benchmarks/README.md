@@ -75,6 +75,27 @@ The quality JSON now includes `rendered_depth_fit` (GT-free):
 - `rel_depth_error`
 - `inlier_ratio` (`|depth_error| < threshold`)
 
+## Reconstruct Compare Report (PR-D)
+
+Generate side-by-side `legacy` vs `tsdf` outputs in one run:
+
+```bash
+python benchmarks/compare_reconstruct.py \
+  --dataset-dir ./datasets/reconstruct_eval \
+  --depth-backend da3 \
+  --backends legacy,tsdf \
+  --quality standard \
+  --output-dir benchmarks/results/reconstruct_compare_4090
+```
+
+Outputs:
+- `quality_legacy.json`
+- `quality_tsdf.json`
+- `bench_legacy.json`
+- `bench_tsdf.json`
+- `reconstruct_compare.json` (stable `schema_version`)
+- `reconstruct_compare.md` (one-page summary table + deltas)
+
 ## Notes
 
 - These scripts are for local/experimental use and are not part of CI.

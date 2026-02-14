@@ -342,9 +342,8 @@ python benchmarks/bench_reconstruct.py --backend da3 --reconstruct-backend tsdf 
 # /reconstruct quality-eval skeleton (JSON contract for future geometry metrics)
 python benchmarks/quality_reconstruct.py --reconstruct-backend legacy --depth-backend da3
 
-# Compare backend quality on same sequence set (GT-free rendered-depth fit)
-python benchmarks/quality_reconstruct.py --dataset-dir ./datasets/reconstruct_eval --reconstruct-backend legacy --depth-backend da3
-python benchmarks/quality_reconstruct.py --dataset-dir ./datasets/reconstruct_eval --reconstruct-backend tsdf --depth-backend da3
+# Compare legacy vs tsdf and export one-page report (JSON + Markdown)
+python benchmarks/compare_reconstruct.py --dataset-dir ./datasets/reconstruct_eval --depth-backend da3 --backends legacy,tsdf --quality standard --output-dir benchmarks/results/reconstruct_compare_4090
 ```
 
 ## Project Structure

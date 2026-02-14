@@ -192,18 +192,24 @@ def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     processing = np.asarray([float(r["processing_time_ms"]) for r in ok], dtype=np.float64)
     points = np.asarray([float(r["point_like_count"]) for r in ok], dtype=np.float64)
     volume = np.asarray([float(r["bbox_volume_m3_like"]) for r in ok], dtype=np.float64)
-    fit_coverage = np.asarray(
-        [float(r["rendered_depth_fit"]["coverage"]["mean"]) for r in ok if r["rendered_depth_fit"]["coverage"]["mean"]],
-        dtype=np.float64,
-    )
-    fit_abs = np.asarray(
-        [
-            float(r["rendered_depth_fit"]["abs_depth_error_m"]["mean"])
-            for r in ok
-            if r["rendered_depth_fit"]["abs_depth_error_m"]["mean"]
-        ],
-        dtype=np.float64,
-    )
+    fit_coverage_values: list[float] = []
+    fit_abs_values: list[float] = []
+    fit_inlier_values: list[float] = []
+    for record in ok:
+        fit = record.get("rendered_depth_fit", {})
+        coverage_mean = ((fit.get("coverage") or {}).get("mean"))
+        abs_mean = ((fit.get("abs_depth_error_m") or {}).get("mean"))
+        inlier_mean = ((fit.get("inlier_ratio") or {}).get("mean"))
+        if coverage_mean is not None:
+            fit_coverage_values.append(float(coverage_mean))
+        if abs_mean is not None:
+            fit_abs_values.append(float(abs_mean))
+        if inlier_mean is not None:
+            fit_inlier_values.append(float(inlier_mean))
+
+    fit_coverage = np.asarray(fit_coverage_values, dtype=np.float64)
+    fit_abs = np.asarray(fit_abs_values, dtype=np.float64)
+    fit_inlier = np.asarray(fit_inlier_values, dtype=np.float64)
 
     return {
         "num_sequences": len(results),
@@ -225,6 +231,7 @@ def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         "rendered_depth_fit": {
             "coverage_mean": round(float(np.mean(fit_coverage)), 6) if fit_coverage.size else None,
             "abs_depth_error_mean_m": round(float(np.mean(fit_abs)), 6) if fit_abs.size else None,
+            "inlier_ratio_mean": round(float(np.mean(fit_inlier)), 6) if fit_inlier.size else None,
         },
         "notes": [
             "Rendered-Depth Fit compares reconstructed geometry against observed depth without GT meshes.",

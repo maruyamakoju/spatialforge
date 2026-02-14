@@ -78,6 +78,9 @@ benchmark-reconstruct-json: ## Reconstruct baseline benchmark (JSON output)
 benchmark-reconstruct-quality-json: ## Reconstruct quality-eval skeleton (JSON output)
 	python benchmarks/quality_reconstruct.py --reconstruct-backend legacy --depth-backend da3
 
+benchmark-reconstruct-compare: ## Reconstruct compare report (legacy vs tsdf, JSON + Markdown)
+	python benchmarks/compare_reconstruct.py --depth-backend da3 --backends legacy,tsdf $(if $(DATASET_DIR),--dataset-dir $(DATASET_DIR),)
+
 # ── Admin ────────────────────────────────────────────────────
 
 create-key: ## Create a new API key (usage: make create-key OWNER=myapp PLAN=builder)
