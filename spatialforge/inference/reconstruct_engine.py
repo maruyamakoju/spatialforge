@@ -33,6 +33,7 @@ _TSDF_CONFIG = {
 }
 
 ProgressCallback = Callable[[str, dict[str, Any] | None], None]
+EvalHook = Callable[[np.ndarray], None]
 
 
 @dataclass
@@ -75,6 +76,8 @@ class ReconstructEngine:
         output_format: str = "pointcloud",
         output_dir: Path | None = None,
         progress_callback: ProgressCallback | None = None,
+        eval_hook: EvalHook | None = None,
+        eval_max_points: int = 200_000,
     ) -> ReconstructResult:
         """Reconstruct a 3D scene from a sequence of frames."""
         if len(frames) < 3:
@@ -97,6 +100,8 @@ class ReconstructEngine:
                 requested_backend="legacy",
                 backend_used="legacy",
                 progress_callback=progress_callback,
+                eval_hook=eval_hook,
+                eval_max_points=eval_max_points,
             )
 
         if self._backend == "tsdf":
@@ -108,6 +113,8 @@ class ReconstructEngine:
                 depth_model=quality_cfg["depth_model"],
                 requested_backend="tsdf",
                 progress_callback=progress_callback,
+                eval_hook=eval_hook,
+                eval_max_points=eval_max_points,
             )
 
         logger.warning(
@@ -123,6 +130,8 @@ class ReconstructEngine:
             requested_backend=self._backend,
             backend_used="legacy",
             progress_callback=progress_callback,
+            eval_hook=eval_hook,
+            eval_max_points=eval_max_points,
         )
 
     def _reconstruct_legacy(
@@ -136,6 +145,8 @@ class ReconstructEngine:
         requested_backend: str,
         backend_used: str,
         progress_callback: ProgressCallback | None,
+        eval_hook: EvalHook | None,
+        eval_max_points: int,
     ) -> ReconstructResult:
         t0 = time.perf_counter()
 
@@ -146,7 +157,12 @@ class ReconstructEngine:
             depth_model=depth_model,
             reconstruct_backend=requested_backend,
         )
-        depth_maps = self._estimate_depth_maps(frames, depth_model=depth_model)
+        depth_maps = self._estimate_depth_maps(
+            frames,
+            depth_model=depth_model,
+            require_metric=False,
+            backend=requested_backend,
+        )
 
         self._emit_progress(progress_callback, "estimating_pose", num_frames=len(frames))
         pose_result = self._estimate_poses(frames)
@@ -198,6 +214,7 @@ class ReconstructEngine:
             )
 
         self._attach_camera_poses(result, pose_result, output_dir)
+        self._emit_eval_hook(eval_hook, all_points, max_points=eval_max_points)
         return result
 
     def _reconstruct_tsdf(
@@ -210,6 +227,8 @@ class ReconstructEngine:
         depth_model: str,
         requested_backend: str,
         progress_callback: ProgressCallback | None,
+        eval_hook: EvalHook | None,
+        eval_max_points: int,
     ) -> ReconstructResult:
         t0 = time.perf_counter()
         o3d = self._import_open3d()
@@ -222,7 +241,12 @@ class ReconstructEngine:
             depth_model=depth_model,
             reconstruct_backend=requested_backend,
         )
-        depth_maps = self._estimate_depth_maps(frames, depth_model=depth_model)
+        depth_maps = self._estimate_depth_maps(
+            frames,
+            depth_model=depth_model,
+            require_metric=True,
+            backend=requested_backend,
+        )
 
         self._emit_progress(progress_callback, "estimating_pose", num_frames=len(frames))
         pose_result = self._estimate_poses(frames)
@@ -264,6 +288,7 @@ class ReconstructEngine:
         mesh_colors = self._as_colors(np.asarray(mesh.vertex_colors), fallback_count=len(mesh_vertices))
         pcd_points = self._as_points(np.asarray(pointcloud.points))
         pcd_colors = self._as_colors(np.asarray(pointcloud.colors), fallback_count=len(pcd_points))
+        eval_points = pcd_points if len(pcd_points) > 0 else mesh_vertices
 
         bbox_points = pcd_points if len(pcd_points) > 0 else mesh_vertices
         if len(bbox_points) == 0:
@@ -321,15 +346,28 @@ class ReconstructEngine:
             )
 
         self._attach_camera_poses(result, pose_result, output_dir)
+        self._emit_eval_hook(eval_hook, eval_points, max_points=eval_max_points)
         return result
 
-    def _estimate_depth_maps(self, frames: list[NDArray[np.uint8]], *, depth_model: str) -> list[NDArray[np.float32]]:
+    def _estimate_depth_maps(
+        self,
+        frames: list[NDArray[np.uint8]],
+        *,
+        depth_model: str,
+        require_metric: bool,
+        backend: str,
+    ) -> list[NDArray[np.float32]]:
         from .depth_engine import DepthEngine
 
         depth_engine = DepthEngine(self._mm)
         depth_maps: list[NDArray[np.float32]] = []
-        for frame in frames:
+        for i, frame in enumerate(frames):
             depth_result = depth_engine.estimate(frame, model_size=depth_model)
+            if require_metric and not depth_result.is_metric:
+                raise RuntimeError(
+                    f"{backend.upper()} backend requires metric depth maps, but frame {i} "
+                    f"from model '{depth_result.model_used}' was non-metric"
+                )
             depth_maps.append(depth_result.depth_map)
         return depth_maps
 
@@ -359,6 +397,25 @@ class ReconstructEngine:
         if callback is None:
             return
         callback(step, meta or None)
+
+    @staticmethod
+    def _emit_eval_hook(
+        callback: EvalHook | None,
+        points_world: NDArray[np.float32],
+        *,
+        max_points: int,
+    ) -> None:
+        if callback is None:
+            return
+        points = np.asarray(points_world, dtype=np.float32)
+        if points.ndim != 2 or points.shape[1] < 3:
+            callback(np.zeros((0, 3), dtype=np.float32))
+            return
+        points = points[:, :3]
+        if max_points > 0 and len(points) > max_points:
+            idx = np.linspace(0, len(points) - 1, max_points, dtype=np.int64)
+            points = points[idx]
+        callback(np.ascontiguousarray(points, dtype=np.float32))
 
     @staticmethod
     def _world_to_camera_extrinsic(

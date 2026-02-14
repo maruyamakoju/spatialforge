@@ -27,6 +27,16 @@ def _is_final_retry(task) -> bool:
     return retries >= max_retries
 
 
+def _normalize_reconstruct_error(exc: Exception) -> str:
+    """Map internal reconstruct errors to stable client-facing messages."""
+    raw = str(exc)
+    if "requires optional dependency 'open3d'" in raw:
+        return "TSDF backend unavailable: install optional dependency '.[tsdf]' (open3d)."
+    if "requires metric depth maps" in raw:
+        return "TSDF requires metric depth; use a metric depth model/back-end configuration."
+    return raw
+
+
 def _get_model_manager():
     """Lazy-init model manager (one per worker process)."""
     global _model_manager
@@ -175,7 +185,7 @@ def reconstruct_task(
     except Exception as exc:
         logger.error("Reconstruction failed: %s", traceback.format_exc())
         if _is_final_retry(self):
-            err = {"status": "failed", "error": str(exc)}
+            err = {"status": "failed", "error": _normalize_reconstruct_error(exc)}
             _fire_webhook(webhook_url, self.request.id, "reconstruct", err)
             return err
         raise
