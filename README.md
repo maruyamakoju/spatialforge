@@ -7,7 +7,7 @@
 Turn any photo or video into depth maps, 3D measurements, camera poses, and floor plans with a single API call. Production-ready spatial intelligence powered by state-of-the-art depth estimation.
 
 [![CI](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml/badge.svg)](https://github.com/maruyamakoju/spatialforge/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-184%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-185%20passed-brightgreen.svg)](#testing)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
@@ -231,6 +231,8 @@ curl -X POST https://spatialforge-demo.fly.dev/v1/depth \
 git clone https://github.com/maruyamakoju/spatialforge.git
 cd spatialforge
 pip install -e ".[dev]"
+# Optional: enable TSDF reconstruct backend
+pip install -e ".[tsdf]"
 
 cp .env.example .env  # configure secrets
 
@@ -291,7 +293,7 @@ When `RESEARCH_MODE=false`, any research model key/alias is rejected at startup 
 | `DEMO_MODE` | `false` | Allow unauthenticated access (demos only) |
 | `RESEARCH_MODE` | `false` | Enable CC-BY-NC models |
 | `DEPTH_BACKEND` | `hf` | `hf` (transformers) or `da3` (Depth Anything 3 backend) |
-| `RECONSTRUCT_BACKEND` | `legacy` | `legacy`, `tsdf`, or `da3` (PR-A scaffold; non-legacy currently falls back to legacy) |
+| `RECONSTRUCT_BACKEND` | `legacy` | `legacy` (default), `tsdf` (Open3D required), or `da3` (placeholder backend key) |
 | `STRIPE_SECRET_KEY` | (optional) | Stripe secret for billing |
 | `STRIPE_WEBHOOK_SECRET` | (optional) | Stripe webhook signing |
 | `ALLOWED_ORIGINS` | `localhost` | CORS allowed origins (JSON list) |
@@ -310,7 +312,7 @@ When `RESEARCH_MODE=false`, any research model key/alias is rejected at startup 
 ## Testing
 
 ```bash
-# Server tests (104 tests)
+# Server tests (105 tests)
 pytest tests/ -v
 
 # SDK tests (80 tests)
@@ -320,7 +322,7 @@ cd sdk && pytest tests/ -v
 ruff check --config pyproject.toml spatialforge/ tests/
 ```
 
-**184 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), async job contracts, backend selection, error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
+**185 total tests** covering API endpoints, billing, depth processing, video handling, middleware (security headers, request timeouts), input validation (coordinate bounds, NaN/Inf), async job contracts, backend selection, error handling (all endpoints), SDK sync/async clients, typed exceptions, retry logic, and data models.
 
 ## Benchmarks
 
@@ -333,6 +335,9 @@ python benchmarks/bench_depth.py --backend da3 --models small,base,large --resol
 
 # /reconstruct baseline benchmark
 python benchmarks/bench_reconstruct.py --backend da3 --reconstruct-backend legacy --frame-counts 30,60,120 --width 960 --height 540
+
+# /reconstruct TSDF benchmark (requires: pip install -e ".[tsdf]")
+python benchmarks/bench_reconstruct.py --backend da3 --reconstruct-backend tsdf --frame-counts 30,60,120 --width 960 --height 540
 
 # /reconstruct quality-eval skeleton (JSON contract for future geometry metrics)
 python benchmarks/quality_reconstruct.py --reconstruct-backend legacy --depth-backend da3
@@ -357,7 +362,7 @@ spatialforge/
 sdk/               # Python SDK (spatialforge-client) — sync, async, CLI
 site/              # Landing page, docs, demo, pricing
 infra/             # Redis infrastructure (Fly.io deployment)
-tests/             # pytest test suite (104 server + 80 SDK)
+tests/             # pytest test suite (105 server + 80 SDK)
 monitoring/        # Prometheus + Grafana configs
 .github/workflows/ # CI/CD (test, lint, docker, deploy, SDK publish)
 ```
