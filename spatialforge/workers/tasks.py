@@ -122,17 +122,32 @@ def reconstruct_task(
             self.update_state(state="PROCESSING", meta={"step": "extracting_keyframes"})
             frames = _extract_frames(video_path, target_fps=2.0)
 
-            self.update_state(
-                state="PROCESSING",
-                meta={"step": "reconstructing", "num_frames": len(frames)},
-            )
-
             from ..inference.reconstruct_engine import ReconstructEngine
 
             engine = ReconstructEngine(mm, backend=settings.reconstruct_backend)
-            result = engine.reconstruct(frames=frames, quality=quality, output_format=output_format)
+            self.update_state(
+                state="PROCESSING",
+                meta={
+                    "step": "reconstructing",
+                    "num_frames": len(frames),
+                    "reconstruct_backend": settings.reconstruct_backend,
+                },
+            )
 
-            self.update_state(state="PROCESSING", meta={"step": "uploading_result"})
+            def _progress(step: str, meta: dict[str, Any] | None = None) -> None:
+                payload: dict[str, Any] = {"step": step}
+                if meta:
+                    payload.update(meta)
+                self.update_state(state="PROCESSING", meta=payload)
+
+            result = engine.reconstruct(
+                frames=frames,
+                quality=quality,
+                output_format=output_format,
+                progress_callback=_progress,
+            )
+
+            self.update_state(state="PROCESSING", meta={"step": "uploading_results"})
 
             scene_key = store.upload_file(
                 str(result.output_path),

@@ -102,7 +102,7 @@ MINIO_SECURE=false
 MODEL_DIR=./models
 DEFAULT_DEPTH_MODEL=large
 DEPTH_BACKEND=hf  # "hf" or "da3" (requires optional DA3 dependency)
-RECONSTRUCT_BACKEND=legacy  # "legacy", "tsdf", or "da3" (non-legacy currently falls back to legacy)
+RECONSTRUCT_BACKEND=legacy  # "legacy" (default), "tsdf" (requires open3d), or "da3" (placeholder)
 DEVICE=cuda  # or "cpu"
 TORCH_DTYPE=float16  # or "float32"
 RESEARCH_MODE=false  # DANGER: enables CC-BY-NC models
@@ -158,6 +158,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install spatialforge + dev dependencies
 pip install -e ".[dev]"
+
+# Optional: TSDF backend dependencies for reconstruct
+pip install -e ".[tsdf]"
 ```
 
 ### 2. Start Redis

@@ -27,10 +27,16 @@ Real pipeline (for RTX4090 reporting):
 ```bash
 python benchmarks/bench_reconstruct.py \
   --backend da3 \
-  --reconstruct-backend legacy \
+  --reconstruct-backend tsdf \
   --frame-counts 30,60,120 \
   --width 960 --height 540 \
   --quality standard --runs 5 --warmup 1
+```
+
+Requires Open3D extra:
+
+```bash
+pip install -e ".[tsdf]"
 ```
 
 Fast pipeline-overhead baseline with mocked stages:
@@ -58,7 +64,7 @@ Run on real frame folders (`<dataset_dir>/<sequence_name>/*.jpg|png`) with real 
 ```bash
 python benchmarks/quality_reconstruct.py \
   --dataset-dir ./datasets/reconstruct_eval \
-  --reconstruct-backend legacy \
+  --reconstruct-backend tsdf \
   --depth-backend da3 \
   --real-depth --real-pose
 ```
