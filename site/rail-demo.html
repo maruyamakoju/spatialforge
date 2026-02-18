@@ -337,6 +337,99 @@
     .spec-list li { font-size: 0.82rem; color: var(--muted); padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
     .spec-list li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 0.75rem; }
 
+    /* ── Video Player ──────────────────────────── */
+    .player-sub-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .pvtab {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.82rem; font-weight: 600;
+      padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .pvtab:hover { border-color: var(--accent); color: var(--accent); }
+    .pvtab.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    .player-wrap {
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; aspect-ratio: 16/9;
+      margin-bottom: 0.75rem;
+    }
+    .player-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .player-hud {
+      position: absolute; top: 10px; left: 12px; z-index: 10;
+      display: flex; gap: 0.5rem; align-items: center;
+    }
+    .player-ts-badge {
+      background: rgba(10,10,15,0.88); border: 1px solid rgba(245,158,11,0.4);
+      color: var(--accent); font-size: 0.75rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 5px; font-variant-numeric: tabular-nums;
+    }
+    .player-anom-hud {
+      background: rgba(239,68,68,0.85); color: #fff;
+      font-size: 0.7rem; font-weight: 800;
+      padding: 3px 8px; border-radius: 5px; letter-spacing: 0.04em;
+      display: none;
+    }
+    .player-anom-flash {
+      position: absolute; inset: 0; background: rgba(239,68,68,0.12);
+      opacity: 0; pointer-events: none; z-index: 5; transition: opacity 0.1s;
+    }
+    .player-model-chip {
+      position: absolute; top: 10px; right: 12px; z-index: 10;
+      background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4);
+      color: var(--indigo); font-size: 0.65rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 5px;
+    }
+
+    .player-controls {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;
+    }
+    .play-btn {
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--accent); color: #000; font-size: 0.9rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.15s;
+    }
+    .play-btn:hover { background: var(--accent-bright); }
+    #playerScrubber {
+      flex: 1; accent-color: var(--accent); cursor: pointer;
+      height: 4px;
+    }
+    .player-time-display {
+      font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums;
+      white-space: nowrap; min-width: 80px; text-align: right;
+    }
+    .speed-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.75rem; font-weight: 700;
+      padding: 0.3rem 0.6rem; border-radius: 5px; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .speed-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Sparkline canvas */
+    .spark-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+    }
+    .spark-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;
+    }
+    #sparkCanvas { width: 100%; display: block; cursor: crosshair; }
+
+    /* Loading state */
+    .player-loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 200px; color: var(--muted); font-size: 0.9rem;
+      flex-direction: column; gap: 0.75rem;
+    }
+    .player-spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── CTA ──────────────────────────────────── */
     .cta-section {
       text-align: center; padding: 6rem 2rem;
@@ -437,12 +530,74 @@
     <button class="video-tab" data-vid="upload" onclick="selectVideo('upload')">
       <span class="tab-dot dot-upload"></span> 画像アップロード
     </button>
+    <button class="video-tab" data-vid="player" onclick="selectVideo('player')" style="border-color:rgba(99,102,241,0.4)">
+      <span class="tab-dot" style="background:var(--indigo)"></span> ▶ 動画プレーヤー
+      <span style="font-size:0.6rem;background:var(--indigo);color:#fff;padding:1px 5px;border-radius:3px;margin-left:2px;font-weight:800">NEW</span>
+    </button>
   </div>
 
   <!-- Frame selector strip -->
   <div class="frame-strip-outer" id="frameStrip">
     <div class="frame-strip-inner" id="frameStripInner">
       <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- ── Video Player (hidden by default) ─────────────────── -->
+  <div id="videoPlayerSection" style="display:none">
+    <div class="player-sub-tabs">
+      <button class="pvtab active" onclick="loadTimeline('jrsam3',this)">jrsam3 路線</button>
+      <button class="pvtab" onclick="loadTimeline('jr23',this)">jr23 路線</button>
+    </div>
+
+    <!-- Loading placeholder -->
+    <div class="player-loading" id="playerLoading">
+      <div class="player-spinner"></div>
+      <span>タイムラインを読み込み中...</span>
+    </div>
+
+    <!-- Player (shown after timeline loads) -->
+    <div id="playerReady" style="display:none">
+      <div class="player-wrap">
+        <img id="playerImg" src="" alt="frame">
+        <div class="player-hud">
+          <span class="player-ts-badge" id="playerTs">0.0s</span>
+          <span class="player-anom-hud" id="playerAnomHud"></span>
+        </div>
+        <span class="player-model-chip">DA V2 Large</span>
+        <div class="player-anom-flash" id="playerAnomFlash"></div>
+      </div>
+
+      <div class="player-controls">
+        <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+        <input type="range" id="playerScrubber" min="0" max="1" value="0" step="1"
+               oninput="scrubTo(parseInt(this.value))">
+        <span class="player-time-display" id="playerTimeDisplay">0.0s / 0.0s</span>
+        <button class="speed-btn" id="speedBtn" onclick="cycleSpeed()">1×</button>
+      </div>
+
+      <div class="spark-wrap">
+        <div class="spark-title">⚠ 異常スコアタイムライン — クリックでジャンプ</div>
+        <canvas id="sparkCanvas" height="64"></canvas>
+      </div>
+
+      <div class="info-grid" style="margin-top:1rem">
+        <div class="alert-panel">
+          <h3>⚠ フレーム検知アラート</h3>
+          <div id="playerAlertList">
+            <div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0">フレームを選択中...</div>
+          </div>
+        </div>
+        <div class="metric-panel">
+          <h3>📐 フレーム計測データ</h3>
+          <div class="metric-row"><span class="metric-key">タイムスタンプ</span><span class="metric-val" id="pm-ts">—</span></div>
+          <div class="metric-row"><span class="metric-key">前方距離（最短）</span><span class="metric-val" id="pm-near">—</span></div>
+          <div class="metric-row"><span class="metric-key">前方距離（最遠）</span><span class="metric-val" id="pm-far">—</span></div>
+          <div class="metric-row"><span class="metric-key">異常スコア</span><span class="metric-val" id="pm-score">—</span></div>
+          <div class="metric-row"><span class="metric-key">信頼度</span><span class="metric-val" id="pm-conf">—</span></div>
+          <div class="metric-row"><span class="metric-key">処理時間</span><span class="metric-val" id="pm-ms">—</span></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -704,17 +859,24 @@ function selectVideo(vid) {
     t.classList.toggle('active', t.dataset.vid === vid));
 
   const isUpload = vid === 'upload';
-  document.getElementById('frameStrip').style.display   = isUpload ? 'none' : 'block';
-  document.getElementById('mainDisplay').style.display  = isUpload ? 'none' : 'grid';
-  document.getElementById('infoPanels').style.display   = isUpload ? 'none' : 'grid';
-  document.getElementById('uploadZone').style.display   = isUpload ? 'block' : 'none';
+  const isPlayer = vid === 'player';
+  const isKeyframe = !isUpload && !isPlayer;
 
-  if (!isUpload) {
+  document.getElementById('frameStrip').style.display        = isKeyframe ? 'block' : 'none';
+  document.getElementById('mainDisplay').style.display       = isKeyframe ? 'grid'  : 'none';
+  document.getElementById('infoPanels').style.display        = isKeyframe ? 'grid'  : 'none';
+  document.getElementById('uploadZone').style.display        = isUpload   ? 'block' : 'none';
+  document.getElementById('videoPlayerSection').style.display = isPlayer  ? 'block' : 'none';
+
+  if (isKeyframe) {
     renderFrameStrip(vid);
-    // Default to first anomaly frame, or first frame
     const frames = FRAMES.filter(f => f.video === vid);
     const pick = frames.find(f => f.anoms.length > 0) || frames[0];
     selectFrame(pick.name);
+  }
+  if (isPlayer) {
+    // Auto-load jrsam3 timeline on first open
+    if (!playerTimeline) loadTimeline('jrsam3');
   }
 }
 
@@ -841,6 +1003,282 @@ function updateAlertPanel(frame) {
         <span>推論: ${frame.ms.toFixed(1)}ms | 信頼度: ${(frame.conf*100).toFixed(1)}%</span>
       </div>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// VIDEO PLAYER — timeline-based playback
+// ══════════════════════════════════════════════════════════════
+let playerTimeline   = null;   // loaded timeline.json data
+let playerVideoName  = '';
+let playerFrameIdx   = 0;
+let playerInterval   = null;
+let playerSpeed      = 1;      // 0.5, 1, 2
+const PLAYER_SPEEDS  = [0.5, 1, 2];
+let playerSpeedIdx   = 1;
+let sparkChart       = null;
+
+async function loadTimeline(name, tabEl) {
+  // Update sub-tabs
+  document.querySelectorAll('.pvtab').forEach(t => t.classList.toggle('active', t === tabEl));
+
+  // Stop any running playback
+  if (playerInterval) { clearInterval(playerInterval); playerInterval = null; }
+  document.getElementById('playBtn').textContent = '▶';
+
+  // Show loading
+  document.getElementById('playerLoading').style.display = 'flex';
+  document.getElementById('playerReady').style.display   = 'none';
+
+  playerVideoName = name;
+  const url = `rail-assets/video/${name}/timeline.json`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    playerTimeline = data;
+
+    // Initialize scrubber
+    const scrubber = document.getElementById('playerScrubber');
+    scrubber.max   = data.total_frames - 1;
+    scrubber.value = 0;
+
+    // Draw sparkline
+    drawSparkline(data);
+
+    // Show first frame
+    document.getElementById('playerLoading').style.display = 'none';
+    document.getElementById('playerReady').style.display   = 'block';
+    displayPlayerFrame(0);
+
+  } catch(e) {
+    document.getElementById('playerLoading').innerHTML =
+      `<div style="color:var(--muted);text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem">⏳</div>
+        <strong style="color:var(--accent)">動画処理中...</strong><br>
+        <span style="font-size:0.82rem">タイムラインを生成しています。数分後にリロードしてください。</span>
+       </div>`;
+    document.getElementById('playerLoading').style.display = 'flex';
+  }
+}
+
+function displayPlayerFrame(idx) {
+  if (!playerTimeline) return;
+  const frames = playerTimeline.frames;
+  if (idx < 0 || idx >= frames.length) return;
+
+  playerFrameIdx = idx;
+  const f = frames[idx];
+
+  // Update image
+  const img = document.getElementById('playerImg');
+  img.src = `rail-assets/video/${playerVideoName}/${f.files.overlay}`;
+
+  // Update scrubber
+  document.getElementById('playerScrubber').value = idx;
+
+  // Update HUD
+  document.getElementById('playerTs').textContent = f.ts.toFixed(1) + 's';
+  const anomHud = document.getElementById('playerAnomHud');
+  if (f.anomaly_count > 0) {
+    anomHud.style.display = 'inline-block';
+    anomHud.textContent   = `⚠ ${f.dist_m}m`;
+    // Flash
+    const flash = document.getElementById('playerAnomFlash');
+    flash.style.opacity = '1';
+    setTimeout(() => { flash.style.opacity = '0'; }, 200);
+  } else {
+    anomHud.style.display = 'none';
+  }
+
+  // Update time display
+  document.getElementById('playerTimeDisplay').textContent =
+    `${f.ts.toFixed(1)}s / ${playerTimeline.duration_s.toFixed(1)}s`;
+
+  // Update metrics
+  document.getElementById('pm-ts').textContent   = f.ts.toFixed(2) + ' s';
+  document.getElementById('pm-near').textContent = f.near_m.toFixed(2) + ' m';
+  document.getElementById('pm-near').className   = 'metric-val' + (f.near_m < 2.5 ? ' danger' : '');
+  document.getElementById('pm-far').textContent  = (f.far_m >= 200 ? '200+ m' : f.far_m.toFixed(1) + ' m');
+  document.getElementById('pm-score').textContent = f.anomaly_score > 0
+    ? (f.anomaly_score * 100).toFixed(1) + '%'
+    : '—';
+  document.getElementById('pm-score').className = 'metric-val ' + (f.anomaly_score > 0.5 ? 'danger' : f.anomaly_score > 0 ? 'accent' : 'safe');
+  document.getElementById('pm-conf').textContent = (f.confidence * 100).toFixed(1) + '%';
+  document.getElementById('pm-conf').className   = 'metric-val accent';
+  document.getElementById('pm-ms').textContent   = f.processing_ms.toFixed(1) + ' ms';
+
+  // Update alert list
+  updatePlayerAlerts(f);
+
+  // Update sparkline cursor
+  drawSparklineCursor(idx);
+}
+
+function updatePlayerAlerts(f) {
+  const list = document.getElementById('playerAlertList');
+  if (f.anomaly_count === 0) {
+    list.innerHTML = `
+      <div class="alert-item ok">
+        <span class="alert-badge badge-ok">正常</span>
+        <div class="alert-text">
+          <strong>異常なし — t=${f.ts.toFixed(1)}s</strong>
+          <span>深度 ${f.near_m.toFixed(1)}m–${f.far_m >= 200 ? '200m+' : f.far_m.toFixed(0) + 'm'} / 信頼度 ${(f.confidence*100).toFixed(1)}%</span>
+        </div>
+      </div>`;
+    return;
+  }
+  list.innerHTML = f.anomalies.map(a => `
+    <div class="alert-item ${a.severity}">
+      <span class="alert-badge badge-${a.severity === 'critical' ? 'critical' : 'warning'}">${a.severity === 'critical' ? '緊急' : '注意'}</span>
+      <div class="alert-text">
+        <strong>近接物体検知 — 前方 ${a.dist_m} m  (t=${f.ts.toFixed(1)}s)</strong>
+        <span>深度 mean=${a.depth_mean.toFixed(3)} / 面積 ${a.area_px.toLocaleString()} px²</span>
+      </div>
+    </div>`).join('');
+}
+
+function togglePlay() {
+  if (playerInterval) {
+    clearInterval(playerInterval);
+    playerInterval = null;
+    document.getElementById('playBtn').textContent = '▶';
+  } else {
+    document.getElementById('playBtn').textContent = '⏸';
+    const fps = playerTimeline ? playerTimeline.fps_processed : 3;
+    const intervalMs = Math.round(1000 / (fps * playerSpeed));
+    playerInterval = setInterval(() => {
+      if (!playerTimeline) return;
+      const next = playerFrameIdx + 1;
+      if (next >= playerTimeline.total_frames) {
+        // Loop
+        displayPlayerFrame(0);
+      } else {
+        displayPlayerFrame(next);
+      }
+    }, intervalMs);
+  }
+}
+
+function scrubTo(idx) {
+  if (playerInterval) { clearInterval(playerInterval); playerInterval = null; document.getElementById('playBtn').textContent = '▶'; }
+  displayPlayerFrame(idx);
+}
+
+function cycleSpeed() {
+  playerSpeedIdx = (playerSpeedIdx + 1) % PLAYER_SPEEDS.length;
+  playerSpeed    = PLAYER_SPEEDS[playerSpeedIdx];
+  document.getElementById('speedBtn').textContent = playerSpeed + '×';
+  if (playerInterval) { clearInterval(playerInterval); playerInterval = null; togglePlay(); }
+}
+
+// ── Sparkline (custom canvas) ──────────────────────────────────
+function drawSparkline(data) {
+  const canvas = document.getElementById('sparkCanvas');
+  const W = canvas.offsetWidth || canvas.parentElement.clientWidth || 800;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = 64 * window.devicePixelRatio;
+  canvas.style.height = '64px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const H     = 64;
+  const PAD   = 4;
+  const n     = data.frames.length;
+
+  // Background
+  ctx.fillStyle = 'transparent';
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth   = 1;
+  [0.25, 0.5, 0.75].forEach(frac => {
+    const y = PAD + (H - PAD*2) * (1 - frac);
+    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
+  });
+
+  if (n === 0) return;
+
+  // Anomaly highlight regions
+  data.frames.forEach((f, i) => {
+    if (f.anomaly_count === 0) return;
+    const x0 = PAD + (i     / n) * (W - PAD*2);
+    const x1 = PAD + ((i+1) / n) * (W - PAD*2);
+    ctx.fillStyle = 'rgba(239,68,68,0.12)';
+    ctx.fillRect(x0, PAD, x1-x0, H-PAD*2);
+  });
+
+  // Score line
+  ctx.beginPath();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth   = 2;
+  data.frames.forEach((f, i) => {
+    const x = PAD + (i / (n-1)) * (W - PAD*2);
+    const y = PAD + (H - PAD*2) * (1 - f.anomaly_score);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Anomaly dots
+  data.frames.forEach((f, i) => {
+    if (f.anomaly_count === 0) return;
+    const x = PAD + (i / (n-1)) * (W - PAD*2);
+    const y = PAD + (H - PAD*2) * (1 - f.anomaly_score);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+  });
+
+  // Store reference for cursor
+  canvas._sparkData = data;
+
+  // Click to jump
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const rx   = (e.clientX - rect.left) / rect.width;
+    const idx  = Math.round(rx * (data.total_frames - 1));
+    scrubTo(idx);
+  };
+}
+
+function drawSparklineCursor(idx) {
+  const canvas = document.getElementById('sparkCanvas');
+  const data   = canvas._sparkData;
+  if (!data) return;
+
+  const W = canvas.width  / window.devicePixelRatio;
+  const H = canvas.height / window.devicePixelRatio;
+  const PAD = 4;
+  const n   = data.frames.length;
+
+  // Redraw base (cheap: just draw the cursor line on top of existing)
+  // We need to redraw the whole sparkline for clean cursor
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.setTransform(window.devicePixelRatio,0,0,window.devicePixelRatio,0,0);
+
+  // Re-draw base sparkline
+  drawSparkline(data);
+
+  // Cursor
+  const x = PAD + (idx / (n-1)) * (W - PAD*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(x, PAD); ctx.lineTo(x, H-PAD); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Current dot
+  const f = data.frames[idx];
+  const y = PAD + (H - PAD*2) * (1 - f.anomaly_score);
+  ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+  ctx.fillStyle = f.anomaly_count > 0 ? '#ef4444' : '#f59e0b';
+  ctx.fill();
+
+  ctx.restore();
 }
 
 // ══════════════════════════════════════════════════════════════
