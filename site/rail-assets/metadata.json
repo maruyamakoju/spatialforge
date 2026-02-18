@@ -1,0 +1,278 @@
+[
+  {
+    "name": "jrsam3_02s",
+    "depth_min_m": 2.02,
+    "depth_max_m": 200.0,
+    "confidence": 0.894,
+    "processing_ms": 379.8,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jrsam3_02s_camera.jpg",
+      "depth": "jrsam3_02s_depth.jpg",
+      "overlay": "jrsam3_02s_overlay.jpg",
+      "sbs": "jrsam3_02s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jrsam3_04s",
+    "depth_min_m": 2.31,
+    "depth_max_m": 200.0,
+    "confidence": 0.879,
+    "processing_ms": 114.6,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jrsam3_04s_camera.jpg",
+      "depth": "jrsam3_04s_depth.jpg",
+      "overlay": "jrsam3_04s_overlay.jpg",
+      "sbs": "jrsam3_04s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jrsam3_07s",
+    "depth_min_m": 3.35,
+    "depth_max_m": 200.0,
+    "confidence": 0.871,
+    "processing_ms": 115.3,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jrsam3_07s_camera.jpg",
+      "depth": "jrsam3_07s_depth.jpg",
+      "overlay": "jrsam3_07s_overlay.jpg",
+      "sbs": "jrsam3_07s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jrsam3_11s",
+    "depth_min_m": 2.57,
+    "depth_max_m": 14.6,
+    "confidence": 0.877,
+    "processing_ms": 114.1,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 96,
+        "y": 216,
+        "w": 140,
+        "h": 280,
+        "cx": 152,
+        "cy": 352,
+        "depth_max": 0.832,
+        "depth_mean": 0.693,
+        "approx_dist_m": 6.1,
+        "severity": "warning",
+        "area_px": 31602
+      }
+    ],
+    "files": {
+      "camera": "jrsam3_11s_camera.jpg",
+      "depth": "jrsam3_11s_depth.jpg",
+      "overlay": "jrsam3_11s_overlay.jpg",
+      "sbs": "jrsam3_11s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jrsam3_16s",
+    "depth_min_m": 2.56,
+    "depth_max_m": 200.0,
+    "confidence": 0.863,
+    "processing_ms": 111.0,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 822,
+        "y": 404,
+        "w": 42,
+        "h": 92,
+        "cx": 849,
+        "cy": 459,
+        "depth_max": 0.726,
+        "depth_mean": 0.527,
+        "approx_dist_m": 8.6,
+        "severity": "warning",
+        "area_px": 2235
+      }
+    ],
+    "files": {
+      "camera": "jrsam3_16s_camera.jpg",
+      "depth": "jrsam3_16s_depth.jpg",
+      "overlay": "jrsam3_16s_overlay.jpg",
+      "sbs": "jrsam3_16s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jrsam3_21s",
+    "depth_min_m": 2.24,
+    "depth_max_m": 9.9,
+    "confidence": 0.88,
+    "processing_ms": 113.1,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 96,
+        "y": 216,
+        "w": 134,
+        "h": 280,
+        "cx": 154,
+        "cy": 352,
+        "depth_max": 0.802,
+        "depth_mean": 0.688,
+        "approx_dist_m": 6.2,
+        "severity": "warning",
+        "area_px": 32697
+      }
+    ],
+    "files": {
+      "camera": "jrsam3_21s_camera.jpg",
+      "depth": "jrsam3_21s_depth.jpg",
+      "overlay": "jrsam3_21s_overlay.jpg",
+      "sbs": "jrsam3_21s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_02s",
+    "depth_min_m": 2.5,
+    "depth_max_m": 88.2,
+    "confidence": 0.861,
+    "processing_ms": 112.0,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jr23_02s_camera.jpg",
+      "depth": "jr23_02s_depth.jpg",
+      "overlay": "jr23_02s_overlay.jpg",
+      "sbs": "jr23_02s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_04s",
+    "depth_min_m": 2.68,
+    "depth_max_m": 200.0,
+    "confidence": 0.873,
+    "processing_ms": 114.3,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jr23_04s_camera.jpg",
+      "depth": "jr23_04s_depth.jpg",
+      "overlay": "jr23_04s_overlay.jpg",
+      "sbs": "jr23_04s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_07s",
+    "depth_min_m": 2.1,
+    "depth_max_m": 200.0,
+    "confidence": 0.898,
+    "processing_ms": 114.7,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 0,
+    "anomalies": [],
+    "files": {
+      "camera": "jr23_07s_camera.jpg",
+      "depth": "jr23_07s_depth.jpg",
+      "overlay": "jr23_07s_overlay.jpg",
+      "sbs": "jr23_07s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_11s",
+    "depth_min_m": 1.99,
+    "depth_max_m": 200.0,
+    "confidence": 0.869,
+    "processing_ms": 115.4,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 834,
+        "y": 353,
+        "w": 30,
+        "h": 143,
+        "cx": 851,
+        "cy": 433,
+        "depth_max": 0.828,
+        "depth_mean": 0.599,
+        "approx_dist_m": 7.5,
+        "severity": "warning",
+        "area_px": 3129
+      }
+    ],
+    "files": {
+      "camera": "jr23_11s_camera.jpg",
+      "depth": "jr23_11s_depth.jpg",
+      "overlay": "jr23_11s_overlay.jpg",
+      "sbs": "jr23_11s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_16s",
+    "depth_min_m": 1.76,
+    "depth_max_m": 200.0,
+    "confidence": 0.877,
+    "processing_ms": 113.2,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 809,
+        "y": 216,
+        "w": 55,
+        "h": 280,
+        "cx": 847,
+        "cy": 385,
+        "depth_max": 0.814,
+        "depth_mean": 0.394,
+        "approx_dist_m": 10.6,
+        "severity": "warning",
+        "area_px": 7757
+      }
+    ],
+    "files": {
+      "camera": "jr23_16s_camera.jpg",
+      "depth": "jr23_16s_depth.jpg",
+      "overlay": "jr23_16s_overlay.jpg",
+      "sbs": "jr23_16s_sbs.jpg"
+    }
+  },
+  {
+    "name": "jr23_21s",
+    "depth_min_m": 1.82,
+    "depth_max_m": 200.0,
+    "confidence": 0.898,
+    "processing_ms": 114.4,
+    "model": "depth-anything/Depth-Anything-V2-Large-hf",
+    "anomaly_count": 1,
+    "anomalies": [
+      {
+        "x": 778,
+        "y": 216,
+        "w": 86,
+        "h": 280,
+        "cx": 826,
+        "cy": 359,
+        "depth_max": 0.866,
+        "depth_mean": 0.621,
+        "approx_dist_m": 7.2,
+        "severity": "warning",
+        "area_px": 20287
+      }
+    ],
+    "files": {
+      "camera": "jr23_21s_camera.jpg",
+      "depth": "jr23_21s_depth.jpg",
+      "overlay": "jr23_21s_overlay.jpg",
+      "sbs": "jr23_21s_sbs.jpg"
+    }
+  }
+]
