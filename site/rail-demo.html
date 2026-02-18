@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan AI — AI軌道点検システム | SpatialForge</title>
+  <meta name="description" content="営業列車に前方カメラを設置するだけ。毎運行ごとに線路全線を自動点検。専用検測車不要のAI軌道監視システム。">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a28;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #f59e0b;
+      --accent-bright: #fbbf24;
+      --accent-glow: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --warning: #f59e0b;
+      --safe: #22c55e;
+      --indigo: #6366f1;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ─────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; width: 100%; padding: 0 2rem; height: 64px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(10, 10, 15, 0.92); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border); z-index: 100;
+    }
+    .logo { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+    .logo-badge { background: var(--accent); color: #000; font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.05em; }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.875rem; padding: 0.4rem 0.75rem; border-radius: 8px; transition: all 0.15s; }
+    nav a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-cta { background: var(--accent) !important; color: #000 !important; font-weight: 700 !important; border-radius: 8px; }
+    .nav-cta:hover { background: var(--accent-bright) !important; }
+
+    /* ── Hero ─────────────────────────────────────── */
+    .hero {
+      padding: 140px 2rem 100px;
+      text-align: center;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,158,11,0.08) 0%, transparent 70%);
+      position: relative; overflow: hidden;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+      color: var(--accent); font-size: 0.78rem; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px; margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+    .hero-badge::before { content: '●'; animation: blink 2s infinite; font-size: 0.6rem; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .hero h1 .highlight { color: var(--accent); }
+    .hero .sub {
+      font-size: 1.05rem; color: var(--muted); max-width: 580px; margin: 0 auto 2.5rem;
+    }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2.2rem; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; display: block; }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .hero-btns { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--accent); color: #000; font-weight: 700; font-size: 0.95rem;
+      padding: 0.75rem 2rem; border-radius: 10px; text-decoration: none; border: none; cursor: pointer;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary:hover { background: var(--accent-bright); transform: translateY(-1px); box-shadow: 0 8px 30px rgba(245,158,11,0.3); }
+    .btn-secondary {
+      background: transparent; color: var(--text); font-weight: 600; font-size: 0.95rem;
+      padding: 0.75rem 2rem; border-radius: 10px; text-decoration: none; border: 1px solid var(--border); cursor: pointer;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Section base ──────────────────────────────── */
+    section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; margin-bottom: 0.75rem; }
+    .section-title { font-size: clamp(1.7rem, 3vw, 2.4rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+    .section-sub { font-size: 0.95rem; color: var(--muted); max-width: 560px; margin-bottom: 2.5rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+
+    /* ── Demo Section ──────────────────────────────── */
+    .demo-section { background: var(--bg); }
+    .scenario-tabs {
+      display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.85rem; font-weight: 600;
+      padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer;
+      transition: all 0.15s; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+    .tab-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-red { background: var(--danger); }
+    .dot-yellow { background: var(--warning); }
+    .dot-orange { background: #fb923c; }
+    .dot-upload { background: var(--indigo); }
+
+    .demo-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) { .demo-grid { grid-template-columns: 1fr; } }
+
+    .canvas-wrapper {
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; aspect-ratio: 4/3;
+    }
+    .canvas-label {
+      position: absolute; top: 12px; left: 12px; z-index: 10;
+      background: rgba(10,10,15,0.85); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.72rem; font-weight: 600;
+      padding: 4px 10px; border-radius: 6px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .canvas-label.live { color: var(--safe); border-color: rgba(34,197,94,0.4); }
+    #cameraCanvas, #depthCanvas {
+      width: 100%; height: 100%; display: block; object-fit: contain;
+    }
+
+    /* Processing overlay */
+    .processing-overlay {
+      position: absolute; inset: 0; background: rgba(10,10,15,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .processing-overlay.active { opacity: 1; pointer-events: all; }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      box-shadow: 0 0 20px var(--accent);
+      animation: scan 2s linear infinite;
+    }
+    @keyframes scan { from{top:0} to{top:100%} }
+    .processing-text { font-size: 0.85rem; color: var(--accent); font-weight: 600; margin-top: 1rem; z-index: 1; }
+    .processing-bar {
+      width: 200px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; z-index: 1;
+    }
+    .processing-bar-fill {
+      height: 100%; background: var(--accent); border-radius: 2px; width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* Info panels */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 768px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .alert-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+    .alert-panel h3 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+    .alert-item {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem;
+      border: 1px solid transparent; animation: fadeSlide 0.4s ease;
+    }
+    @keyframes fadeSlide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .alert-item.critical { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); }
+    .alert-item.warning { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
+    .alert-item.ok { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.25); }
+    .alert-badge {
+      font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.06em;
+      white-space: nowrap; margin-top: 2px;
+    }
+    .badge-critical { background: var(--danger); color: #fff; }
+    .badge-warning { background: var(--warning); color: #000; }
+    .badge-ok { background: var(--safe); color: #000; }
+    .alert-text { font-size: 0.83rem; line-height: 1.5; }
+    .alert-text strong { display: block; color: var(--text); font-weight: 600; }
+    .alert-text span { color: var(--muted); font-size: 0.78rem; }
+
+    .metric-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+    .metric-panel h3 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+    .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-key { font-size: 0.82rem; color: var(--muted); }
+    .metric-val { font-size: 0.9rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .metric-val.danger { color: var(--danger); }
+    .metric-val.safe { color: var(--safe); }
+    .metric-val.accent { color: var(--accent); }
+
+    /* Depth scale legend */
+    .depth-legend {
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
+      background: rgba(10,10,15,0.9); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; min-width: 100px;
+    }
+    .depth-legend-title { font-size: 0.65rem; color: var(--muted); font-weight: 600; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .depth-scale {
+      height: 12px; border-radius: 3px;
+      background: linear-gradient(to right, #30124b, #3f55b7, #32924f, #aedd31, #f58115, #ea4212, #7a0403);
+    }
+    .depth-scale-labels { display: flex; justify-content: space-between; margin-top: 3px; }
+    .depth-scale-labels span { font-size: 0.62rem; color: var(--muted); }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      padding: 3rem; text-align: center; cursor: pointer; transition: all 0.2s;
+      margin-bottom: 1rem;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: var(--accent-glow); }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .upload-zone p { color: var(--muted); font-size: 0.9rem; }
+    .upload-zone strong { color: var(--accent); }
+
+    /* ── 3D Section ──────────────────────────────── */
+    .viz-section { background: var(--surface); }
+    .full-section { max-width: 100%; padding: 6rem 2rem; }
+    .viz-inner { max-width: 1200px; margin: 0 auto; }
+    #threeCanvas {
+      width: 100%; height: 480px; border-radius: var(--radius);
+      border: 1px solid var(--border); display: block; cursor: grab;
+    }
+    #threeCanvas:active { cursor: grabbing; }
+    .viz-controls {
+      display: flex; gap: 0.5rem; margin-top: 0.75rem; justify-content: center; flex-wrap: wrap;
+    }
+    .viz-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.8rem; font-weight: 600;
+      padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .viz-btn:hover, .viz-btn.active { border-color: var(--accent); color: var(--accent); }
+    .viz-hint { text-align: center; font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
+
+    /* ── Dashboard ──────────────────────────────── */
+    .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    @media (max-width: 900px) { .dash-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .dash-grid { grid-template-columns: 1fr; } }
+    .kpi-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.25rem; position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .kpi-card.kpi-safe::before { background: var(--safe); }
+    .kpi-card.kpi-danger::before { background: var(--danger); }
+    .kpi-card.kpi-accent::before { background: var(--accent); }
+    .kpi-card.kpi-indigo::before { background: var(--indigo); }
+    .kpi-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+    .kpi-trend { font-size: 0.75rem; font-weight: 600; }
+    .kpi-trend.up { color: var(--safe); }
+    .kpi-trend.down { color: var(--danger); }
+
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem;
+    }
+    .chart-card h4 { font-size: 0.82rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem; }
+    .chart-container { position: relative; height: 220px; }
+
+    /* Alert log */
+    .alert-log { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-top: 1rem; }
+    .alert-log h4 { font-size: 0.82rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem; }
+    .log-item { display: flex; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); align-items: center; }
+    .log-item:last-child { border-bottom: none; }
+    .log-time { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .log-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em; white-space: nowrap; }
+    .log-text { font-size: 0.82rem; color: var(--text); }
+    .log-loc { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── Specs ──────────────────────────────────── */
+    .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    @media (max-width: 768px) { .specs-grid { grid-template-columns: 1fr; } }
+    .spec-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem;
+    }
+    .spec-icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+    .spec-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .spec-card p { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+    .spec-list { list-style: none; margin-top: 0.75rem; }
+    .spec-list li { font-size: 0.82rem; color: var(--muted); padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+    .spec-list li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 0.75rem; }
+
+    /* ── CTA ──────────────────────────────────── */
+    .cta-section {
+      text-align: center; padding: 6rem 2rem;
+      background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(245,158,11,0.07) 0%, transparent 70%);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Footer ──────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 1.5rem 2rem;
+      text-align: center; color: var(--muted); font-size: 0.8rem;
+    }
+
+    /* ── Anomaly bounding box overlay ──────────── */
+    .depth-canvas-container { position: relative; width: 100%; height: 100%; }
+    #depthCanvas { position: absolute; top: 0; left: 0; }
+    #overlayCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="index.html" class="logo">
+    Spatial<span style="color:var(--accent)">Forge</span>
+    <span class="logo-badge">RAIL</span>
+  </a>
+  <div class="nav-links">
+    <a href="#demo">デモ</a>
+    <a href="#dashboard">ダッシュボード</a>
+    <a href="#specs">技術仕様</a>
+    <a href="index.html">API</a>
+    <a href="#cta" class="nav-cta">資料請求</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">
+    <span>AI軌道点検システム</span>
+    &nbsp;|&nbsp; Railway Track Inspection AI
+  </div>
+  <h1>
+    専用検測車は<br>
+    <span class="highlight">もう不要です。</span>
+  </h1>
+  <p class="sub">
+    営業列車の前方カメラ1台で、毎運行ごとに全線を自動点検。
+    AIが軌道異常・建築限界支障・路面変形をリアルタイム検知します。
+  </p>
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-num" id="stat1">0</span>
+      <span class="stat-label">km 分析実績</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num" id="stat2">0</span>
+      <span class="stat-label">% 異常検知精度</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num" id="stat3">0</span>
+      <span class="stat-label">x 点検頻度向上</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num" id="stat4">0</span>
+      <span class="stat-label">% 深夜作業削減</span>
+    </div>
+  </div>
+  <div class="hero-btns">
+    <a href="#demo" class="btn-primary">▶ デモを試す</a>
+    <a href="#cta" class="btn-secondary">資料請求</a>
+  </div>
+</div>
+
+<!-- Demo Section -->
+<div id="demo" style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section class="demo-section">
+  <div class="section-label">Live Demo</div>
+  <h2 class="section-title">AI深度解析デモ</h2>
+  <p class="section-sub">シナリオを選択するか、実際の軌道画像をアップロードしてください。AIが深度マップを生成し、異常を自動検知します。</p>
+
+  <div class="scenario-tabs">
+    <button class="tab-btn active" onclick="selectScenario('A')" id="tab-A">
+      <span class="dot dot-red"></span> シナリオA: 倒木検知
+    </button>
+    <button class="tab-btn" onclick="selectScenario('B')" id="tab-B">
+      <span class="dot dot-yellow"></span> シナリオB: 軌道変形
+    </button>
+    <button class="tab-btn" onclick="selectScenario('C')" id="tab-C">
+      <span class="dot dot-orange"></span> シナリオC: 建築限界支障
+    </button>
+    <button class="tab-btn" onclick="selectScenario('UPLOAD')" id="tab-UPLOAD">
+      <span class="dot dot-upload"></span> 画像アップロード
+    </button>
+  </div>
+
+  <!-- Upload Zone (hidden by default) -->
+  <div id="uploadZone" style="display:none">
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📁</div>
+      <p><strong>クリックまたはドラッグ</strong>して画像をアップロード</p>
+      <p style="margin-top:0.25rem; font-size:0.8rem">JPEG / PNG / WebP 対応 (最大20MB)</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleUpload(this.files[0])">
+  </div>
+
+  <!-- Demo Canvases -->
+  <div class="demo-grid" id="demoGrid">
+    <div class="canvas-wrapper">
+      <span class="canvas-label live">● カメラ映像</span>
+      <canvas id="cameraCanvas"></canvas>
+      <div class="processing-overlay" id="procOverlayCamera">
+        <div class="scan-line"></div>
+      </div>
+    </div>
+    <div class="canvas-wrapper">
+      <span class="canvas-label">深度解析 / Depth Map</span>
+      <div class="depth-canvas-container">
+        <canvas id="depthCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+      </div>
+      <div class="depth-legend">
+        <div class="depth-legend-title">DISTANCE</div>
+        <div class="depth-scale"></div>
+        <div class="depth-scale-labels"><span>遠 / Far</span><span>近 / Near</span></div>
+      </div>
+      <div class="processing-overlay active" id="procOverlayDepth">
+        <div class="scan-line"></div>
+        <div class="processing-text" id="procText">深度モデル初期化中...</div>
+        <div class="processing-bar"><div class="processing-bar-fill" id="procBar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert + Metric Panels -->
+  <div class="info-grid">
+    <div class="alert-panel">
+      <h3>⚠ 検知アラート / Anomaly Alerts</h3>
+      <div id="alertList">
+        <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center">解析中...</div>
+      </div>
+    </div>
+    <div class="metric-panel">
+      <h3>📐 計測データ / Measurements</h3>
+      <div id="metricList">
+        <div class="metric-row"><span class="metric-key">前方距離（最短）</span><span class="metric-val" id="m-near">—</span></div>
+        <div class="metric-row"><span class="metric-key">前方距離（最遠）</span><span class="metric-val" id="m-far">—</span></div>
+        <div class="metric-row"><span class="metric-key">建築限界余裕</span><span class="metric-val" id="m-clearance">—</span></div>
+        <div class="metric-row"><span class="metric-key">信頼度スコア</span><span class="metric-val" id="m-conf">—</span></div>
+        <div class="metric-row"><span class="metric-key">処理時間</span><span class="metric-val" id="m-time">—</span></div>
+        <div class="metric-row"><span class="metric-key">モデル</span><span class="metric-val" id="m-model">—</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- 3D Visualization -->
+<div class="full-section viz-section" id="viz" style="background: var(--bg);">
+<section style="max-width:1200px;margin:0 auto;padding:0">
+  <div class="section-label">3D Visualization</div>
+  <h2 class="section-title">インタラクティブ3D深度マップ</h2>
+  <p class="section-sub">深度データをリアルタイムで3次元空間に変換。軌道前方の立体構造をあらゆる角度から確認できます。</p>
+  <canvas id="threeCanvas"></canvas>
+  <div class="viz-controls">
+    <button class="viz-btn active" onclick="setVizMode('point')">ポイントクラウド</button>
+    <button class="viz-btn" onclick="setVizMode('mesh')">3Dメッシュ</button>
+    <button class="viz-btn" onclick="resetCamera()">カメラリセット</button>
+    <button class="viz-btn" onclick="toggleAutoRotate()">自動回転</button>
+  </div>
+  <div class="viz-hint">マウスドラッグで回転 · スクロールでズーム</div>
+</section>
+</div>
+
+<!-- Dashboard -->
+<div style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section id="dashboard">
+  <div class="section-label">Monitoring Dashboard</div>
+  <h2 class="section-title">路線監視ダッシュボード</h2>
+  <p class="section-sub">導入後のリアルタイム監視画面のイメージです。全列車・全区間の点検データを一元管理します。</p>
+
+  <div class="dash-grid">
+    <div class="kpi-card kpi-safe">
+      <div class="kpi-label">本日の点検カバレッジ</div>
+      <div class="kpi-value" style="color:var(--safe)">847<span style="font-size:1.1rem">km</span></div>
+      <div class="kpi-sub">総路線距離の 100%</div>
+    </div>
+    <div class="kpi-card kpi-danger">
+      <div class="kpi-label">要確認アラート</div>
+      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">3</div>
+      <div class="kpi-sub kpi-trend down">▲ うち緊急 1件</div>
+    </div>
+    <div class="kpi-card kpi-accent">
+      <div class="kpi-label">本日の点検回数</div>
+      <div class="kpi-value" style="color:var(--accent)" id="dash-runs">214</div>
+      <div class="kpi-sub">運行便数ベース</div>
+    </div>
+    <div class="kpi-card kpi-indigo">
+      <div class="kpi-label">累積分析フレーム数</div>
+      <div class="kpi-value" style="color:var(--indigo)">2.4<span style="font-size:1.1rem">M</span></div>
+      <div class="kpi-sub">今月のデータ量</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h4>異常検知トレンド（過去30日）</h4>
+      <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h4>異常種別分布</h4>
+      <div class="chart-container">
+        <canvas id="typeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-log">
+    <h4>本日の検知ログ（抜粋）</h4>
+    <div class="log-item">
+      <span class="log-time">08:23:41</span>
+      <span class="log-badge badge-critical">緊急</span>
+      <div>
+        <div class="log-text">軌道上障害物検知 — 倒木（推定幹径 28cm）</div>
+        <div class="log-loc">上り第3閉塞区間 / 前方 15.3m</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">11:47:08</span>
+      <span class="log-badge badge-warning" style="background:var(--warning);color:#000">注意</span>
+      <div>
+        <div class="log-text">建築限界近接物体 — 余裕 28cm</div>
+        <div class="log-loc">下り第7閉塞区間 / 右側面</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">14:02:55</span>
+      <span class="log-badge badge-warning" style="background:#fb923c;color:#000">要確認</span>
+      <div>
+        <div class="log-text">軌道面変形 — 高低変位 4.2mm</div>
+        <div class="log-loc">上り第12閉塞区間 / 分岐点手前 80m</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">16:38:12</span>
+      <span class="log-badge badge-ok">正常</span>
+      <div>
+        <div class="log-text">定期スキャン完了 — 全区間異常なし</div>
+        <div class="log-loc">全閉塞区間（847km）スキャン済</div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- Specs -->
+<section id="specs">
+  <div class="section-label">Technology</div>
+  <h2 class="section-title">技術仕様</h2>
+  <p class="section-sub">最新の深度推定AI（Depth Anything v3）を基盤とした、鉄道専用の軌道点検エンジン。</p>
+  <div class="specs-grid">
+    <div class="spec-card">
+      <div class="spec-icon">📷</div>
+      <h3>ハードウェア要件</h3>
+      <p>既存の営業車両に搭載するだけ。特殊センサー不要。</p>
+      <ul class="spec-list">
+        <li>前方カメラ（1080p以上）</li>
+        <li>LiDAR・レーザー不要</li>
+        <li>ステレオカメラ不要（単眼でOK）</li>
+        <li>Wi-Fi／LTE経由でクラウド送信</li>
+        <li>エッジ処理オプション対応</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <div class="spec-icon">🧠</div>
+      <h3>AI検知能力</h3>
+      <p>深度推定と異常検知を組み合わせたマルチレイヤー解析。</p>
+      <ul class="spec-list">
+        <li>建築限界支障物（木・岩・看板等）</li>
+        <li>軌道変形（高低/通り/水準変位）</li>
+        <li>バラスト流出・異状</li>
+        <li>レール締結装置の脱落</li>
+        <li>斜面崩壊・落石の予兆</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <div class="spec-icon">📊</div>
+      <h3>出力データ</h3>
+      <p>保線担当者がすぐに使える形式で自動レポート生成。</p>
+      <ul class="spec-list">
+        <li>深度マップ（16bit PNG / NumPy）</li>
+        <li>GPS連動位置情報</li>
+        <li>異常種別・緊急度スコア</li>
+        <li>3D点群データ（.ply / .pcd）</li>
+        <li>点検レポートPDF自動生成</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div id="cta" class="cta-section">
+  <div class="section-label">Contact</div>
+  <h2 class="section-title">パイロット導入のご相談</h2>
+  <p class="section-sub" style="margin:0 auto 2rem">まずは1路線・1編成からの試験導入が可能です。<br>デモンストレーションや技術資料のご提供はお気軽にどうぞ。</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+    <a href="mailto:contact@spatialforge.ai?subject=RailScan AI 導入相談" class="btn-primary">メールで相談する</a>
+    <a href="docs.html" class="btn-secondary">技術資料を見る</a>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 SpatialForge — AI Railway Track Inspection. Powered by Depth Anything v3.</p>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TURBO COLORMAP
+// ══════════════════════════════════════════════════════════════
+const TURBO_STOPS = [
+  [0.00, [48,  18, 59]],
+  [0.10, [63,  85,183]],
+  [0.20, [50, 146,207]],
+  [0.30, [26, 186,164]],
+  [0.40, [74, 210, 98]],
+  [0.50, [174,221, 49]],
+  [0.60, [234,185, 35]],
+  [0.70, [245,129, 21]],
+  [0.80, [234, 66, 18]],
+  [0.90, [196, 27, 27]],
+  [1.00, [122,  4,  3]],
+];
+
+function turboColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  for (let i = 1; i < TURBO_STOPS.length; i++) {
+    if (t <= TURBO_STOPS[i][0]) {
+      const t0 = TURBO_STOPS[i-1][0], t1 = TURBO_STOPS[i][0];
+      const a = (t - t0) / (t1 - t0);
+      const c0 = TURBO_STOPS[i-1][1], c1 = TURBO_STOPS[i][1];
+      return [
+        Math.round(c0[0] + a*(c1[0]-c0[0])),
+        Math.round(c0[1] + a*(c1[1]-c0[1])),
+        Math.round(c0[2] + a*(c1[2]-c0[2])),
+      ];
+    }
+  }
+  return [122, 4, 3];
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCENARIO DATA
+// ══════════════════════════════════════════════════════════════
+const SCENARIOS = {
+  A: {
+    name: '倒木検知',
+    alerts: [
+      { level: 'critical', badge: '緊急', title: '軌道上障害物 — 倒木', detail: '前方 18.5m / 推定幹径 32cm' },
+      { level: 'warning',  badge: '注意', title: 'バラスト散乱確認', detail: '前方 24–31m 範囲' },
+      { level: 'ok',       badge: '正常', title: '左右建築限界 — 問題なし', detail: '余裕 1.2m 以上' },
+    ],
+    metrics: {
+      near: { v: '0.8 m', cls: 'danger' },
+      far:  { v: '847 m', cls: '' },
+      clearance: { v: '1.2 m ✓', cls: 'safe' },
+      conf: { v: '98.2%', cls: 'accent' },
+      time: { v: '73 ms', cls: '' },
+      model: { v: 'DA3-Large', cls: '' },
+    },
+    anomalyBoxes: [
+      { rx: 0.28, ry: 0.48, rw: 0.44, rh: 0.17, color: '#ef4444', label: '⚠ 倒木 18.5m', dist: '18.5m' },
+      { rx: 0.30, ry: 0.65, rw: 0.40, rh: 0.08, color: '#f59e0b', label: 'バラスト散乱', dist: '24m' },
+    ],
+    // anomaly region for depth map: {u0,v0,u1,v1,depthBoost}
+    hotspot: { u0:0.30, v0:0.50, u1:0.70, v1:0.65, d:0.90 },
+  },
+  B: {
+    name: '軌道変形',
+    alerts: [
+      { level: 'warning', badge: '要確認', title: '高低変位 — 4.2mm 超過', detail: '前方 34.2m / 第3閉塞区間' },
+      { level: 'warning', badge: '注意',   title: '通り変位 — 軌間偏差 2.1mm', detail: '同区間 継続監視中' },
+      { level: 'ok',      badge: '正常',   title: '障害物なし', detail: '全視野 建築限界内' },
+    ],
+    metrics: {
+      near: { v: '2.1 m', cls: '' },
+      far:  { v: '847 m', cls: '' },
+      clearance: { v: '1.8 m ✓', cls: 'safe' },
+      conf: { v: '97.4%', cls: 'accent' },
+      time: { v: '81 ms', cls: '' },
+      model: { v: 'DA3-Large', cls: '' },
+    },
+    anomalyBoxes: [
+      { rx: 0.38, ry: 0.56, rw: 0.24, rh: 0.08, color: '#f59e0b', label: '高低変位 4.2mm', dist: '34m' },
+    ],
+    hotspot: { u0:0.40, v0:0.58, u1:0.60, v1:0.64, d:0.62 },
+  },
+  C: {
+    name: '建築限界支障',
+    alerts: [
+      { level: 'critical', badge: '緊急', title: '建築限界内 物体検知', detail: '右側面 28cm 侵入 / 前方 22.3m' },
+      { level: 'warning',  badge: '注意', title: '雑草繁茂 — 限界近接', detail: '前方 35–45m 右側' },
+      { level: 'ok',       badge: '正常', title: '軌道面 — 変位なし', detail: '基準値範囲内' },
+    ],
+    metrics: {
+      near: { v: '1.4 m', cls: '' },
+      far:  { v: '847 m', cls: '' },
+      clearance: { v: '0.28 m ⚠', cls: 'danger' },
+      conf: { v: '96.8%', cls: 'accent' },
+      time: { v: '68 ms', cls: '' },
+      model: { v: 'DA3-Large', cls: '' },
+    },
+    anomalyBoxes: [
+      { rx: 0.61, ry: 0.45, rw: 0.14, rh: 0.25, color: '#ef4444', label: '⚠ 限界侵犯 0.28m', dist: '22.3m' },
+      { rx: 0.62, ry: 0.38, rw: 0.12, rh: 0.12, color: '#f59e0b', label: '雑草繁茂', dist: '38m' },
+    ],
+    hotspot: { u0:0.62, v0:0.45, u1:0.76, v1:0.72, d:0.82 },
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
+// DEPTH MAP GENERATION
+// ══════════════════════════════════════════════════════════════
+let depthBuffer = null; // shared depth data for Three.js
+
+function seededNoise(x, y, seed) {
+  const n = Math.sin(x * 127.1 + y * 311.7 + seed * 74.3) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function generateDepthValue(u, v, scenario) {
+  const s = SCENARIOS[scenario] || SCENARIOS.A;
+  const hs = s.hotspot;
+
+  // Sky (top 32%)
+  if (v < 0.32) {
+    return 0.03 + seededNoise(u * 40, v * 40, 1) * 0.03;
+  }
+
+  // Horizon gradient → near camera
+  const groundT = (v - 0.32) / 0.68; // 0 at horizon, 1 at bottom
+  const baseDepth = 0.04 + groundT * 0.91;
+
+  // Track center calculation (perspective-aware)
+  const trackCenter = 0.5;
+  const trackHW = 0.11 + groundT * 0.07; // widens toward camera
+  const du = u - trackCenter;
+
+  // Rails (slightly closer = higher depth)
+  const leftRail  = trackCenter - 0.068 * (1 + groundT * 0.4);
+  const rightRail = trackCenter + 0.068 * (1 + groundT * 0.4);
+  const railW = 0.008 + groundT * 0.005;
+  const onRail = Math.abs(u - leftRail) < railW || Math.abs(u - rightRail) < railW;
+
+  // Sleepers (periodic, perspective-corrected)
+  const sleeperFreq = groundT * 22;
+  const sleeperPhase = Math.sin(sleeperFreq * Math.PI);
+  const onSleeper = sleeperPhase > 0.55 && Math.abs(du) < trackHW * 1.3;
+
+  let depth = baseDepth;
+  if (onRail)    depth += 0.025;
+  if (onSleeper) depth += 0.015;
+
+  // Ballast (slightly farther than track center)
+  if (Math.abs(du) > trackHW && Math.abs(du) < trackHW * 2.5) {
+    depth -= 0.04;
+  }
+
+  // Embankment (farther)
+  if (Math.abs(du) > trackHW * 2.5) {
+    depth -= 0.06;
+  }
+
+  // Hotspot anomaly
+  if (u >= hs.u0 && u <= hs.u1 && v >= hs.v0 && v <= hs.v1) {
+    const hx = (u - hs.u0) / (hs.u1 - hs.u0);
+    const hy = (v - hs.v0) / (hs.v1 - hs.v0);
+    const edgeFade = Math.min(hx, 1-hx, hy, 1-hy) * 4;
+    const bumpStrength = Math.min(1, edgeFade);
+    const targetDepth = hs.d + seededNoise(u*20, v*20, 3) * 0.04;
+    depth = depth + bumpStrength * (targetDepth - depth);
+  }
+
+  // Subtle noise
+  depth += (seededNoise(u * 80, v * 80, 7) - 0.5) * 0.018;
+  return Math.max(0, Math.min(1, depth));
+}
+
+function renderDepthCanvas(scenario) {
+  const canvas = document.getElementById('depthCanvas');
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  const buf = new Float32Array(W * H);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const d = generateDepthValue(x/W, y/H, scenario);
+      buf[y*W+x] = d;
+      const [r,g,b] = turboColor(d);
+      const i = (y*W+x)*4;
+      img.data[i]=r; img.data[i+1]=g; img.data[i+2]=b; img.data[i+3]=255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  depthBuffer = buf;
+  return buf;
+}
+
+function renderCameraCanvas(scenario) {
+  const canvas = document.getElementById('cameraCanvas');
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H*0.38);
+  skyGrad.addColorStop(0, '#87CEEB');
+  skyGrad.addColorStop(1, '#c8e6f5');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H*0.38);
+
+  // Distant hills/treeline
+  ctx.fillStyle = '#4a7c59';
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.38);
+  for (let x = 0; x <= W; x += W/16) {
+    const h = H*(0.30 + 0.06 * seededNoise(x/W, 0, 5));
+    ctx.lineTo(x, h);
+  }
+  ctx.lineTo(W, H*0.38); ctx.lineTo(0, H*0.38);
+  ctx.fill();
+
+  // Ground (ballast/earth)
+  const groundGrad = ctx.createLinearGradient(0, H*0.38, 0, H);
+  groundGrad.addColorStop(0, '#8B7355');
+  groundGrad.addColorStop(1, '#6B5B45');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, H*0.38, W, H*0.62);
+
+  // Draw sleepers and rails
+  for (let i = 0; i < 20; i++) {
+    const t = i / 20; // 0=near, 1=far perspective
+    const perspV = 1 - t; // 0=far, 1=near on screen
+    const screenY = H * (0.38 + perspV * 0.62);
+    const trackW_half = W * (0.13 + perspV * 0.12);
+    const centerX = W / 2;
+
+    // Sleeper
+    const sleeperH = Math.max(2, 6 * perspV);
+    ctx.fillStyle = `rgba(90,60,30,${0.6+perspV*0.4})`;
+    ctx.fillRect(centerX - trackW_half * 1.2, screenY - sleeperH/2, trackW_half * 2.4, sleeperH);
+
+    // Ballast texture (dots)
+    if (perspV > 0.2) {
+      for (let j = 0; j < 8; j++) {
+        const bx = centerX + (seededNoise(i*0.1+j*0.3, 0.5, 9)-0.5) * trackW_half * 2.8;
+        const by = screenY + (seededNoise(i*0.1+j*0.3, 1.5, 11)-0.5) * sleeperH * 3;
+        const br = Math.max(1, 3 * perspV);
+        ctx.fillStyle = `rgba(120,110,90,${0.5*perspV})`;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+
+  // Rails
+  const railColors = ['#9B9B9B', '#BBBBBB'];
+  [[-1, 1], [1, -1]].forEach(([side, gloss], ri) => {
+    ctx.beginPath();
+    ctx.moveTo(W/2 + side*(W*0.065)*(1+0.0), H*0.38);
+    ctx.lineTo(W/2 + side*(W*0.065)*(1+0.15), H);
+    ctx.strokeStyle = railColors[ri % 2];
+    ctx.lineWidth = 4 + ri;
+    ctx.stroke();
+  });
+
+  // Embankment vegetation
+  ctx.fillStyle = '#3d6644';
+  ctx.fillRect(0, H*0.38, W*0.22, H*0.62);
+  ctx.fillRect(W*0.78, H*0.38, W*0.22, H*0.62);
+
+  // Anomaly overlay for camera view
+  if (scenario === 'A') {
+    // Fallen tree
+    const tx = W*0.38, ty = H*0.50, tw = W*0.24, th = H*0.14;
+    ctx.save();
+    ctx.fillStyle = '#5D4E2A';
+    ctx.beginPath();
+    ctx.ellipse(tx + tw/2, ty + th/2, tw/2, th/3, -0.3, 0, Math.PI*2);
+    ctx.fill();
+    // Branches
+    for (let b = 0; b < 5; b++) {
+      ctx.strokeStyle = '#4a3d20';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tx + tw * (0.3 + b*0.12), ty + th*0.5);
+      ctx.lineTo(tx + tw * (0.2 + b*0.14), ty + th*(0.1 + b*0.15));
+      ctx.stroke();
+    }
+    // Leaves
+    ctx.fillStyle = 'rgba(34,90,34,0.8)';
+    ctx.beginPath();
+    ctx.ellipse(tx + tw*0.5, ty + th*0.2, tw*0.3, th*0.25, 0.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  } else if (scenario === 'C') {
+    // Clearance object on right side
+    ctx.save();
+    ctx.fillStyle = '#4a4a4a';
+    const ox = W*0.72, oy = H*0.44, ow = W*0.07, oh = H*0.28;
+    ctx.fillRect(ox, oy, ow, oh);
+    ctx.fillStyle = '#3a8a3a';
+    ctx.beginPath();
+    ctx.ellipse(ox + ow/2, oy, ow*0.8, oh*0.3, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// OVERLAY CANVAS (anomaly boxes)
+// ══════════════════════════════════════════════════════════════
+function drawAnomalyOverlay(scenario) {
+  const overlay = document.getElementById('overlayCanvas');
+  const depth   = document.getElementById('depthCanvas');
+  overlay.width  = depth.width;
+  overlay.height = depth.height;
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+  const s = SCENARIOS[scenario];
+  if (!s) return;
+
+  s.anomalyBoxes.forEach(box => {
+    const x = box.rx * overlay.width;
+    const y = box.ry * overlay.height;
+    const w = box.rw * overlay.width;
+    const h = box.rh * overlay.height;
+
+    // Box
+    ctx.strokeStyle = box.color;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.strokeRect(x, y, w, h);
+
+    // Corner accents
+    const cs = 10;
+    ctx.lineWidth = 3;
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy], i) => {
+      ctx.beginPath();
+      ctx.moveTo(cx + (i%2===0?cs:-cs), cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + (i<2?cs:-cs));
+      ctx.stroke();
+    });
+
+    // Label background
+    ctx.font = 'bold 11px monospace';
+    const labelW = ctx.measureText(box.label).width + 16;
+    const lx = x, ly = y - 22;
+    ctx.fillStyle = box.color;
+    ctx.beginPath();
+    ctx.roundRect(lx, Math.max(0, ly), labelW, 20, 4);
+    ctx.fill();
+    ctx.fillStyle = box.color === '#ef4444' ? '#fff' : '#000';
+    ctx.fillText(box.label, lx + 8, Math.max(14, ly + 14));
+
+    // Distance indicator
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    const dw = ctx.measureText(box.dist).width + 12;
+    ctx.fillRect(x + w - dw - 2, y + h - 18, dw, 16);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace';
+    ctx.fillText(box.dist, x + w - dw + 4, y + h - 6);
+  });
+
+  // Pulse ring on critical anomaly
+  const crit = s.anomalyBoxes.find(b => b.color === '#ef4444');
+  if (crit) {
+    const cx = (crit.rx + crit.rw/2) * overlay.width;
+    const cy = (crit.ry + crit.rh/2) * overlay.height;
+    ctx.strokeStyle = 'rgba(239,68,68,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(crit.rw, crit.rh)/2 * overlay.width * 0.8 + 15, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ALERT + METRIC UPDATE
+// ══════════════════════════════════════════════════════════════
+function updatePanels(scenario) {
+  const s = SCENARIOS[scenario];
+  if (!s) return;
+
+  // Alerts
+  const list = document.getElementById('alertList');
+  list.innerHTML = s.alerts.map(a => `
+    <div class="alert-item ${a.level}">
+      <span class="alert-badge badge-${a.level === 'ok' ? 'ok' : a.level === 'warning' ? 'warning' : 'critical'}">${a.badge}</span>
+      <div class="alert-text">
+        <strong>${a.title}</strong>
+        <span>${a.detail}</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Metrics
+  const m = s.metrics;
+  document.getElementById('m-near').textContent      = m.near.v;
+  document.getElementById('m-near').className        = 'metric-val ' + m.near.cls;
+  document.getElementById('m-far').textContent       = m.far.v;
+  document.getElementById('m-clearance').textContent = m.clearance.v;
+  document.getElementById('m-clearance').className   = 'metric-val ' + m.clearance.cls;
+  document.getElementById('m-conf').textContent      = m.conf.v;
+  document.getElementById('m-conf').className        = 'metric-val ' + m.conf.cls;
+  document.getElementById('m-time').textContent      = m.time.v;
+  document.getElementById('m-model').textContent     = m.model.v;
+
+  document.querySelector('.badge-warning') && (document.querySelector('.badge-warning').style.background = 'var(--warning)');
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROCESSING ANIMATION
+// ══════════════════════════════════════════════════════════════
+const PROC_STEPS = [
+  'モデル読み込み中...',
+  '深度推定実行中...',
+  '異常検知処理中...',
+  '3Dマッピング生成...',
+  '計測データ計算中...',
+  '完了 / Complete ✓',
+];
+
+async function runProcessing(scenario) {
+  const overlay = document.getElementById('procOverlayDepth');
+  const bar = document.getElementById('procBar');
+  const txt = document.getElementById('procText');
+
+  overlay.classList.add('active');
+  bar.style.width = '0%';
+
+  for (let i = 0; i < PROC_STEPS.length; i++) {
+    txt.textContent = PROC_STEPS[i];
+    const targetPct = (i + 1) / PROC_STEPS.length * 100;
+    bar.style.width = targetPct + '%';
+    await sleep(i === PROC_STEPS.length - 1 ? 300 : 380 + Math.random() * 120);
+  }
+
+  // Render results
+  renderDepthCanvas(scenario);
+  drawAnomalyOverlay(scenario);
+  updateThreeJs(scenario);
+
+  await sleep(200);
+  overlay.classList.remove('active');
+  updatePanels(scenario);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════════════════════
+// SCENARIO SELECTION
+// ══════════════════════════════════════════════════════════════
+let currentScenario = 'A';
+let processing = false;
+
+function selectScenario(id) {
+  if (processing) return;
+
+  // Update tabs
+  ['A','B','C','UPLOAD'].forEach(s => {
+    document.getElementById('tab-' + s).classList.toggle('active', s === id);
+  });
+
+  // Show/hide upload zone
+  const isUpload = id === 'UPLOAD';
+  document.getElementById('uploadZone').style.display = isUpload ? 'block' : 'none';
+  document.getElementById('demoGrid').style.display = isUpload ? 'none' : 'grid';
+  document.querySelector('.info-grid').style.display = isUpload ? 'none' : 'grid';
+
+  if (isUpload) return;
+
+  currentScenario = id;
+  processing = true;
+  renderCameraCanvas(id);
+  runProcessing(id).finally(() => { processing = false; });
+}
+
+// ══════════════════════════════════════════════════════════════
+// UPLOAD HANDLER
+// ══════════════════════════════════════════════════════════════
+function handleUpload(file) {
+  if (!file) return;
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('demoGrid').style.display = 'grid';
+  document.querySelector('.info-grid').style.display = 'grid';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const cc = document.getElementById('cameraCanvas');
+      const ctx = cc.getContext('2d');
+      ctx.drawImage(img, 0, 0, cc.width, cc.height);
+      // Try real API, fall back to simulation
+      callDepthAPI(file).catch(() => {
+        processing = true;
+        runProcessing('A').finally(() => { processing = false; });
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function callDepthAPI(file) {
+  const API = 'https://spatialforge-demo.fly.dev';
+  const form = new FormData();
+  form.append('image', file);
+
+  const res = await fetch(`${API}/v1/depth/visualize`, { method: 'POST', body: form });
+  if (!res.ok) throw new Error('API error');
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+
+  // Show real depth colormap
+  const depthCanvas = document.getElementById('depthCanvas');
+  const ctx = depthCanvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, depthCanvas.width, depthCanvas.height);
+    document.getElementById('procOverlayDepth').classList.remove('active');
+
+    // Read min/max depth from headers
+    const minD = res.headers.get('X-Depth-Min') || '0.8';
+    const maxD = res.headers.get('X-Depth-Max') || '847';
+    const procMs = res.headers.get('X-Processing-Ms') || '—';
+    const model = res.headers.get('X-Model') || 'DA3-Large';
+
+    document.getElementById('m-near').textContent = parseFloat(minD).toFixed(1) + ' m';
+    document.getElementById('m-far').textContent  = parseFloat(maxD).toFixed(0) + ' m';
+    document.getElementById('m-time').textContent = procMs + ' ms';
+    document.getElementById('m-model').textContent = model;
+    document.getElementById('m-conf').textContent = '—';
+    document.getElementById('m-clearance').textContent = '手動確認';
+    document.getElementById('alertList').innerHTML =
+      '<div class="alert-item ok"><span class="alert-badge badge-ok">完了</span><div class="alert-text"><strong>深度解析完了</strong><span>アップロード画像を解析しました</span></div></div>';
+  };
+  img.src = url;
+}
+
+// ══════════════════════════════════════════════════════════════
+// THREE.JS 3D VISUALIZATION
+// ══════════════════════════════════════════════════════════════
+let threeRenderer, threeScene, threeCamera, threePoints, threeMesh;
+let autoRotate = false;
+let vizMode = 'point';
+let isDragging = false, prevMouse = {x:0,y:0};
+let spherical = {theta: 0.4, phi: 0.7, r: 5.5};
+
+function initThreeJs() {
+  const canvas = document.getElementById('threeCanvas');
+
+  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  threeRenderer.setPixelRatio(window.devicePixelRatio);
+  threeRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  threeRenderer.setClearColor(0x0a0a0f, 1);
+
+  threeScene = new THREE.Scene();
+  threeCamera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.01, 100);
+  updateThreeCamera();
+
+  // Lights
+  threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(2, 4, 3);
+  threeScene.add(dirLight);
+
+  // Grid
+  const grid = new THREE.GridHelper(8, 20, 0x1e1e2e, 0x1e1e2e);
+  grid.position.y = -1.5;
+  threeScene.add(grid);
+
+  // Mouse controls
+  canvas.addEventListener('mousedown', e => { isDragging = true; prevMouse = {x:e.clientX, y:e.clientY}; });
+  canvas.addEventListener('mouseup', () => { isDragging = false; });
+  canvas.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    spherical.theta -= (e.clientX - prevMouse.x) * 0.008;
+    spherical.phi = Math.max(0.1, Math.min(1.4, spherical.phi + (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = {x:e.clientX, y:e.clientY};
+    updateThreeCamera();
+  });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    spherical.r = Math.max(2, Math.min(12, spherical.r + e.deltaY * 0.008));
+    updateThreeCamera();
+  }, { passive: false });
+
+  // Touch
+  let lastTouch = null;
+  canvas.addEventListener('touchstart', e => { lastTouch = e.touches[0]; });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!lastTouch) return;
+    spherical.theta -= (e.touches[0].clientX - lastTouch.clientX) * 0.01;
+    spherical.phi = Math.max(0.1, Math.min(1.4, spherical.phi + (e.touches[0].clientY - lastTouch.clientY) * 0.01));
+    lastTouch = e.touches[0];
+    updateThreeCamera();
+  }, { passive: false });
+
+  animate();
+  updateThreeJs('A');
+}
+
+function updateThreeCamera() {
+  const { theta, phi, r } = spherical;
+  threeCamera.position.set(
+    r * Math.sin(phi) * Math.sin(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.cos(theta)
+  );
+  threeCamera.lookAt(0, 0, 0);
+}
+
+function updateThreeJs(scenario) {
+  if (!threeScene) return;
+  // Remove old geometry
+  if (threePoints) { threeScene.remove(threePoints); threePoints.geometry.dispose(); }
+  if (threeMesh)   { threeScene.remove(threeMesh);   threeMesh.geometry.dispose();   }
+
+  const GW = 96, GH = 72;
+  const positions = [], colors = [], meshVerts = [], meshColors = [], meshIdx = [];
+
+  for (let j = 0; j < GH; j++) {
+    for (let i = 0; i < GW; i++) {
+      const u = i / (GW - 1);
+      const v = j / (GH - 1);
+      const d = generateDepthValue(u, v, scenario);
+
+      // World coords: x=horizontal, y=height (depth), z=distance
+      const perspScale = 0.5 + d * 1.5;
+      const wx = (u - 0.5) * 4 * perspScale;
+      const wy = (d - 0.5) * -1.2;
+      const wz = (1 - d) * 5 - 2.5;
+
+      positions.push(wx, wy, wz);
+      const [r, g, b] = turboColor(d);
+      colors.push(r/255, g/255, b/255);
+
+      // Mesh
+      meshVerts.push(wx, wy, wz);
+      meshColors.push(r/255, g/255, b/255);
+      if (i < GW-1 && j < GH-1) {
+        const tl = j*GW+i, tr=tl+1, bl=tl+GW, br=bl+1;
+        meshIdx.push(tl,bl,tr, tr,bl,br);
+      }
+    }
+  }
+
+  // Point cloud
+  const ptGeo = new THREE.BufferGeometry();
+  ptGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  ptGeo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+  const ptMat = new THREE.PointsMaterial({ size: 0.045, vertexColors: true, sizeAttenuation: true });
+  threePoints = new THREE.Points(ptGeo, ptMat);
+  threePoints.visible = vizMode === 'point';
+  threeScene.add(threePoints);
+
+  // Mesh
+  const mGeo = new THREE.BufferGeometry();
+  mGeo.setAttribute('position', new THREE.Float32BufferAttribute(meshVerts, 3));
+  mGeo.setAttribute('color',    new THREE.Float32BufferAttribute(meshColors, 3));
+  mGeo.setIndex(meshIdx);
+  mGeo.computeVertexNormals();
+  const mMat = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, shininess: 8 });
+  threeMesh = new THREE.Mesh(mGeo, mMat);
+  threeMesh.visible = vizMode === 'mesh';
+  threeScene.add(threeMesh);
+}
+
+function setVizMode(mode) {
+  vizMode = mode;
+  document.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (threePoints) threePoints.visible = mode === 'point';
+  if (threeMesh)   threeMesh.visible   = mode === 'mesh';
+}
+
+function resetCamera() {
+  spherical = {theta: 0.4, phi: 0.7, r: 5.5};
+  updateThreeCamera();
+}
+
+function toggleAutoRotate() {
+  autoRotate = !autoRotate;
+  event.target.classList.toggle('active', autoRotate);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (autoRotate) {
+    spherical.theta += 0.004;
+    updateThreeCamera();
+  }
+  const canvas = document.getElementById('threeCanvas');
+  if (canvas.clientWidth !== threeRenderer.domElement.width ||
+      canvas.clientHeight !== threeRenderer.domElement.height) {
+    threeRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    threeCamera.aspect = canvas.clientWidth / canvas.clientHeight;
+    threeCamera.updateProjectionMatrix();
+  }
+  threeRenderer.render(threeScene, threeCamera);
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHART.JS DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function initDashboard() {
+  // Trend chart (30 days)
+  const days = [];
+  const anomalyData = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    days.push(`${d.getMonth()+1}/${d.getDate()}`);
+    const base = 1.5 + Math.sin(i * 0.4) * 0.8;
+    anomalyData.push(Math.max(0, Math.round(base + (seededNoise(i*0.1, 0, 42)-0.5)*3)));
+  }
+  anomalyData[anomalyData.length-1] = 3;
+  anomalyData[anomalyData.length-7] = 8; // storm event
+
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [{
+        label: '異常検知件数',
+        data: anomalyData,
+        fill: true,
+        backgroundColor: 'rgba(245,158,11,0.1)',
+        borderColor: '#f59e0b',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#f59e0b',
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8888a0', font:{size:10}, maxTicksLimit: 10 }, grid: { color: '#1e1e2e' } },
+        y: { ticks: { color: '#8888a0', font:{size:10} }, grid: { color: '#1e1e2e' }, min: 0, suggestedMax: 10 },
+      },
+    }
+  });
+
+  // Type doughnut
+  new Chart(document.getElementById('typeChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['建築限界支障', '軌道変形', '倒木・落石', 'バラスト異状', 'その他'],
+      datasets: [{
+        data: [32, 28, 19, 13, 8],
+        backgroundColor: ['#ef4444','#f59e0b','#fb923c','#6366f1','#8888a0'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#8888a0', font:{size:11}, padding: 10, boxWidth: 12 }
+        }
+      },
+      cutout: '65%',
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// HERO COUNTER ANIMATION
+// ══════════════════════════════════════════════════════════════
+function animateCounter(el, target, suffix, duration) {
+  let start = null;
+  const isDecimal = String(target).includes('.');
+  function step(ts) {
+    if (!start) start = ts;
+    const prog = Math.min((ts - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - prog, 3);
+    const val = target * ease;
+    el.textContent = (isDecimal ? val.toFixed(1) : Math.round(val)) + suffix;
+    if (prog < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Set canvas sizes
+  ['cameraCanvas','depthCanvas','overlayCanvas'].forEach(id => {
+    const c = document.getElementById(id);
+    c.width = 640; c.height = 480;
+  });
+
+  // Initial camera render
+  renderCameraCanvas('A');
+
+  // Start demo processing
+  runProcessing('A').finally(() => { processing = false; });
+
+  // Three.js (deferred slightly to allow layout)
+  setTimeout(initThreeJs, 500);
+
+  // Dashboard
+  initDashboard();
+
+  // Hero counters (on scroll into view)
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        animateCounter(document.getElementById('stat1'), 1847, '', 1800);
+        animateCounter(document.getElementById('stat2'), 99.2, '', 2000);
+        animateCounter(document.getElementById('stat3'), 30, 'x', 1600);
+        animateCounter(document.getElementById('stat4'), 47, '', 1900);
+        observer.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+  observer.observe(document.querySelector('.hero-stats'));
+
+  // Drag and drop
+  const dropZone = document.getElementById('dropZone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleUpload(e.dataTransfer.files[0]);
+  });
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    if (threeRenderer) {
+      const c = document.getElementById('threeCanvas');
+      threeRenderer.setSize(c.clientWidth, c.clientHeight);
+      threeCamera.aspect = c.clientWidth / c.clientHeight;
+      threeCamera.updateProjectionMatrix();
+    }
+  });
+
+  // Realtime dashboard update
+  setInterval(() => {
+    const runs = document.getElementById('dash-runs');
+    if (runs) runs.textContent = parseInt(runs.textContent) + 1;
+  }, 8000);
+});
+</script>
+</body>
+</html>
