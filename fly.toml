@@ -16,6 +16,8 @@ primary_region = 'nrt'
   RESEARCH_MODE = 'false'
   TORCH_DTYPE = 'float32'
   WORKERS = '1'
+  # Stripe secrets are NOT set here — use flyctl secrets set instead:
+  #   flyctl secrets set STRIPE_SECRET_KEY=sk_live_... STRIPE_WEBHOOK_SECRET=whsec_...
 
 [http_service]
   internal_port = 8000

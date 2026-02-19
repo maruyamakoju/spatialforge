@@ -160,6 +160,51 @@ Endpoints like `/reconstruct`, `/floorplan`, and `/segment-3d` use Celery tasks:
 3. Return `job_id` immediately
 4. Client polls `GET /endpoint/{job_id}` for results
 
+## Deployment
+
+### Stripe Billing (Fly.io)
+
+The app runs without Stripe by default (billing endpoints return 503). To enable:
+
+```bash
+# Set secrets on Fly.io (never commit these to the repo)
+flyctl secrets set \
+  STRIPE_SECRET_KEY=sk_live_... \
+  STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Verify secrets are set
+flyctl secrets list
+```
+
+To get the webhook secret:
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. Add endpoint: `https://spatialforge-demo.fly.dev/billing/webhooks`
+3. Listen for: `checkout.session.completed`, `customer.subscription.*`, `invoice.*`
+4. Copy the signing secret → set as `STRIPE_WEBHOOK_SECRET`
+
+### SDK — Publishing to PyPI
+
+The `publish-sdk.yml` workflow uses OIDC trusted publishers (no API keys needed).
+One-time setup on PyPI.org:
+
+1. Go to https://pypi.org/manage/account/publishing/
+2. Add a new pending publisher:
+   - **PyPI project name**: `spatialforge-client`
+   - **GitHub owner**: `maruyamakoju`
+   - **GitHub repo**: `spatialforge`
+   - **Workflow filename**: `publish-sdk.yml`
+   - **Environment**: `pypi`
+3. Do the same on https://test.pypi.org with environment `testpypi`
+4. Create a GitHub release tagged `sdk-v0.1.0` — the workflow triggers automatically
+
+### Fly.io — Removing the 5-Minute Sleep Limit
+
+The free trial auto-stops machines after 5 minutes of inactivity.
+To remove this limit: add a credit card at https://fly.io/dashboard/billing
+
+After adding a card, optionally set `min_machines_running = 1` in `fly.toml`
+to keep the machine always warm (eliminates cold-start delay for demos).
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
