@@ -674,7 +674,7 @@
       </h1>
       <p class="subtitle">
         営業列車に前方カメラを設置するだけで、毎運行ごとに線路全線を自動点検。<br>
-        専用検測車不要。コスト 1/30・精度 95%以上。
+        専用検測車不要。コスト 1/30・YOLOv8m + Depth Anything V2による4クラス欠陥検出。
       </p>
       <div class="cover-meta">
         <span><strong>提案先:</strong> 鉄道事業者様</span>
@@ -691,8 +691,8 @@
         <div class="kpi-label">検測車比コスト</div>
       </div>
       <div class="kpi-cell">
-        <div class="kpi-val">40ms</div>
-        <div class="kpi-label">フレーム処理時間</div>
+        <div class="kpi-val">13ms</div>
+        <div class="kpi-label">フレーム処理時間（RTX 4090）</div>
       </div>
       <div class="kpi-cell">
         <div class="kpi-val">95%</div>
@@ -766,7 +766,7 @@
         <div class="flow-step">
           <div class="flow-icon">🧠</div>
           <h4>AI深度推定</h4>
-          <p>Depth Anything V2 Large。毎フレーム40msで3D構造を推定。</p>
+          <p>YOLOv8m欠陥検出 + Depth Anything V2。毎フレーム13msで4クラス分類。</p>
         </div>
         <div class="flow-arrow">→</div>
         <div class="flow-step">
@@ -817,140 +817,148 @@
       </div>
 
       <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">
-        実際の鉄道走行映像（計142フレーム、約43秒）をDepth Anything V2 Largeで解析した結果。
-        フレームごとの深度推定・異常スコア・距離推定を自動算出。
+        5,052枚の実レール画像（Roboflow公開データセット3種を統合）でYOLOv8mをファインチューニング。
+        50エポック学習後、テストセット83枚で検証。以下は実際の推論結果。
       </p>
 
       <div class="card-grid" style="margin-bottom:24px">
         <div class="card">
-          <div class="stat-big">142</div>
-          <div class="stat-label">解析フレーム数（@3fps）</div>
+          <div class="stat-big">5,052</div>
+          <div class="stat-label">学習画像数（実レール写真）</div>
         </div>
         <div class="card">
-          <div class="stat-big">9</div>
-          <div class="stat-label">検出異常イベント（緊急1 / 注意8）</div>
+          <div class="stat-big">35</div>
+          <div class="stat-label">検出欠陥数（12キーフレーム中）</div>
         </div>
         <div class="card">
-          <div class="stat-big">40ms</div>
-          <div class="stat-label">平均処理時間 / フレーム（RTX 4090）</div>
+          <div class="stat-big">13ms</div>
+          <div class="stat-label">平均推論時間 / フレーム（RTX 4090）</div>
         </div>
         <div class="card">
-          <div class="stat-big">95%</div>
-          <div class="stat-label">誤検知削減（時間的クールダウンフィルタ適用後）</div>
+          <div class="stat-big">43.3%</div>
+          <div class="stat-label">mAP@50（検証セット、4クラス）</div>
         </div>
       </div>
 
       <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
-        路線 A（jrsam3） — 73フレーム / 5イベント検出
+        路線 A（jrsam3） — 6キーフレーム / 24件の欠陥検出（緊急8 / 重要13 / 軽微3）
       </h4>
       <table class="data-table" style="margin-bottom:28px">
         <thead>
           <tr>
             <th>時刻</th>
             <th>重要度</th>
-            <th>推定距離</th>
-            <th>深度スコア</th>
-            <th>検知面積</th>
+            <th>欠陥分類</th>
             <th>信頼度</th>
+            <th>検知面積</th>
+            <th>推定距離</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="td-num">t = 7.0 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">7.7 m</td>
-            <td class="td-num">58.7%</td>
-            <td class="td-num">6,735 px²</td>
-            <td class="td-num">91.4%</td>
+            <td class="td-num">t = 2 s</td>
+            <td><span class="badge-warning">重要</span></td>
+            <td>レール剥離</td>
+            <td class="td-num" style="font-weight:700">98%</td>
+            <td class="td-num">130,187 px²</td>
+            <td class="td-num">5.6 m</td>
+          </tr>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 4 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td>レールき裂</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">72%</td>
+            <td class="td-num">59,502 px²</td>
+            <td class="td-num">4.3 m</td>
           </tr>
           <tr>
-            <td class="td-num">t = 11.0 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">6.3 m</td>
-            <td class="td-num">65.2%</td>
-            <td class="td-num">9,180 px²</td>
-            <td class="td-num">92.8%</td>
+            <td class="td-num">t = 7 s</td>
+            <td><span class="badge-warning">重要</span></td>
+            <td>レール剥離</td>
+            <td class="td-num">85%</td>
+            <td class="td-num">16,482 px²</td>
+            <td class="td-num">5.3 m</td>
           </tr>
-          <tr>
-            <td class="td-num">t = 15.0 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">6.8 m</td>
-            <td class="td-num">62.1%</td>
-            <td class="td-num">8,240 px²</td>
-            <td class="td-num">91.9%</td>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 11 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td>レールき裂 ×2 + 剥離 ×3 + 波状摩耗 ×2</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">83%</td>
+            <td class="td-num">463,364 px²</td>
+            <td class="td-num">5.8〜11.6 m</td>
           </tr>
-          <tr>
-            <td class="td-num">t = 19.0 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">5.9 m</td>
-            <td class="td-num">70.4%</td>
-            <td class="td-num">16,782 px²</td>
-            <td class="td-num">93.1%</td>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 16 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td>レールき裂 ×2 + 剥離 ×2 + 波状摩耗 ×2</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">81%</td>
+            <td class="td-num">455,558 px²</td>
+            <td class="td-num">5.9〜11.8 m</td>
           </tr>
-          <tr>
-            <td class="td-num">t = 23.0 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">6.1 m</td>
-            <td class="td-num">68.7%</td>
-            <td class="td-num">12,450 px²</td>
-            <td class="td-num">92.5%</td>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 21 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td>レールき裂 ×3</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">80%</td>
+            <td class="td-num">218,783 px²</td>
+            <td class="td-num">6.1〜11.1 m</td>
           </tr>
         </tbody>
       </table>
 
       <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
-        路線 B（jr23） — 69フレーム / 4イベント検出（緊急1件含む）
+        路線 B（jr23） — 6キーフレーム / 11件の欠陥検出（緊急7 / 重要1 / 軽微3）+ 4フレーム正常
       </h4>
       <table class="data-table">
         <thead>
           <tr>
             <th>時刻</th>
             <th>重要度</th>
-            <th>推定距離</th>
-            <th>深度スコア</th>
-            <th>検知面積</th>
+            <th>欠陥分類</th>
             <th>信頼度</th>
+            <th>検知面積</th>
+            <th>推定距離</th>
           </tr>
         </thead>
         <tbody>
           <tr style="background:rgba(239,68,68,0.04)">
-            <td class="td-num">t = 3.3 s</td>
+            <td class="td-num">t = 2 s</td>
             <td><span class="badge-critical">緊急</span></td>
-            <td class="td-num" style="color:var(--danger);font-weight:700">4.1 m</td>
-            <td class="td-num" style="color:var(--danger);font-weight:700">82.9%</td>
-            <td class="td-num">3,487 px²</td>
-            <td class="td-num">93.7%</td>
+            <td>レールき裂 ×2 + 波状摩耗</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">79%</td>
+            <td class="td-num">307,404 px²</td>
+            <td class="td-num">5.3〜11.1 m</td>
+          </tr>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 4 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td>レールき裂 ×3 + 波状摩耗 + 剥離</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">79%</td>
+            <td class="td-num">317,524 px²</td>
+            <td class="td-num">5.7〜11.6 m</td>
           </tr>
           <tr>
-            <td class="td-num">t = 9.7 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">6.2 m</td>
-            <td class="td-num">66.4%</td>
-            <td class="td-num">5,920 px²</td>
-            <td class="td-num">91.5%</td>
+            <td class="td-num">t = 7 s</td>
+            <td><span class="badge-ok">正常</span></td>
+            <td>—（欠陥なし）</td>
+            <td class="td-num">—</td>
+            <td class="td-num">—</td>
+            <td class="td-num">—</td>
           </tr>
           <tr>
-            <td class="td-num">t = 15.7 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">7.1 m</td>
-            <td class="td-num">62.4%</td>
-            <td class="td-num">9,210 px²</td>
-            <td class="td-num">90.8%</td>
-          </tr>
-          <tr>
-            <td class="td-num">t = 19.7 s</td>
-            <td><span class="badge-warning">注意</span></td>
-            <td class="td-num">6.7 m</td>
-            <td class="td-num">64.1%</td>
-            <td class="td-num">7,340 px²</td>
-            <td class="td-num">91.2%</td>
+            <td class="td-num">t = 11〜21 s</td>
+            <td><span class="badge-ok">正常</span></td>
+            <td>—（3フレーム連続で欠陥なし）</td>
+            <td class="td-num">—</td>
+            <td class="td-num">—</td>
+            <td class="td-num">—</td>
           </tr>
         </tbody>
       </table>
 
       <p style="font-size:0.78rem;color:var(--muted);margin-top:12px">
-        ※ 深度スコア = 障害物候補領域の平均深度値（0〜100%、高いほど近距離）。推定距離は焦点距離モデルによる近似値。
-        実本番環境ではカメラキャリブレーション後に精度向上。
+        ※ YOLOv8m（5,052枚の実レール画像で50エポック学習済み）による推論結果。4クラス検出: レールき裂（critical）、レール剥離（major）、レール波状摩耗（minor）、レール摩耗（major）。
+        mAP@50 = 43.3%（検証セット）。推論速度: RTX 4090で13ms/フレーム。モデルは継続的に改善中。
       </p>
     </div>
 
