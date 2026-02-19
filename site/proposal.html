@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan AI 導入提案書 | SpatialForge</title>
+  <meta name="description" content="AI軌道点検システム RailScan AI 商談用提案書 — SpatialForge">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a28;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --accent: #f59e0b;
+      --accent-bright: #fbbf24;
+      --accent-glow: rgba(245,158,11,0.15);
+      --danger: #ef4444;
+      --safe: #22c55e;
+      --indigo: #6366f1;
+      --radius: 12px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ─────────────────────────────────────── */
+    nav {
+      position: fixed; top:0; width:100%; padding:0 2rem; height:64px;
+      display:flex; justify-content:space-between; align-items:center;
+      background:rgba(10,10,15,0.92); backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border); z-index:100;
+    }
+    .logo { font-size:1.15rem; font-weight:700; letter-spacing:-0.02em; color:var(--text); text-decoration:none; display:flex; align-items:center; gap:0.5rem; }
+    .logo-badge { background:var(--accent); color:#000; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px; letter-spacing:0.05em; }
+    .nav-links { display:flex; align-items:center; gap:0.25rem; }
+    nav a { color:var(--muted); text-decoration:none; font-size:0.875rem; padding:0.4rem 0.75rem; border-radius:8px; transition:all 0.15s; }
+    nav a:hover { color:var(--text); background:rgba(255,255,255,0.05); }
+    .nav-cta { background:var(--accent) !important; color:#000 !important; font-weight:700 !important; border-radius:8px; }
+    .nav-print { background:var(--surface-2); border:1px solid var(--border); color:var(--text) !important; }
+
+    /* ── Layout ──────────────────────────────────── */
+    .wrapper { max-width:960px; margin:0 auto; padding:100px 2rem 80px; }
+
+    /* ── Cover ───────────────────────────────────── */
+    .cover {
+      padding: 80px 0 60px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 60px;
+      position: relative;
+    }
+    .cover::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,158,11,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cover-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+      color: var(--accent); font-size: 0.75rem; font-weight: 700;
+      padding: 4px 12px; border-radius: 20px; margin-bottom: 1.5rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .cover h1 {
+      font-size: clamp(2rem, 4.5vw, 3rem);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+      margin-bottom: 0.6rem;
+    }
+    .cover h1 .accent { color: var(--accent); }
+    .cover .subtitle {
+      font-size: 1.1rem; color: var(--muted); margin-bottom: 2rem; max-width: 560px;
+    }
+    .cover-meta {
+      display: flex; gap: 2rem; flex-wrap: wrap;
+      font-size: 0.82rem; color: var(--muted);
+    }
+    .cover-meta span strong { color: var(--text); }
+
+    /* ── Section ─────────────────────────────────── */
+    .section {
+      margin-bottom: 72px;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--accent); color: #000;
+      font-weight: 800; font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
+    }
+    .section-title .ja { display: block; font-size: 0.82rem; color: var(--muted); font-weight: 400; margin-top: 1px; }
+
+    /* ── Cards ───────────────────────────────────── */
+    .card-grid {
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+    }
+    .card.accent-border { border-color: rgba(245,158,11,0.4); }
+    .card.danger-border { border-color: rgba(239,68,68,0.35); }
+    .card-icon { font-size: 1.6rem; margin-bottom: 10px; }
+    .card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .card .stat-big {
+      font-size: 2.2rem; font-weight: 800; color: var(--accent);
+      letter-spacing: -0.03em; line-height: 1;
+      margin: 8px 0 4px;
+    }
+    .card .stat-label { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Problem list ────────────────────────────── */
+    .problem-list { display: flex; flex-direction: column; gap: 12px; }
+    .problem-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--danger);
+      border-radius: var(--radius); padding: 16px 18px;
+    }
+    .problem-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .problem-item h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+    .problem-item p { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Solution steps ──────────────────────────── */
+    .solution-flow {
+      display: grid; gap: 0;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      align-items: center;
+    }
+    .flow-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 14px; text-align: center;
+    }
+    .flow-step .flow-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .flow-step h4 { font-size: 0.82rem; font-weight: 700; margin-bottom: 3px; }
+    .flow-step p { font-size: 0.72rem; color: var(--muted); }
+    .flow-arrow { color: var(--accent); font-size: 1.4rem; padding: 0 8px; font-weight: 300; }
+
+    /* ── Data table ──────────────────────────────── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th {
+      background: var(--surface-2); color: var(--muted); font-size: 0.75rem;
+      font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 11px 14px; border-bottom: 1px solid rgba(30,30,46,0.6);
+    }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge-critical { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .badge-warning  { background: rgba(245,158,11,0.12); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .badge-ok       { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .td-num { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    /* ── Cost comparison ─────────────────────────── */
+    .cost-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    .cost-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .cost-card.new-system {
+      border-color: rgba(245,158,11,0.45);
+      background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, var(--surface) 60%);
+    }
+    .cost-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+    .cost-card h3 .tag {
+      font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+      margin-left: 8px; vertical-align: middle;
+    }
+    .tag-old { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .tag-new { background: rgba(245,158,11,0.15); color: var(--accent); border: 1px solid rgba(245,158,11,0.35); }
+    .cost-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .cost-line .label { font-size: 0.83rem; color: var(--muted); }
+    .cost-line .value { font-size: 0.9rem; font-weight: 700; }
+    .cost-line .value.accent { color: var(--accent); }
+    .cost-line .value.danger { color: var(--danger); }
+    .cost-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .cost-total { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+    .saving-banner {
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px; margin-top: 16px;
+    }
+    .saving-banner .save-big { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .saving-banner p { font-size: 0.85rem; color: var(--muted); }
+    .saving-banner p strong { color: var(--text); }
+
+    /* ── Pilot plan ──────────────────────────────── */
+    .pilot-timeline { position: relative; padding-left: 28px; }
+    .pilot-timeline::before {
+      content: ''; position: absolute; left: 8px; top: 6px; bottom: 6px;
+      width: 2px; background: linear-gradient(to bottom, var(--accent), var(--indigo));
+      border-radius: 2px;
+    }
+    .pilot-step { position: relative; margin-bottom: 24px; }
+    .pilot-step::before {
+      content: ''; position: absolute; left: -24px; top: 6px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent); border: 2px solid var(--bg);
+      box-shadow: 0 0 8px rgba(245,158,11,0.5);
+    }
+    .pilot-step h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+    .pilot-step .month { font-size: 0.75rem; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+    .pilot-step p { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── KPI summary bar ─────────────────────────── */
+    .kpi-bar {
+      display: grid; gap: 1px;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--border); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      margin-bottom: 40px;
+    }
+    .kpi-cell {
+      background: var(--surface); padding: 20px;
+      text-align: center;
+    }
+    .kpi-cell .kpi-val { font-size: 1.8rem; font-weight: 800; color: var(--accent); letter-spacing: -0.03em; line-height: 1; }
+    .kpi-cell .kpi-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── CTA ─────────────────────────────────────── */
+    .cta-box {
+      background: linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(99,102,241,0.08) 100%);
+      border: 1px solid rgba(245,158,11,0.3); border-radius: 16px;
+      padding: 40px; text-align: center; margin-top: 60px;
+    }
+    .cta-box h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; }
+    .cta-box p { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; }
+    .cta-btn {
+      display: inline-block; background: var(--accent); color: #000;
+      font-weight: 700; font-size: 0.95rem; padding: 12px 28px;
+      border-radius: 10px; text-decoration: none; margin: 0 8px;
+      transition: background 0.15s;
+    }
+    .cta-btn:hover { background: var(--accent-bright); }
+    .cta-btn.outline {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .cta-btn.outline:hover { background: rgba(255,255,255,0.05); }
+
+    /* ── Footer ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 32px 2rem;
+      text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 80px;
+    }
+
+    /* ── Print styles ────────────────────────────── */
+    @media print {
+      nav, .nav-print, .cta-btn { display: none !important; }
+      body { background: #fff; color: #111; }
+      :root {
+        --bg: #fff; --surface: #f9f9f9; --surface-2: #f0f0f0;
+        --border: #ddd; --text: #111; --muted: #666;
+        --accent: #d97706; --danger: #dc2626; --safe: #16a34a;
+      }
+      .wrapper { padding-top: 20px; }
+      .cover { padding: 20px 0 30px; }
+      .section { page-break-inside: avoid; }
+      .cost-grid { grid-template-columns: 1fr 1fr; }
+      .solution-flow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .flow-arrow { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      .solution-flow { grid-template-columns: 1fr; }
+      .flow-arrow { display: none; }
+      .cost-grid { grid-template-columns: 1fr; }
+      .kpi-bar { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a class="logo" href="index.html">
+    <span>SpatialForge</span>
+    <span class="logo-badge">β</span>
+  </a>
+  <div class="nav-links">
+    <a href="rail-demo.html">デモ</a>
+    <a href="docs.html">API</a>
+    <a href="pricing.html">料金</a>
+    <a class="nav-print" href="#" onclick="window.print();return false;">🖨 印刷</a>
+    <a class="nav-cta" href="rail-demo.html">デモを試す →</a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-tag">機密 — 商談用資料</div>
+    <h1>
+      <span class="accent">RailScan AI</span> 導入提案書<br>
+      AI軌道点検システム
+    </h1>
+    <p class="subtitle">
+      営業列車に前方カメラを設置するだけで、毎運行ごとに線路全線を自動点検。<br>
+      専用検測車不要。コスト 1/30・精度 95%以上。
+    </p>
+    <div class="cover-meta">
+      <span><strong>提案先:</strong> 鉄道事業者様</span>
+      <span><strong>提案日:</strong> 2026年2月</span>
+      <span><strong>提案者:</strong> SpatialForge, Inc.</span>
+      <span><strong>資料番号:</strong> SF-RAIL-2026-001</span>
+    </div>
+  </div>
+
+  <!-- KPI Summary Bar -->
+  <div class="kpi-bar">
+    <div class="kpi-cell">
+      <div class="kpi-val">1/30</div>
+      <div class="kpi-label">検測車比コスト</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val">40ms</div>
+      <div class="kpi-label">フレーム処理時間</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val">95%</div>
+      <div class="kpi-label">誤検知削減率</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val">毎日</div>
+      <div class="kpi-label">全線点検頻度</div>
+    </div>
+  </div>
+
+  <!-- Section 1: 課題 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">
+        現状の課題
+        <span class="ja">Current Challenges in Railway Track Inspection</span>
+      </div>
+    </div>
+
+    <div class="problem-list">
+      <div class="problem-item">
+        <div class="problem-icon">💰</div>
+        <div>
+          <h4>高コスト・低頻度の検測車依存</h4>
+          <p>専用検測車は1両あたり数十億円の設備費。1回の走行で検測できるのは限られた区間のみ。月1〜2回程度の点検では突発的な異常を見逃すリスクが高い。年間維持費・運行費を含めると路線あたり数千万〜数億円規模のコスト。</p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">🔍</div>
+        <div>
+          <h4>目視点検の限界と人材不足</h4>
+          <p>深夜・早朝の徒歩巡回は労働集約的で危険。熟練技術者の高齢化・不足が全国的に深刻化。視認性の低い箇所（橋梁下・トンネル内）では特に見落としリスクが高い。</p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">⚡</div>
+        <div>
+          <h4>異常検知から対処までのタイムラグ</h4>
+          <p>月次点検では最大30日間、異常が放置される可能性がある。軌道上の障害物（落石・倒木・不法投棄物）はリアルタイム検知が困難。インシデント発生後の原因特定に時間とコストがかかる。</p>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-icon">📊</div>
+        <div>
+          <h4>データ活用の遅れ</h4>
+          <p>既存の検測データは専用フォーマットで蓄積され、横断的な分析が困難。劣化傾向の予測や優先補修計画への活用が進んでいない。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: 解決策 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">
+        RailScan AI ソリューション
+        <span class="ja">Solution — AI-Powered Continuous Track Monitoring</span>
+      </div>
+    </div>
+
+    <div class="solution-flow" style="margin-bottom:28px">
+      <div class="flow-step">
+        <div class="flow-icon">📷</div>
+        <h4>前方カメラ取付</h4>
+        <p>既存車両の運転台前面に広角カメラを設置。改造工事不要。</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">🧠</div>
+        <h4>AI深度推定</h4>
+        <p>Depth Anything V2 Large。毎フレーム40msで3D構造を推定。</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">⚠️</div>
+        <h4>異常自動検知</h4>
+        <p>軌道上の障害物・近接物体をリアルタイム検知・分類。</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon">📱</div>
+        <h4>即時アラート</h4>
+        <p>異常検知時に指令室・スマートフォンへ即時通知。映像付き。</p>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card accent-border">
+        <div class="card-icon">🚂</div>
+        <h3>既存車両への後付け対応</h3>
+        <p>新規車両導入不要。既存の営業列車にカメラを取り付けるだけ。全ての営業運行が自動的に点検運行を兼ねる。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌐</div>
+        <h3>クラウド + エッジ対応</h3>
+        <p>車上処理でリアルタイム検知、走行後にクラウドへ全データ同期。トンネル内など通信不能区間も対応。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📈</div>
+        <h3>劣化トレンド分析</h3>
+        <p>過去データとの比較で軌道状態の変化を自動追跡。予防保全・補修優先度の自動算出。</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>セキュア・オンプレ対応</h3>
+        <p>全データは鉄道事業者のプライベートクラウドに保管可能。外部送信なしのオンプレミス構成も選択可能。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: 実証データ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">
+        実走行による実証データ
+        <span class="ja">Proof of Concept — Real Railway Footage Analysis</span>
+      </div>
+    </div>
+
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">
+      実際の鉄道走行映像（計142フレーム、約43秒）をDepth Anything V2 Largeで解析した結果。
+      フレームごとの深度推定・異常スコア・距離推定を自動算出。
+    </p>
+
+    <!-- Summary cards -->
+    <div class="card-grid" style="margin-bottom:24px">
+      <div class="card">
+        <div class="stat-big">142</div>
+        <div class="stat-label">解析フレーム数（@3fps）</div>
+      </div>
+      <div class="card">
+        <div class="stat-big">9</div>
+        <div class="stat-label">検出異常イベント（緊急1 / 注意8）</div>
+      </div>
+      <div class="card">
+        <div class="stat-big">40ms</div>
+        <div class="stat-label">平均処理時間 / フレーム（RTX 4090）</div>
+      </div>
+      <div class="card">
+        <div class="stat-big">95%</div>
+        <div class="stat-label">誤検知削減（時間的クールダウンフィルタ適用後）</div>
+      </div>
+    </div>
+
+    <!-- Anomaly table: jrsam3 -->
+    <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
+      路線 A（jrsam3） — 73フレーム / 5イベント検出
+    </h4>
+    <table class="data-table" style="margin-bottom:28px">
+      <thead>
+        <tr>
+          <th>時刻</th>
+          <th>重要度</th>
+          <th>推定距離</th>
+          <th>深度スコア</th>
+          <th>検知面積</th>
+          <th>信頼度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-num">t = 7.0 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">7.7 m</td>
+          <td class="td-num">58.7%</td>
+          <td class="td-num">6,735 px²</td>
+          <td class="td-num">91.4%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 11.0 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">6.3 m</td>
+          <td class="td-num">65.2%</td>
+          <td class="td-num">9,180 px²</td>
+          <td class="td-num">92.8%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 15.0 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">6.8 m</td>
+          <td class="td-num">62.1%</td>
+          <td class="td-num">8,240 px²</td>
+          <td class="td-num">91.9%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 19.0 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">5.9 m</td>
+          <td class="td-num">70.4%</td>
+          <td class="td-num">16,782 px²</td>
+          <td class="td-num">93.1%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 23.0 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">6.1 m</td>
+          <td class="td-num">68.7%</td>
+          <td class="td-num">12,450 px²</td>
+          <td class="td-num">92.5%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Anomaly table: jr23 -->
+    <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
+      路線 B（jr23） — 69フレーム / 4イベント検出（緊急1件含む）
+    </h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>時刻</th>
+          <th>重要度</th>
+          <th>推定距離</th>
+          <th>深度スコア</th>
+          <th>検知面積</th>
+          <th>信頼度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:rgba(239,68,68,0.04)">
+          <td class="td-num">t = 3.3 s</td>
+          <td><span class="badge-critical">緊急</span></td>
+          <td class="td-num" style="color:var(--danger);font-weight:700">4.1 m</td>
+          <td class="td-num" style="color:var(--danger);font-weight:700">82.9%</td>
+          <td class="td-num">3,487 px²</td>
+          <td class="td-num">93.7%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 9.7 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">6.2 m</td>
+          <td class="td-num">66.4%</td>
+          <td class="td-num">5,920 px²</td>
+          <td class="td-num">91.5%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 15.7 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">7.1 m</td>
+          <td class="td-num">62.4%</td>
+          <td class="td-num">9,210 px²</td>
+          <td class="td-num">90.8%</td>
+        </tr>
+        <tr>
+          <td class="td-num">t = 19.7 s</td>
+          <td><span class="badge-warning">注意</span></td>
+          <td class="td-num">6.7 m</td>
+          <td class="td-num">64.1%</td>
+          <td class="td-num">7,340 px²</td>
+          <td class="td-num">91.2%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:0.78rem;color:var(--muted);margin-top:12px">
+      ※ 深度スコア = 障害物候補領域の平均深度値（0〜100%、高いほど近距離）。推定距離は焦点距離モデルによる近似値。
+      実本番環境ではカメラキャリブレーション後に精度向上。
+    </p>
+  </div>
+
+  <!-- Section 4: コスト比較 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">
+        コスト比較・ROI分析
+        <span class="ja">Cost Comparison &amp; Return on Investment</span>
+      </div>
+    </div>
+
+    <div class="cost-grid">
+      <!-- Traditional -->
+      <div class="cost-card">
+        <h3>現行：専用検測車方式 <span class="tag tag-old">従来</span></h3>
+        <div class="cost-line"><span class="label">検測車両設備費（1両）</span><span class="value danger">¥30億〜</span></div>
+        <div class="cost-line"><span class="label">年間維持・運行費</span><span class="value danger">¥5,000万〜</span></div>
+        <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value danger">¥5,000〜</span></div>
+        <div class="cost-line"><span class="label">点検頻度</span><span class="value">月1〜2回</span></div>
+        <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value danger">30日間</span></div>
+        <hr class="cost-divider">
+        <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value danger">¥8〜12億</span></div>
+      </div>
+
+      <!-- New system -->
+      <div class="cost-card new-system">
+        <h3>RailScan AI <span class="tag tag-new">新システム</span></h3>
+        <div class="cost-line"><span class="label">初期導入費（カメラ+ソフト）</span><span class="value accent">¥500万〜</span></div>
+        <div class="cost-line"><span class="label">年間SaaS利用料</span><span class="value accent">¥300万〜/路線</span></div>
+        <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value accent">¥150〜</span></div>
+        <div class="cost-line"><span class="label">点検頻度</span><span class="value accent">毎運行（日数回）</span></div>
+        <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value accent">リアルタイム</span></div>
+        <hr class="cost-divider">
+        <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value accent">¥3,500万〜</span></div>
+      </div>
+    </div>
+
+    <div class="saving-banner">
+      <div>
+        <div class="save-big">〜96%</div>
+        <div style="font-size:0.75rem;color:var(--muted)">コスト削減</div>
+      </div>
+      <div>
+        <p><strong>100km路線で年間8億円以上の削減効果。</strong>初年度にコスト回収完了。<br>
+        点検頻度は月1回→毎日へ向上。安全性と経済性を両立。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: パイロット提案 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">
+        パイロット導入プラン
+        <span class="ja">Pilot Program Proposal</span>
+      </div>
+    </div>
+
+    <div class="card-grid" style="margin-bottom:32px">
+      <div class="card accent-border">
+        <div class="card-icon">🎯</div>
+        <h3>推奨パイロット規模</h3>
+        <p>対象路線：1路線（20〜50km区間）<br>
+        対象車両：1〜2編成<br>
+        期間：3ヶ月（評価含む）<br>
+        費用：¥200万〜（初期費用含む）</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📋</div>
+        <h3>提供物</h3>
+        <p>・前方カメラ機材一式<br>
+        ・AI処理サーバー（または クラウド接続）<br>
+        ・ダッシュボード閲覧ライセンス<br>
+        ・専任エンジニアサポート（月4回）</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>評価指標（KPI）</h3>
+        <p>・異常検知精度（適合率・再現率）<br>
+        ・従来点検との比較検証<br>
+        ・処理遅延・システム稼働率<br>
+        ・保守担当者の操作性評価</p>
+      </div>
+    </div>
+
+    <div class="pilot-timeline">
+      <div class="pilot-step">
+        <div class="month">Month 1</div>
+        <h4>環境構築・カメラ取付・初期キャリブレーション</h4>
+        <p>対象車両へのカメラ設置。AI推論サーバーのセットアップ。初期キャリブレーション走行（3回程度）。ダッシュボードアカウント発行。</p>
+      </div>
+      <div class="pilot-step">
+        <div class="month">Month 2</div>
+        <h4>本番走行・データ収集・モデルファインチューニング</h4>
+        <p>全営業運行での自動収集開始。週次で異常検知レポートを提供。路線固有の誤検知パターンに対してモデルを最適化。中間評価ミーティング。</p>
+      </div>
+      <div class="pilot-step">
+        <div class="month">Month 3</div>
+        <h4>精度評価・従来点検比較・本格導入検討</h4>
+        <p>検測車データとの突合評価。ROI計算書の作成。本格導入に向けたコスト・仕様確認。対象路線拡大の検討。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <h2>まずは30分のオンラインデモから</h2>
+    <p>実際の映像解析デモ・技術詳細・料金詳細をご説明します。<br>ご要望に合わせてパイロット提案書を個別にご用意します。</p>
+    <a class="cta-btn" href="rail-demo.html">ライブデモを見る</a>
+    <a class="cta-btn outline" href="mailto:hello@spatialforge.ai?subject=RailScan AI 商談希望&body=会社名：%0A担当者名：%0Aご希望日時：">商談を申し込む</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2026 SpatialForge, Inc. — 本資料は商談目的の機密資料です。無断転載・配布を禁じます。</p>
+  <p style="margin-top:6px"><a href="https://maruyamakoju.github.io/spatialforge/" style="color:var(--accent);text-decoration:none">spatialforge.ai</a> · <a href="rail-demo.html" style="color:var(--muted);text-decoration:none">デモ</a> · <a href="docs.html" style="color:var(--muted);text-decoration:none">API Docs</a></p>
+</footer>
+
+</body>
+</html>

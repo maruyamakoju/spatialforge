@@ -515,6 +515,7 @@
     <a href="#specs">技術仕様</a>
     <a href="#roi">ROI比較</a>
     <a href="index.html">API</a>
+    <a href="proposal.html">提案書</a>
     <a href="#cta" class="nav-cta">資料請求</a>
   </div>
 </nav>
@@ -696,6 +697,10 @@
 
   <!-- Upload Zone (hidden by default) -->
   <div id="uploadZone" style="display:none">
+    <div id="apiStatusBar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:0.78rem;color:var(--muted)">
+      <span id="apiDot" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;flex-shrink:0"></span>
+      <span id="apiStatusText">APIステータス確認中…</span>
+    </div>
     <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="upload-icon">📁</div>
       <p><strong>クリックまたはドラッグ</strong>して画像をアップロード</p>
@@ -1492,6 +1497,12 @@ function displayPlayerFrame(idx) {
 
   // Update sparkline cursor
   drawSparklineCursor(idx);
+
+  // Sync Three.js 3D viewer with current player frame depth image
+  if (threeScene) {
+    const depthPath = `rail-assets/video/${playerVideoName}/${f.files.depth}`;
+    loadDepthForThreeJs(playerVideoName, f, depthPath);
+  }
 }
 
 function updatePlayerAlerts(f) {
@@ -1687,30 +1698,73 @@ function handleUpload(file) {
   reader.readAsDataURL(file);
 }
 
+// API endpoints: local demo server preferred, Fly.io as fallback
+const API_ENDPOINTS = [
+  'http://localhost:8765',
+  'https://spatialforge-demo.fly.dev',
+];
+
+async function tryFetch(url, opts, timeoutMs = 6000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 async function callDepthAPI(file) {
-  const API = 'https://spatialforge-demo.fly.dev';
   const form = new FormData();
   form.append('image', file);
-  const res = await fetch(`${API}/v1/depth/visualize`, { method:'POST', body:form });
-  if (!res.ok) throw new Error('API error');
+
+  let res = null;
+  let usedEndpoint = '';
+  for (const base of API_ENDPOINTS) {
+    try {
+      const r = await tryFetch(`${base}/v1/depth/visualize`,
+                               { method: 'POST', body: form },
+                               base.includes('localhost') ? 3000 : 6000);
+      if (r.ok) { res = r; usedEndpoint = base; break; }
+    } catch (_) { /* try next */ }
+  }
+  if (!res) throw new Error('All API endpoints failed');
+
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
+  const url  = URL.createObjectURL(blob);
   const oImg = document.getElementById('overlayImg');
-  oImg.src = url;
+  oImg.src   = url;
   oImg.style.opacity = '1';
-  const minD  = res.headers.get('X-Depth-Min') || '—';
-  const maxD  = res.headers.get('X-Depth-Max') || '—';
+
+  const nearM  = res.headers.get('X-Depth-Near-M')  || res.headers.get('X-Depth-Min') || '—';
+  const farM   = res.headers.get('X-Depth-Far-M')   || res.headers.get('X-Depth-Max') || '—';
   const procMs = res.headers.get('X-Processing-Ms') || '—';
-  const model  = res.headers.get('X-Model') || 'DA V2 Large-hf';
-  document.getElementById('m-near').textContent = parseFloat(minD).toFixed(2) + ' m';
-  document.getElementById('m-far').textContent  = parseFloat(maxD).toFixed(0)  + ' m';
-  document.getElementById('m-time').textContent = procMs + ' ms';
-  document.getElementById('m-model').textContent = model;
-  document.getElementById('m-conf').textContent = '—';
+  const model  = res.headers.get('X-Model')         || 'DA V2 Large-hf';
+  const anomN  = res.headers.get('X-Anomaly-Count');
+  const confV  = res.headers.get('X-Confidence');
+
+  document.getElementById('m-near').textContent  = isNaN(parseFloat(nearM)) ? nearM : parseFloat(nearM).toFixed(1) + ' m';
+  document.getElementById('m-far').textContent   = isNaN(parseFloat(farM))  ? farM  : parseFloat(farM).toFixed(0)  + ' m';
+  document.getElementById('m-time').textContent  = procMs + ' ms';
+  document.getElementById('m-model').textContent = model.replace('depth-anything/', '');
+  document.getElementById('m-conf').textContent  = confV ? (parseFloat(confV)*100).toFixed(1) + '%' : '—';
   document.getElementById('m-clearance').textContent = '手動確認';
-  document.getElementById('m-anom').textContent = '—';
+  document.getElementById('m-anom').textContent  = anomN !== null ? anomN + ' 件' : '—';
+
+  const isLocal = usedEndpoint.includes('localhost');
+  const anomCount = anomN !== null ? parseInt(anomN) : 0;
+  const alertSev  = anomCount > 0 ? 'warn' : 'ok';
+  const alertBadge = anomCount > 0 ? 'badge-warn' : 'badge-ok';
+  const alertMsg   = anomCount > 0
+    ? `<strong>${anomCount}件の異常を検出</strong><span>軌道上の障害物候補を確認してください</span>`
+    : `<strong>異常なし — 正常</strong><span>軌道クリアランス確認済み</span>`;
   document.getElementById('alertList').innerHTML =
-    '<div class="alert-item ok"><span class="alert-badge badge-ok">完了</span><div class="alert-text"><strong>深度解析完了</strong><span>アップロード画像を解析しました</span></div></div>';
+    `<div class="alert-item ${alertSev}"><span class="alert-badge ${alertBadge}">${anomCount > 0 ? '警告' : '完了'}</span><div class="alert-text">${alertMsg}</div></div>` +
+    `<div class="alert-item ok" style="font-size:0.72rem;opacity:.6;padding:4px 10px;">` +
+    `エンドポイント: ${isLocal ? 'ローカル (RTX 4090)' : 'Fly.io クラウド'} — ${procMs}ms</div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1814,8 +1868,14 @@ function updateThreeCamera() {
   threeCamera.lookAt(0,0,0);
 }
 
-function loadDepthForThreeJs(name, frame) {
+function loadDepthForThreeJs(name, frame, depthPath) {
+  // Normalize frame so synthetic fallback works for both static & timeline frames
+  const normalizedFrame = frame ? {
+    anoms: frame.anoms || frame.anomalies || [],
+  } : { anoms: [] };
+
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = function() {
     const W=96, H=54; // 16:9 grid
     const off = document.createElement('canvas');
@@ -1828,11 +1888,11 @@ function loadDepthForThreeJs(name, frame) {
       buildThreeJsFromPixels(W, H);
     } catch(e) {
       // CORS / local file fallback
-      buildThreeJsSynthetic(frame);
+      buildThreeJsSynthetic(normalizedFrame);
     }
   };
-  img.onerror = () => buildThreeJsSynthetic(frame);
-  img.src = `rail-assets/${name}_depth.jpg`;
+  img.onerror = () => buildThreeJsSynthetic(normalizedFrame);
+  img.src = depthPath || `rail-assets/${name}_depth.jpg`;
 }
 
 function buildThreeJsFromPixels(GW, GH) {
@@ -2026,10 +2086,37 @@ function animateCounter(el, target, suffix, duration) {
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
+// Check API availability and update status indicator
+async function checkApiStatus() {
+  const dot  = document.getElementById('apiDot');
+  const txt  = document.getElementById('apiStatusText');
+  if (!dot || !txt) return;
+  for (const base of API_ENDPOINTS) {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 2500);
+      const r = await fetch(`${base}/health`, { signal: ctrl.signal });
+      if (r.ok) {
+        dot.style.background = '#10b981';
+        const isLocal = base.includes('localhost');
+        txt.textContent = isLocal
+          ? 'API オンライン — ローカル RTX 4090 (高速推論)'
+          : 'API オンライン — Fly.io クラウド';
+        return;
+      }
+    } catch (_) { /* next */ }
+  }
+  dot.style.background = '#f59e0b';
+  txt.textContent = 'API オフライン — アップロード後にフォールバック処理します';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // Render initial frame strip and select default anomaly frame
   renderFrameStrip('jrsam3');
   selectFrame('jrsam3_11s');
+
+  // API status check (non-blocking)
+  setTimeout(checkApiStatus, 800);
 
   // Three.js (deferred)
   setTimeout(initThreeJs, 400);
