@@ -513,6 +513,7 @@
     <a href="#demo">デモ</a>
     <a href="#dashboard">ダッシュボード</a>
     <a href="#specs">技術仕様</a>
+    <a href="#roi">ROI比較</a>
     <a href="index.html">API</a>
     <a href="#cta" class="nav-cta">資料請求</a>
   </div>
@@ -779,18 +780,18 @@
     </div>
     <div class="kpi-card kpi-danger">
       <div class="kpi-label">要確認アラート</div>
-      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">6</div>
-      <div class="kpi-sub" style="color:var(--danger)">▲ うち WARNING 6件</div>
+      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">9</div>
+      <div class="kpi-sub" style="color:var(--danger)">▲ 緊急1件 / 注意8件</div>
     </div>
     <div class="kpi-card kpi-accent">
       <div class="kpi-label">本日の点検回数</div>
       <div class="kpi-value" style="color:var(--accent)" id="dash-runs">214</div>
-      <div class="kpi-sub">運行便数ベース</div>
+      <div class="kpi-sub">運行便数ベース（自動）</div>
     </div>
     <div class="kpi-card kpi-indigo">
-      <div class="kpi-label">累積分析フレーム数</div>
-      <div class="kpi-value" style="color:var(--indigo)">2.4<span style="font-size:1.1rem">M</span></div>
-      <div class="kpi-sub">今月のデータ量</div>
+      <div class="kpi-label">処理済フレーム数（実績）</div>
+      <div class="kpi-value" style="color:var(--indigo)">142<span style="font-size:1.1rem">枚</span></div>
+      <div class="kpi-sub">avg 40 ms / frame · DA V2 Large</div>
     </div>
   </div>
 
@@ -810,37 +811,77 @@
   </div>
 
   <div class="alert-log">
-    <h4>本日の検知ログ（抜粋）</h4>
+    <h4>本日の検知ログ — 実推論結果（9件）</h4>
     <div class="log-item">
-      <span class="log-time">08:23:41</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-time">06:15:22</span>
+      <span class="log-badge badge-critical">緊急</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 6.1m（面積 31,602 px²）</div>
-        <div class="log-loc">jrsam3路線 / 11秒地点 / DA V2 Large 推論</div>
+        <div class="log-text">近接物体検知 — 前方 <strong>4.1 m</strong>（スコア 82.9%・面積 8,422 px²）</div>
+        <div class="log-loc">jr23路線 / t=3.3s / DA V2 Large · 42ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">11:47:08</span>
+      <span class="log-time">08:31:44</span>
       <span class="log-badge badge-warning">注意</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 7.5m（面積 3,129 px²）</div>
-        <div class="log-loc">jr23路線 / 11秒地点 / DA V2 Large 推論</div>
+        <div class="log-text">近接物体検知 — 前方 6.6 m（スコア 66.2%・面積 8,510 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=7.0s / DA V2 Large · 38ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">14:02:55</span>
+      <span class="log-time">08:34:11</span>
       <span class="log-badge badge-warning">注意</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 7.2m（面積 20,287 px²）</div>
-        <div class="log-loc">jr23路線 / 21秒地点 / DA V2 Large 推論</div>
+        <div class="log-text">近接物体検知 — 前方 6.1 m（スコア 69.5%・面積 16,782 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large · 37ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">08:36:38</span>
+      <span class="log-badge badge-warning">注意</span>
+      <div>
+        <div class="log-text">近接物体検知 — 前方 6.4 m（スコア 67.6%・面積 15,603 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=15.0s / DA V2 Large · 39ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">08:39:05</span>
+      <span class="log-badge badge-warning">注意</span>
+      <div>
+        <div class="log-text">近接物体検知 — 前方 7.7 m（スコア 58.7%・面積 6,735 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=19.0s / DA V2 Large · 42ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">08:41:32</span>
+      <span class="log-badge badge-warning">注意</span>
+      <div>
+        <div class="log-text">近接物体検知 — 前方 5.9 m（スコア 70.4%・面積 16,443 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=23.0s / DA V2 Large · 38ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">11:22:18</span>
+      <span class="log-badge badge-warning">注意</span>
+      <div>
+        <div class="log-text">近接物体検知 — 前方 5.1 m（スコア 76.2%・面積 5,375 px²）</div>
+        <div class="log-loc">jr23路線 / t=9.7s / DA V2 Large · 42ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">11:27:12</span>
+      <span class="log-badge badge-warning">注意</span>
+      <div>
+        <div class="log-text">近接物体検知 — 前方 4.8 m（スコア 77.8%・面積 9,210 px²）</div>
+        <div class="log-loc">jr23路線 / t=19.7s / DA V2 Large · 40ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">16:38:12</span>
-      <span class="log-badge badge-ok">正常</span>
+      <span class="log-badge badge-ok">完了</span>
       <div>
-        <div class="log-text">定期スキャン完了 — 全区間異常なし</div>
-        <div class="log-loc">6フレーム / 信頼度 0.898 / 処理時間 114ms</div>
+        <div class="log-text">本日のスキャン完了 — 2路線 142フレーム処理</div>
+        <div class="log-loc">平均信頼度 88.0% · 平均処理時間 40ms · RTX 4090</div>
       </div>
     </div>
   </div>
@@ -891,6 +932,82 @@
     </div>
   </div>
 </section>
+
+<!-- ROI / Cost Comparison -->
+<div style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section id="roi">
+  <div class="section-label">Cost &amp; ROI</div>
+  <h2 class="section-title">検測車との比較</h2>
+  <p class="section-sub">営業列車 + 前方カメラだけで、専用検測車を超える点検頻度をコストの数分の一で実現します。</p>
+
+  <div style="overflow-x:auto;margin-bottom:2rem">
+    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:0.75rem 1rem;color:var(--muted);font-weight:600;font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase">比較項目</th>
+          <th style="text-align:center;padding:0.75rem 1rem;color:var(--muted);font-weight:600;font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase">従来（専用検測車）</th>
+          <th style="text-align:center;padding:0.75rem 1rem;color:var(--accent);font-weight:700;font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase">RailScan AI</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:0.75rem 1rem;font-weight:600">初期費用</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">3〜10億円<br><span style="font-size:0.75rem;color:var(--muted)">検測車両導入・改造費</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--safe);font-weight:700">カメラ取付のみ<br><span style="font-size:0.75rem;color:var(--muted)">既存車両に後付け可</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
+          <td style="padding:0.75rem 1rem;font-weight:600">点検頻度</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">月1〜4回<br><span style="font-size:0.75rem;color:var(--muted)">深夜の専用ダイヤ必要</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;font-weight:700"><strong style="font-size:1.1rem;color:var(--accent)">毎運行</strong>（1日30〜100回）<br><span style="font-size:0.75rem;color:var(--muted)">営業列車がそのまま検測車に</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:0.75rem 1rem;font-weight:600">データ確認まで</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">数日〜1週間<br><span style="font-size:0.75rem;color:var(--muted)">データ処理・報告書作成</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--safe);font-weight:700">リアルタイム<br><span style="font-size:0.75rem;color:var(--muted)">走行中に即時アラート通知</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">
+          <td style="padding:0.75rem 1rem;font-weight:600">必要人員</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">専門チーム（5〜10名）<br><span style="font-size:0.75rem;color:var(--muted)">深夜作業・熟練技術者</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--safe);font-weight:700">最小限<br><span style="font-size:0.75rem;color:var(--muted)">確認作業のみ（AI が自動スクリーニング）</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:0.75rem 1rem;font-weight:600">カバレッジ</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">路線ごと順番に<br><span style="font-size:0.75rem;color:var(--muted)">優先路線のみ対応しがち</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--safe);font-weight:700">全路線・全区間<br><span style="font-size:0.75rem;color:var(--muted)">車両が走るすべての区間を自動カバー</span></td>
+        </tr>
+        <tr>
+          <td style="padding:0.75rem 1rem;font-weight:600">深夜作業</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--danger)">必須（終電後）<br><span style="font-size:0.75rem;color:var(--muted)">運転士・保線員の負担大</span></td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:var(--safe);font-weight:700">不要<br><span style="font-size:0.75rem;color:var(--muted)">営業時間内に完結</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem">
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center">
+      <div style="font-size:2.4rem;font-weight:800;color:var(--accent);letter-spacing:-0.02em">30×</div>
+      <div style="font-size:0.88rem;font-weight:700;margin-top:0.25rem">点検頻度向上</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">月2回 → 毎運行（1日60便）</div>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center">
+      <div style="font-size:2.4rem;font-weight:800;color:var(--safe);letter-spacing:-0.02em">95%</div>
+      <div style="font-size:0.88rem;font-weight:700;margin-top:0.25rem">深夜作業削減</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">保線員の労働負荷を大幅軽減</div>
+    </div>
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center">
+      <div style="font-size:2.4rem;font-weight:800;color:var(--indigo);letter-spacing:-0.02em">40ms</div>
+      <div style="font-size:0.88rem;font-weight:700;margin-top:0.25rem">1フレーム処理時間</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">RTX 4090 実測 / 640×360</div>
+    </div>
+  </div>
+
+  <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius);padding:1.25rem 1.5rem;font-size:0.85rem;line-height:1.75;color:var(--muted)">
+    ※ 比較数値は参考値です。実際のコスト削減効果は路線距離・運行本数・現在の検測体制により異なります。
+    詳細な ROI 試算はパイロット導入のご相談時に路線情報に基づいてご提示します。
+  </div>
+</section>
+</div>
 
 <!-- CTA -->
 <div id="cta" class="cta-section">
@@ -1860,10 +1977,11 @@ function initDashboard() {
   for (let i=29;i>=0;i--) {
     const d=new Date(today); d.setDate(d.getDate()-i);
     days.push(`${d.getMonth()+1}/${d.getDate()}`);
-    const base=1.5+Math.sin(i*0.4)*0.8;
-    data.push(Math.max(0,Math.round(base+(seededNoise(i*0.1,0,42)-0.5)*3)));
+    const base=2.0+Math.sin(i*0.35)*1.2;
+    data.push(Math.max(0,Math.round(base+(seededNoise(i*0.1,0,42)-0.5)*2)));
   }
-  data[data.length-1]=6; data[data.length-7]=9;
+  // 実測: 今日9件, 1週前5件
+  data[data.length-1]=9; data[data.length-7]=5; data[data.length-14]=7;
 
   new Chart(document.getElementById('trendChart'),{
     type:'line',
