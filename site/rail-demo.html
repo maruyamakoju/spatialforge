@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RailScan AI — AI軌道点検システム | SpatialForge</title>
   <meta name="description" content="営業列車に前方カメラを設置するだけ。毎運行ごとに線路全線を自動点検。専用検測車不要のAI軌道監視システム。">
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- CDN primary, local fallback for offline demos -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"
+          onerror="this.onerror=null;this.src='js/three.min.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+          onerror="this.onerror=null;this.src='js/chart.min.js'"></script>
   <style>
     :root {
       --bg: #0a0a0f;
@@ -499,6 +502,59 @@
 
     /* ── Footer ──────────────────────────────── */
     footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+    /* ── Webcam Live ──────────────────────────── */
+    #webcamSection { display:none; }
+    .webcam-layout {
+      display: grid; gap: 12px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .webcam-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; position: relative;
+    }
+    .webcam-panel video, .webcam-panel img {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
+      background: #000;
+    }
+    .webcam-label {
+      position: absolute; top: 8px; left: 10px;
+      background: rgba(0,0,0,0.7); color: #ccc;
+      font-size: 0.7rem; font-weight: 600; padding: 2px 8px;
+      border-radius: 20px; letter-spacing: 0.04em;
+    }
+    .webcam-label.live { color: var(--safe); }
+    .webcam-label.live::before { content: '● '; animation: blink 1.5s infinite; }
+    .webcam-fps-badge {
+      position: absolute; bottom: 8px; right: 10px;
+      background: rgba(0,0,0,0.7); color: var(--accent);
+      font-size: 0.68rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 10px; font-variant-numeric: tabular-nums;
+    }
+    .webcam-controls {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .btn-webcam-start {
+      background: var(--safe); color: #000; border: none;
+      font-weight: 700; font-size: 0.85rem; padding: 8px 20px;
+      border-radius: 8px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-webcam-start:hover { filter: brightness(1.1); }
+    .btn-webcam-start.running { background: var(--danger); color: #fff; }
+    .webcam-status {
+      font-size: 0.8rem; color: var(--muted); flex: 1;
+    }
+    .webcam-status strong { color: var(--text); }
+    .webcam-info-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+      margin-top: 12px;
+    }
+    .wc-metric { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+    .wc-metric .wc-val { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .wc-metric .wc-lbl { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .wc-anim { animation: wc-flash 0.4s ease; }
+    @keyframes wc-flash { 0%{opacity:0.4} 100%{opacity:1} }
   </style>
 </head>
 <body>
@@ -595,6 +651,10 @@
     <button class="video-tab" data-vid="player" onclick="selectVideo('player')" style="border-color:rgba(99,102,241,0.4)">
       <span class="tab-dot" style="background:var(--indigo)"></span> ▶ 動画プレーヤー
       <span style="font-size:0.6rem;background:var(--indigo);color:#fff;padding:1px 5px;border-radius:3px;margin-left:2px;font-weight:800">NEW</span>
+    </button>
+    <button class="video-tab" data-vid="webcam" onclick="selectVideo('webcam')" style="border-color:rgba(34,197,94,0.4)">
+      <span class="tab-dot" style="background:var(--safe)"></span> 📷 ライブカメラ
+      <span style="font-size:0.6rem;background:var(--safe);color:#000;padding:1px 5px;border-radius:3px;margin-left:2px;font-weight:800">LIVE</span>
     </button>
   </div>
 
@@ -694,6 +754,38 @@
 
     </div><!-- /playerReady -->
   </div><!-- /videoPlayerSection -->
+
+  <!-- ── Webcam Live Section (hidden by default) ──────────── -->
+  <div id="webcamSection">
+    <div class="webcam-controls">
+      <button id="webcamBtn" class="btn-webcam-start" onclick="toggleWebcam()">📷 カメラ起動</button>
+      <div class="webcam-status" id="webcamStatus">
+        カメラを起動してリアルタイム深度解析を開始します。<br>
+        <span style="font-size:0.75rem;opacity:0.7">※ demo_server.py が起動している必要があります（localhost:8765）</span>
+      </div>
+    </div>
+
+    <div class="webcam-layout">
+      <!-- Live camera feed -->
+      <div class="webcam-panel">
+        <video id="webcamVideo" autoplay muted playsinline></video>
+        <div class="webcam-label live" id="webcamLiveLabel" style="display:none">LIVE CAMERA</div>
+      </div>
+      <!-- Depth overlay result -->
+      <div class="webcam-panel">
+        <img id="webcamOverlay" src="rail-assets/jrsam3_11s_overlay.jpg" alt="Depth overlay">
+        <div class="webcam-label">AI 深度解析 出力</div>
+        <div class="webcam-fps-badge" id="webcamFpsBadge">—</div>
+      </div>
+    </div>
+
+    <div class="webcam-info-grid">
+      <div class="wc-metric"><div class="wc-val" id="wc-near">—</div><div class="wc-lbl">最近距離</div></div>
+      <div class="wc-metric"><div class="wc-val" id="wc-far">—</div><div class="wc-lbl">最遠距離</div></div>
+      <div class="wc-metric"><div class="wc-val" id="wc-ms">—</div><div class="wc-lbl">処理時間</div></div>
+      <div class="wc-metric"><div class="wc-val" id="wc-anom">—</div><div class="wc-lbl">異常検知</div></div>
+    </div>
+  </div>
 
   <!-- Upload Zone (hidden by default) -->
   <div id="uploadZone" style="display:none">
@@ -1072,15 +1164,20 @@ function selectVideo(vid) {
   document.querySelectorAll('.video-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.vid === vid));
 
-  const isUpload = vid === 'upload';
-  const isPlayer = vid === 'player';
-  const isKeyframe = !isUpload && !isPlayer;
+  const isUpload   = vid === 'upload';
+  const isPlayer   = vid === 'player';
+  const isWebcam   = vid === 'webcam';
+  const isKeyframe = !isUpload && !isPlayer && !isWebcam;
 
-  document.getElementById('frameStrip').style.display        = isKeyframe ? 'block' : 'none';
-  document.getElementById('mainDisplay').style.display       = isKeyframe ? 'grid'  : 'none';
-  document.getElementById('infoPanels').style.display        = isKeyframe ? 'grid'  : 'none';
-  document.getElementById('uploadZone').style.display        = isUpload   ? 'block' : 'none';
-  document.getElementById('videoPlayerSection').style.display = isPlayer  ? 'block' : 'none';
+  document.getElementById('frameStrip').style.display         = isKeyframe ? 'block' : 'none';
+  document.getElementById('mainDisplay').style.display        = isKeyframe ? 'grid'  : 'none';
+  document.getElementById('infoPanels').style.display         = isKeyframe ? 'grid'  : 'none';
+  document.getElementById('uploadZone').style.display         = isUpload   ? 'block' : 'none';
+  document.getElementById('videoPlayerSection').style.display = isPlayer   ? 'block' : 'none';
+  document.getElementById('webcamSection').style.display      = isWebcam   ? 'block' : 'none';
+
+  // Stop webcam when leaving webcam tab
+  if (!isWebcam && webcamRunning) stopWebcam();
 
   if (isKeyframe) {
     renderFrameStrip(vid);
@@ -1089,8 +1186,10 @@ function selectVideo(vid) {
     selectFrame(pick.name);
   }
   if (isPlayer) {
-    // Auto-load jrsam3 timeline on first open
     if (!playerTimeline) loadTimeline('jrsam3');
+  }
+  if (isWebcam) {
+    checkApiStatus();
   }
 }
 
@@ -1696,6 +1795,146 @@ function handleUpload(file) {
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════════════════════════
+// WEBCAM LIVE INFERENCE
+// ══════════════════════════════════════════════════════════════
+let webcamStream   = null;
+let webcamRunning  = false;
+let webcamInterval = null;
+let webcamCanvas   = null;
+let webcamFrameTs  = 0;     // for FPS calculation
+let webcamFrameN   = 0;
+
+async function toggleWebcam() {
+  if (webcamRunning) {
+    stopWebcam();
+  } else {
+    await startWebcam();
+  }
+}
+
+async function startWebcam() {
+  const btn    = document.getElementById('webcamBtn');
+  const status = document.getElementById('webcamStatus');
+  status.innerHTML = 'カメラへのアクセスを要求中…';
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: 'environment' }
+    });
+  } catch (e) {
+    status.innerHTML = `<span style="color:var(--danger)">カメラアクセスが拒否されました: ${e.message}</span>`;
+    return;
+  }
+
+  const video = document.getElementById('webcamVideo');
+  video.srcObject = webcamStream;
+  await video.play();
+
+  webcamCanvas = document.createElement('canvas');
+  webcamCanvas.width  = 640;
+  webcamCanvas.height = 360;
+
+  webcamRunning = true;
+  webcamFrameN  = 0;
+  webcamFrameTs = performance.now();
+
+  btn.textContent = '⏹ 停止';
+  btn.classList.add('running');
+  document.getElementById('webcamLiveLabel').style.display = 'inline-block';
+  status.innerHTML = '<strong>解析中</strong> — カメラ映像をAIが処理しています';
+
+  // Send one frame every 1200ms (avoid overloading API on laptop)
+  captureAndSend();
+  webcamInterval = setInterval(captureAndSend, 1200);
+}
+
+function stopWebcam() {
+  webcamRunning = false;
+  if (webcamInterval) { clearInterval(webcamInterval); webcamInterval = null; }
+  if (webcamStream)   { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+  const video = document.getElementById('webcamVideo');
+  if (video) video.srcObject = null;
+  const btn = document.getElementById('webcamBtn');
+  if (btn) { btn.textContent = '📷 カメラ起動'; btn.classList.remove('running'); }
+  const lbl = document.getElementById('webcamLiveLabel');
+  if (lbl) lbl.style.display = 'none';
+  const status = document.getElementById('webcamStatus');
+  if (status) status.innerHTML = 'カメラを起動してリアルタイム深度解析を開始します。';
+}
+
+async function captureAndSend() {
+  if (!webcamRunning) return;
+  const video = document.getElementById('webcamVideo');
+  if (!video || video.readyState < 2) return;
+
+  // Draw current video frame onto canvas
+  const ctx = webcamCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, 640, 360);
+
+  // Show live frame in camera panel immediately
+  document.getElementById('webcamVideo').style.opacity = '1';
+
+  // Convert to blob and call API
+  webcamCanvas.toBlob(async (blob) => {
+    if (!blob || !webcamRunning) return;
+    const file = new File([blob], 'webcam_frame.jpg', { type: 'image/jpeg' });
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      let res = null;
+      for (const base of API_ENDPOINTS) {
+        try {
+          const ctrl = new AbortController();
+          setTimeout(() => ctrl.abort(), base.includes('localhost') ? 2000 : 5000);
+          const r = await fetch(`${base}/v1/depth/visualize`, { method:'POST', body:form, signal:ctrl.signal });
+          if (r.ok) { res = r; break; }
+        } catch(_) {}
+      }
+      if (!res) return;
+
+      const resBlob = await res.blob();
+      const url = URL.createObjectURL(resBlob);
+      const overlay = document.getElementById('webcamOverlay');
+      if (overlay) {
+        if (overlay._prevUrl) URL.revokeObjectURL(overlay._prevUrl);
+        overlay._prevUrl = url;
+        overlay.src = url;
+      }
+
+      // Update metrics
+      const nearM  = res.headers.get('X-Depth-Near-M') || '—';
+      const farM   = res.headers.get('X-Depth-Far-M')  || '—';
+      const procMs = res.headers.get('X-Processing-Ms') || '—';
+      const anomN  = res.headers.get('X-Anomaly-Count');
+      const anim   = 'wc-anim';
+
+      function setWc(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = val;
+        el.classList.remove(anim);
+        void el.offsetWidth;
+        el.classList.add(anim);
+      }
+      setWc('wc-near', isNaN(parseFloat(nearM)) ? nearM : parseFloat(nearM).toFixed(1) + 'm');
+      setWc('wc-far',  isNaN(parseFloat(farM))  ? farM  : parseFloat(farM).toFixed(0)  + 'm');
+      setWc('wc-ms',   procMs + 'ms');
+      setWc('wc-anom', anomN !== null ? anomN + '件' : '—');
+      if (anomN !== null) {
+        document.getElementById('wc-anom').style.color = parseInt(anomN) > 0 ? 'var(--danger)' : 'var(--safe)';
+      }
+
+      // FPS badge
+      webcamFrameN++;
+      const elapsed = (performance.now() - webcamFrameTs) / 1000;
+      const fps = webcamFrameN / elapsed;
+      const fpsBadge = document.getElementById('webcamFpsBadge');
+      if (fpsBadge) fpsBadge.textContent = fps.toFixed(1) + ' fps';
+
+    } catch(e) { /* silently ignore single frame errors */ }
+  }, 'image/jpeg', 0.82);
 }
 
 // API endpoints: local demo server preferred, Fly.io as fallback
