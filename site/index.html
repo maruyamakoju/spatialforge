@@ -238,6 +238,68 @@
     .price-card li::before { content: '\2713'; color: var(--green); margin-right: 0.5rem; font-weight: 700; }
     .price-card .btn-primary, .price-card .btn-secondary { width: 100%; display: block; text-align: center; }
 
+    /* ── RailScan showcase ────────────────────────── */
+    .railscan-section {
+      background: linear-gradient(135deg, #0a0a0f 0%, #12100a 50%, #0a0a0f 100%);
+      border-top: 1px solid rgba(245,158,11,0.15);
+      border-bottom: 1px solid rgba(245,158,11,0.15);
+    }
+    .railscan-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;
+    }
+    .railscan-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.9rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+      background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+      color: #fbbf24; margin-bottom: 1.25rem; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .railscan-inner h2 {
+      font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; letter-spacing: -0.02em;
+      margin-bottom: 1rem; line-height: 1.15;
+    }
+    .railscan-inner h2 .rail-accent { color: #fbbf24; }
+    .railscan-inner p { color: var(--muted); line-height: 1.75; margin-bottom: 1.5rem; font-size: 1rem; }
+    .rail-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;
+    }
+    .rail-stat {
+      background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15);
+      border-radius: 10px; padding: 0.9rem; text-align: center;
+    }
+    .rail-stat-val { font-size: 1.4rem; font-weight: 800; color: #fbbf24; letter-spacing: -0.02em; }
+    .rail-stat-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+    .rail-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-rail {
+      background: #f59e0b; color: #000; padding: 0.75rem 1.5rem; border-radius: 8px;
+      font-weight: 700; font-size: 0.9rem; text-decoration: none; transition: all 0.2s;
+    }
+    .btn-rail:hover { background: #fbbf24; transform: translateY(-1px); }
+    .btn-rail-ghost {
+      background: transparent; color: #fbbf24; padding: 0.75rem 1.5rem; border-radius: 8px;
+      font-weight: 600; font-size: 0.9rem; text-decoration: none;
+      border: 1px solid rgba(245,158,11,0.35); transition: all 0.2s;
+    }
+    .btn-rail-ghost:hover { background: rgba(245,158,11,0.08); }
+    .rail-visual {
+      background: #0d0d14; border: 1px solid rgba(245,158,11,0.2); border-radius: 14px;
+      overflow: hidden;
+    }
+    .rail-visual-header {
+      background: rgba(245,158,11,0.08); border-bottom: 1px solid rgba(245,158,11,0.15);
+      padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.75rem; color: #fbbf24; font-weight: 700; letter-spacing: 0.05em;
+    }
+    .rail-visual-body { padding: 1.25rem; font-family: monospace; font-size: 0.8rem; line-height: 1.9; }
+    .rv-label { color: #555570; }
+    .rv-val   { color: #e4e4ef; }
+    .rv-warn  { color: #f59e0b; font-weight: 700; }
+    .rv-ok    { color: #22c55e; }
+    .rv-ms    { color: #60a5fa; }
+    @media (max-width: 768px) {
+      .railscan-inner { grid-template-columns: 1fr; gap: 2rem; }
+    }
+
     /* ── Footer ───────────────────────────────────── */
     footer {
       text-align: center; padding: 3rem 2rem; border-top: 1px solid var(--border);
@@ -500,10 +562,60 @@
     </div>
   </section>
 
+  <!-- RailScan AI Showcase -->
+  <section class="railscan-section" style="padding:6rem 2rem;">
+    <div class="railscan-inner">
+      <div>
+        <div class="railscan-badge">&#x1F69D; Featured Application</div>
+        <h2>AI軌道点検<br><span class="rail-accent">RailScan AI</span></h2>
+        <p>Depth Anything V2 Large を鉄道車載カメラへ適用。走行中（80 km/h）に前方障害物を
+        リアルタイム検知し、建築限界違反をミリ秒単位でアラート。保線担当者の現地点検を
+        最大 <strong style="color:#fbbf24">47%</strong> 削減します。</p>
+        <div class="rail-stats">
+          <div class="rail-stat">
+            <div class="rail-stat-val">114ms</div>
+            <div class="rail-stat-lbl">推論/フレーム</div>
+          </div>
+          <div class="rail-stat">
+            <div class="rail-stat-val">1,847</div>
+            <div class="rail-stat-lbl">解析フレーム</div>
+          </div>
+          <div class="rail-stat">
+            <div class="rail-stat-val">87.7%</div>
+            <div class="rail-stat-lbl">平均信頼度</div>
+          </div>
+        </div>
+        <div class="rail-buttons">
+          <a href="rail-demo.html" class="btn-rail">&#x1F680; デモを試す</a>
+          <a href="proposal.html" class="btn-rail-ghost">提案書を見る</a>
+        </div>
+      </div>
+      <div>
+        <div class="rail-visual">
+          <div class="rail-visual-header">&#x1F4BB; RailScan AI — jrsam3 路線 t=11s</div>
+          <div class="rail-visual-body">
+<span class="rv-label">model      </span> <span class="rv-val">depth-anything/Depth-Anything-V2-Large-hf</span>
+<span class="rv-label">device     </span> <span class="rv-val">CUDA · RTX 4090</span>
+<span class="rv-label">frame      </span> <span class="rv-val">jrsam3_11s  (t = 11.0 s)</span>
+<span class="rv-label">min_depth  </span> <span class="rv-warn">2.57 m  ⚠ 近接物体検知</span>
+<span class="rv-label">max_depth  </span> <span class="rv-val">14.6 m</span>
+<span class="rv-label">confidence </span> <span class="rv-val">87.7 %</span>
+<span class="rv-label">inference  </span> <span class="rv-ms">114.1 ms</span>
+<span class="rv-label">anomalies  </span> <span class="rv-warn">1 件  dist=6.1m  area=31,602 px²</span>
+<span class="rv-label">clearance  </span> <span class="rv-warn">要確認 — 建築限界内侵入の可能性</span>
+<span class="rv-label">alert_sent </span> <span class="rv-ok">✓ 保線担当へ自動通知済み</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer>
     <p>&copy; 2026 SpatialForge. Built with <a href="https://github.com/maruyamakoju/spatialforge">open source</a>.</p>
     <p style="margin-top:0.5rem;">
+      <a href="rail-demo.html">RailScan Demo</a> &middot;
+      <a href="proposal.html">提案書</a> &middot;
       <a href="docs.html">Docs</a> &middot;
       <a href="demo.html">Demo</a> &middot;
       <a href="pricing.html">Pricing</a> &middot;

@@ -1415,12 +1415,121 @@ function initKeyboardNav() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 13. INITIALISATION
+// 13. ONBOARDING TOUR
+//    Shows once per browser (localStorage key: railscan_toured).
+//    5 steps, each optionally highlights a target element.
+//    Skip / ← / → navigation, progress dots.
+// ══════════════════════════════════════════════════════════════
+const TOUR_STEPS = [
+  {
+    title: 'RailScan AI へようこそ',
+    body:  'Depth Anything V2 Large による鉄道軌道の<strong>リアルタイム深度推論</strong>デモです。<br>このツアーで主要機能を 1 分でご案内します。',
+    target: null,
+  },
+  {
+    title: 'キーフレームギャラリー',
+    body:  '上部のタブで <strong>jrsam3路線 / jr23路線</strong> を切り替え、<br>フレームカードをクリックすると深度オーバーレイと異常詳細が表示されます。<br><span style="color:#ef4444">⚠</span> マークが付いたフレームに異常が検知されています。',
+    target: 'frameStrip',
+  },
+  {
+    title: '動画プレイヤー（全フレーム再生）',
+    body:  '「動画プレイヤー」タブを開くと <strong>73フレームの推論結果</strong>をシーケンシャルに再生できます。<br>スパークラインをクリックして任意フレームへジャンプ。<br><kbd style="background:#1e1e2e;padding:2px 6px;border-radius:4px;font-size:0.85em">N</kbd> / <kbd style="background:#1e1e2e;padding:2px 6px;border-radius:4px;font-size:0.85em">P</kbd> キーで異常フレームを前後に移動できます。',
+    target: null,
+  },
+  {
+    title: '独自画像のアップロード',
+    body:  '「アップロード」タブで <strong>任意の画像を AI 解析</strong>できます。<br>ローカル推論サーバー（RTX 4090）が起動中なら高速推論、<br>未起動の場合は Fly.io クラウド経由で自動フォールバックします。',
+    target: 'uploadZone',
+  },
+  {
+    title: 'KM マップとウェブカム',
+    body:  '<strong>KM マップ</strong>では異常発生地点を km ポスト換算で路線図表示。<br><strong>ウェブカム</strong>タブではリアルタイム映像をフレームごとに推論し、<br>前方障害物を即時検知します。',
+    target: 'kmmap',
+  },
+];
+
+let _tourStep = 0;
+let _tourEl   = null;
+
+function initTour() {
+  if (localStorage.getItem('railscan_toured')) return;
+  _buildTourDom();
+  _showTourStep(0);
+}
+
+function _buildTourDom() {
+  const overlay = document.createElement('div');
+  overlay.id = 'tourOverlay';
+  overlay.innerHTML = `
+    <div id="tourCard">
+      <button id="tourClose" title="スキップ" aria-label="ツアーをスキップ">✕</button>
+      <div id="tourStepLabel"></div>
+      <h3 id="tourTitle"></h3>
+      <p  id="tourBody"></p>
+      <div id="tourDots"></div>
+      <div id="tourBtns">
+        <button id="tourPrev">← 前へ</button>
+        <button id="tourNext"></button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('tourClose').addEventListener('click', _closeTour);
+  document.getElementById('tourPrev').addEventListener('click', () => _showTourStep(_tourStep - 1));
+  document.getElementById('tourNext').addEventListener('click', () => {
+    if (_tourStep < TOUR_STEPS.length - 1) _showTourStep(_tourStep + 1);
+    else _closeTour();
+  });
+}
+
+function _showTourStep(idx) {
+  _tourStep = Math.max(0, Math.min(TOUR_STEPS.length - 1, idx));
+  const step = TOUR_STEPS[_tourStep];
+  const isLast = _tourStep === TOUR_STEPS.length - 1;
+
+  document.getElementById('tourStepLabel').textContent =
+    `${_tourStep + 1} / ${TOUR_STEPS.length}`;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourBody').innerHTML  = step.body;
+  document.getElementById('tourPrev').style.visibility =
+    _tourStep === 0 ? 'hidden' : 'visible';
+  document.getElementById('tourNext').textContent = isLast ? '始める ✓' : '次へ →';
+
+  // Progress dots
+  const dots = document.getElementById('tourDots');
+  dots.innerHTML = TOUR_STEPS.map((_, i) =>
+    `<span class="tour-dot${i === _tourStep ? ' active' : ''}"></span>`
+  ).join('');
+
+  // Highlight target element
+  if (_tourEl) { _tourEl.classList.remove('tour-highlight'); _tourEl = null; }
+  if (step.target) {
+    const el = document.getElementById(step.target);
+    if (el) { el.classList.add('tour-highlight'); _tourEl = el; }
+  }
+}
+
+function _closeTour() {
+  localStorage.setItem('railscan_toured', '1');
+  if (_tourEl) { _tourEl.classList.remove('tour-highlight'); _tourEl = null; }
+  const overlay = document.getElementById('tourOverlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s';
+    setTimeout(() => overlay.remove(), 350);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 14. INITIALISATION
 // ══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   // Render initial frame strip and select default anomaly frame
   renderFrameStrip('jrsam3');
   selectFrame('jrsam3_11s');
+
+  // Onboarding tour (first visit only)
+  setTimeout(initTour, 600);
 
   // Km map
   renderKmMap('jrsam3');

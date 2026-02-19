@@ -583,6 +583,75 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: 
 .wc-anim { animation: wc-flash 0.4s ease; }
 @keyframes wc-flash { 0%{opacity:0.4} 100%{opacity:1} }
 
+/* ── Onboarding tour ──────────────────────── */
+#tourOverlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: tourFadeIn 0.3s ease;
+}
+@keyframes tourFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+#tourCard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem 2.25rem; max-width: 440px; width: 90%;
+  position: relative; box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  animation: tourSlideUp 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes tourSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#tourClose {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  background: none; border: none; color: var(--muted);
+  font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  line-height: 1;
+}
+#tourClose:hover { background: var(--surface-2); color: var(--text); }
+
+#tourStepLabel {
+  font-size: 0.72rem; font-weight: 700; color: var(--accent);
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.6rem;
+}
+
+#tourCard h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; }
+#tourCard p  { font-size: 0.9rem; color: var(--muted); line-height: 1.75; margin-bottom: 1.25rem; }
+
+#tourDots {
+  display: flex; justify-content: center; gap: 6px; margin-bottom: 1.25rem;
+}
+.tour-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border); transition: background 0.2s, transform 0.2s;
+}
+.tour-dot.active {
+  background: var(--accent); transform: scale(1.3);
+}
+
+#tourBtns { display: flex; justify-content: space-between; gap: 0.75rem; }
+#tourBtns button {
+  flex: 1; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.875rem;
+  font-weight: 600; cursor: pointer; border: 1px solid var(--border); transition: all 0.15s;
+}
+#tourPrev { background: var(--surface-2); color: var(--text); }
+#tourPrev:hover { border-color: var(--muted); }
+#tourNext { background: var(--accent); color: #000; border-color: var(--accent); }
+#tourNext:hover { background: #fbbf24; }
+
+/* Highlighted tour target */
+.tour-highlight {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 4px;
+  border-radius: 6px;
+  animation: tourPulse 1.5s ease-in-out infinite;
+}
+@keyframes tourPulse {
+  0%,100% { outline-color: var(--accent); }
+  50% { outline-color: rgba(245,158,11,0.3); }
+}
+
 /* ── Keyboard nav hint ────────────────────── */
 .kbd-hint {
   display: inline-flex; align-items: center; gap: 6px;

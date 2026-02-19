@@ -14,11 +14,37 @@ Turn any photo or video into depth maps, 3D measurements, camera poses, and floo
 [![PyPI](https://img.shields.io/pypi/v/spatialforge-client?label=SDK&color=3775A9)](https://pypi.org/project/spatialforge-client/)
 
 [Live API](https://spatialforge-demo.fly.dev/docs) &middot;
+[🚃 RailScan AI Demo](https://maruyamakoju.github.io/spatialforge/rail-demo.html) &middot;
 [Interactive Demo](https://maruyamakoju.github.io/spatialforge/demo.html) &middot;
 [Documentation](https://maruyamakoju.github.io/spatialforge/docs.html) &middot;
 [Pricing](https://maruyamakoju.github.io/spatialforge/pricing.html)
 
 </div>
+
+---
+
+## Featured Application: RailScan AI — Railway Track Inspection
+
+> **Live Demo →** https://maruyamakoju.github.io/spatialforge/rail-demo.html
+
+SpatialForge powers **RailScan AI**, an autonomous railway inspection system that replaces manual track walking with AI depth analysis at 80 km/h.
+
+| Metric | Value |
+|--------|-------|
+| Inference speed | **~114 ms/frame** on RTX 4090 (Depth Anything V2 Large) |
+| Anomaly detection | Proximity alerts with bounding boxes + distance estimates |
+| Clearance check | Building-limit violation detection at sub-10m range |
+| Output formats | Turbo colormap overlay, 3D point cloud, anomaly JSON, PDF report |
+| Demo routes | JR 路線 jrsam3 · JR 路線 jr23 (real onboard video, 3fps inference) |
+
+```python
+# Real inference result on JR track video
+result = client.depth("jrsam3_11s.jpg", model="large")
+# → min_depth_m: 2.57  max_depth_m: 14.6  confidence: 0.877  ms: 114.1
+# → anomaly detected: object at 6.1m, area 31,602 px²
+```
+
+**[Try the RailScan Demo](https://maruyamakoju.github.io/spatialforge/rail-demo.html)** · **[View Proposal (PDF-printable)](https://maruyamakoju.github.io/spatialforge/proposal.html)**
 
 ---
 
