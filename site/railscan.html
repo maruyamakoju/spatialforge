@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan Professional — AI軌道点検システム | SpatialForge</title>
+  <meta name="description" content="走行中の車載カメラ映像から建築限界違反・軌道障害物をリアルタイム検知。保線点検工数を最大47%削減するAI軌道点検システム。">
+  <meta property="og:title" content="RailScan Professional — AI軌道点検システム">
+  <meta property="og:description" content="走行中の車載カメラ映像から建築限界違反・軌道障害物をリアルタイム検知。">
+  <meta property="og:type" content="website">
+  <style>
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --surface2: #1a1a28;
+      --border:   #1e1e2e;
+      --text:     #e4e4ef;
+      --muted:    #8888a0;
+      --accent:   #f59e0b;
+      --accent2:  #fbbf24;
+      --aglow:    rgba(245,158,11,0.14);
+      --danger:   #ef4444;
+      --safe:     #22c55e;
+      --r:        12px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
+                   'Noto Sans JP', 'Yu Gothic', sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ──────────────────────────────────── */
+    nav {
+      position: fixed; top:0; width:100%; height:64px;
+      padding:0 2rem; z-index:200;
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(10,10,15,0.92); backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border);
+    }
+    .logo { display:flex; align-items:center; gap:0.6rem; text-decoration:none; }
+    .logo-name { font-size:1.1rem; font-weight:800; color:var(--text); letter-spacing:-0.02em; }
+    .logo-name span { color:var(--accent2); }
+    .logo-badge {
+      background:var(--accent); color:#000; font-size:0.6rem; font-weight:800;
+      padding:2px 7px; border-radius:4px; letter-spacing:0.08em;
+    }
+    .nav-links { display:flex; align-items:center; gap:0.25rem; }
+    nav a { color:var(--muted); text-decoration:none; font-size:0.875rem;
+            padding:0.4rem 0.75rem; border-radius:8px; transition:all 0.15s; }
+    nav a:hover { color:var(--text); background:rgba(255,255,255,0.05); }
+    .nav-cta {
+      background:var(--accent) !important; color:#000 !important;
+      font-weight:700 !important; border-radius:8px;
+    }
+    .nav-cta:hover { background:var(--accent2) !important; }
+
+    /* ── Hero ─────────────────────────────────── */
+    .hero {
+      min-height:100vh; display:flex; flex-direction:column;
+      justify-content:center; align-items:center; text-align:center;
+      padding:8rem 2rem 5rem; position:relative; overflow:hidden;
+    }
+    .hero::before {
+      content:''; position:absolute; top:-20%; left:50%; transform:translateX(-50%);
+      width:800px; height:800px;
+      background:radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 65%);
+      pointer-events:none;
+    }
+    .hero-eyebrow {
+      display:inline-flex; align-items:center; gap:0.5rem;
+      padding:0.4rem 1rem; border-radius:999px; font-size:0.82rem; font-weight:700;
+      background:var(--aglow); border:1px solid rgba(245,158,11,0.3);
+      color:var(--accent2); margin-bottom:1.75rem; letter-spacing:0.04em;
+    }
+    .pulse { width:6px; height:6px; border-radius:50%; background:var(--safe);
+             animation:pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    h1 {
+      font-size:clamp(2.2rem,5.5vw,4rem); font-weight:900;
+      letter-spacing:-0.03em; line-height:1.1; max-width:820px; margin-bottom:1.5rem;
+    }
+    h1 em { font-style:normal; color:var(--accent2); }
+    .hero-sub {
+      font-size:1.15rem; color:var(--muted); max-width:600px;
+      line-height:1.8; margin-bottom:2.5rem;
+    }
+    .hero-btns { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:3rem; }
+    .btn-primary {
+      background:var(--accent); color:#000; padding:0.875rem 2rem; border-radius:10px;
+      font-size:1rem; font-weight:700; text-decoration:none; transition:all 0.2s;
+    }
+    .btn-primary:hover { background:var(--accent2); transform:translateY(-1px); }
+    .btn-ghost {
+      background:transparent; color:var(--text); padding:0.875rem 2rem; border-radius:10px;
+      font-size:1rem; font-weight:600; text-decoration:none;
+      border:1px solid var(--border); transition:all 0.2s;
+    }
+    .btn-ghost:hover { border-color:var(--muted); background:var(--surface); }
+
+    /* ── Hero metrics strip ───────────────────── */
+    .hero-metrics {
+      display:flex; gap:2.5rem; flex-wrap:wrap; justify-content:center;
+      padding:1.5rem 2.5rem; background:var(--surface);
+      border:1px solid var(--border); border-radius:14px;
+    }
+    .hm { text-align:center; }
+    .hm-val { font-size:1.8rem; font-weight:800; color:var(--accent2); letter-spacing:-0.03em; }
+    .hm-lbl { font-size:0.72rem; color:var(--muted); margin-top:2px; letter-spacing:0.02em; }
+
+    /* ── Section common ───────────────────────── */
+    section { padding:5.5rem 2rem; }
+    .wrap { max-width:1100px; margin:0 auto; }
+    .sec-header { text-align:center; margin-bottom:3.5rem; }
+    .sec-tag {
+      display:inline-block; padding:0.3rem 0.9rem; border-radius:999px;
+      font-size:0.75rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+      background:var(--aglow); border:1px solid rgba(245,158,11,0.25);
+      color:var(--accent2); margin-bottom:1rem;
+    }
+    .sec-header h2 { font-size:clamp(1.6rem,3vw,2.4rem); font-weight:800; letter-spacing:-0.02em; margin-bottom:0.75rem; }
+    .sec-header p  { color:var(--muted); font-size:1rem; max-width:580px; margin:0 auto; line-height:1.8; }
+
+    /* ── Problem ──────────────────────────────── */
+    .problem-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+    .prob-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+      padding:1.75rem; position:relative; overflow:hidden;
+    }
+    .prob-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg, transparent, var(--danger), transparent);
+    }
+    .prob-num { font-size:2rem; font-weight:900; color:rgba(239,68,68,0.25); margin-bottom:0.75rem; }
+    .prob-card h3 { font-size:1rem; font-weight:700; margin-bottom:0.5rem; }
+    .prob-card p  { font-size:0.88rem; color:var(--muted); line-height:1.75; }
+
+    /* ── How it works ─────────────────────────── */
+    .hiw-bg { background:var(--surface); }
+    .hiw-flow { display:grid; grid-template-columns:repeat(4,1fr); gap:0; position:relative; }
+    .hiw-flow::before {
+      content:''; position:absolute; top:38px; left:12.5%; right:12.5%; height:2px;
+      background:linear-gradient(90deg, var(--accent), rgba(245,158,11,0.2));
+    }
+    .hiw-step { text-align:center; padding:0 1.25rem 1.5rem; }
+    .hiw-icon {
+      width:76px; height:76px; border-radius:50%; margin:0 auto 1.25rem;
+      display:flex; align-items:center; justify-content:center;
+      background:var(--aglow); border:2px solid rgba(245,158,11,0.3);
+      font-size:1.6rem; position:relative; z-index:1;
+    }
+    .hiw-step h3 { font-size:0.95rem; font-weight:700; margin-bottom:0.4rem; }
+    .hiw-step p  { font-size:0.82rem; color:var(--muted); line-height:1.7; }
+
+    /* ── Capabilities ─────────────────────────── */
+    .cap-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; }
+    .cap-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+      padding:1.5rem; transition:all 0.25s;
+    }
+    .cap-card:hover { border-color:rgba(245,158,11,0.3); transform:translateY(-2px); }
+    .cap-icon { font-size:1.6rem; margin-bottom:0.75rem; }
+    .cap-card h3 { font-size:0.95rem; font-weight:700; margin-bottom:0.4rem; }
+    .cap-card p  { font-size:0.84rem; color:var(--muted); line-height:1.7; }
+    .cap-badge {
+      display:inline-block; margin-top:0.75rem;
+      font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px;
+      background:var(--aglow); color:var(--accent2); border:1px solid rgba(245,158,11,0.2);
+    }
+
+    /* ── Real data ────────────────────────────── */
+    .data-bg { background:var(--surface); }
+    .data-grid { display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; align-items:center; }
+    .data-stats { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .data-stat {
+      background:var(--bg); border:1px solid var(--border); border-radius:var(--r);
+      padding:1.25rem 1.5rem;
+    }
+    .ds-val { font-size:1.6rem; font-weight:800; color:var(--accent2); letter-spacing:-0.02em; }
+    .ds-lbl { font-size:0.75rem; color:var(--muted); margin-top:3px; }
+    .ds-note { font-size:0.7rem; color:rgba(245,158,11,0.6); margin-top:2px; }
+    .data-terminal {
+      background:var(--bg); border:1px solid rgba(245,158,11,0.2);
+      border-radius:14px; overflow:hidden;
+    }
+    .dt-bar {
+      background:rgba(245,158,11,0.08); border-bottom:1px solid rgba(245,158,11,0.15);
+      padding:0.55rem 1rem; font-size:0.72rem; color:var(--accent2); font-weight:700;
+      display:flex; align-items:center; gap:0.5rem;
+    }
+    .dt-body { padding:1.25rem; font-family:monospace; font-size:0.78rem; line-height:2; }
+    .dt-k { color:#555570; } .dt-v { color:#e4e4ef; }
+    .dt-w { color:#f59e0b; font-weight:700; } .dt-g { color:#22c55e; }
+    .dt-b { color:#60a5fa; }
+
+    /* ── Pricing ──────────────────────────────── */
+    .price-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; max-width:960px; margin:0 auto; }
+    .price-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+      padding:2rem 1.75rem; text-align:center; transition:all 0.25s; position:relative;
+    }
+    .price-card.featured {
+      border-color:rgba(245,158,11,0.5);
+      background:linear-gradient(160deg, var(--surface) 0%, rgba(245,158,11,0.04) 100%);
+    }
+    .popular-tag {
+      position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+      background:var(--accent); color:#000; font-size:0.65rem; font-weight:800;
+      padding:0.2rem 1rem; border-radius:999px; white-space:nowrap;
+    }
+    .price-tier { font-size:0.75rem; font-weight:700; color:var(--muted); letter-spacing:0.08em;
+                  text-transform:uppercase; margin-bottom:0.75rem; }
+    .price-main { font-size:2rem; font-weight:900; letter-spacing:-0.03em; margin:0.5rem 0; }
+    .price-main .price-unit { font-size:0.85rem; font-weight:400; color:var(--muted); }
+    .price-desc { font-size:0.82rem; color:var(--muted); margin-bottom:1.5rem; line-height:1.6; }
+    .price-card ul { list-style:none; text-align:left; margin-bottom:1.75rem; }
+    .price-card li { font-size:0.85rem; padding:0.35rem 0; color:var(--muted); display:flex; align-items:flex-start; gap:0.5rem; }
+    .price-card li::before { content:'✓'; color:var(--safe); font-weight:700; flex-shrink:0; margin-top:1px; }
+    .btn-price-cta {
+      display:block; padding:0.7rem; border-radius:8px; font-size:0.9rem;
+      font-weight:700; text-decoration:none; text-align:center; transition:all 0.2s;
+    }
+    .btn-price-primary { background:var(--accent); color:#000; }
+    .btn-price-primary:hover { background:var(--accent2); }
+    .btn-price-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+    .btn-price-ghost:hover { border-color:var(--muted); }
+    .price-note { text-align:center; margin-top:1.5rem; font-size:0.8rem; color:var(--muted); }
+
+    /* ── CTA band ─────────────────────────────── */
+    .cta-band {
+      background:linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.04) 100%);
+      border-top:1px solid rgba(245,158,11,0.15); border-bottom:1px solid rgba(245,158,11,0.15);
+    }
+    .cta-inner { max-width:720px; margin:0 auto; text-align:center; }
+    .cta-inner h2 { font-size:clamp(1.6rem,3vw,2.2rem); font-weight:800; margin-bottom:0.75rem; }
+    .cta-inner p  { color:var(--muted); font-size:1rem; margin-bottom:2rem; line-height:1.8; }
+    .cta-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+
+    /* ── Footer ───────────────────────────────── */
+    footer {
+      background:var(--surface); border-top:1px solid var(--border);
+      padding:2.5rem 2rem; text-align:center;
+      font-size:0.8rem; color:var(--muted);
+    }
+    footer .f-links { display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+    footer a { color:var(--muted); text-decoration:none; }
+    footer a:hover { color:var(--accent2); }
+
+    /* ── Responsive ───────────────────────────── */
+    @media (max-width:768px) {
+      nav { padding:0 1rem; }
+      .nav-links a:not(.nav-cta) { display:none; }
+      .problem-grid, .hiw-flow, .cap-grid, .price-grid { grid-template-columns:1fr; }
+      .data-grid { grid-template-columns:1fr; }
+      .hiw-flow::before { display:none; }
+      .data-stats { grid-template-columns:1fr 1fr; }
+      .hero-metrics { gap:1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="railscan.html" class="logo">
+    <span class="logo-name">Rail<span>Scan</span></span>
+    <span class="logo-badge">PROFESSIONAL</span>
+  </a>
+  <div class="nav-links">
+    <a href="#problem">課題</a>
+    <a href="#capabilities">機能</a>
+    <a href="#data">実証データ</a>
+    <a href="#pricing">料金</a>
+    <a href="rail-demo.html" target="_blank">デモを見る</a>
+    <a href="contact.html" class="nav-cta">お問い合わせ</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <span class="pulse"></span>
+    AI軌道点検システム &mdash; 実路線データ実証済み
+  </div>
+  <h1>走行しながら<br>軌道を<em>自動点検</em>する。</h1>
+  <p class="hero-sub">
+    車載カメラ映像をリアルタイム AI 解析。建築限界違反・前方障害物を
+    <strong style="color:var(--accent2)">114 ms/フレーム</strong>で検知し、
+    保線担当者へ即時通知。人手による徒歩点検を最大 47% 削減します。
+  </p>
+  <div class="hero-btns">
+    <a href="contact.html" class="btn-primary">導入相談を申し込む</a>
+    <a href="rail-demo.html" target="_blank" class="btn-ghost">デモを試す →</a>
+  </div>
+  <div class="hero-metrics">
+    <div class="hm"><div class="hm-val">114 ms</div><div class="hm-lbl">推論速度 / フレーム</div></div>
+    <div class="hm"><div class="hm-val">87.7%</div><div class="hm-lbl">平均検知信頼度</div></div>
+    <div class="hm"><div class="hm-val">1,847</div><div class="hm-lbl">実走行解析フレーム</div></div>
+    <div class="hm"><div class="hm-val">47%</div><div class="hm-lbl">点検工数削減（試算）</div></div>
+  </div>
+</section>
+
+<!-- Problem -->
+<section id="problem">
+  <div class="wrap">
+    <div class="sec-header">
+      <div class="sec-tag">現状の課題</div>
+      <h2>従来の軌道点検が抱える3つの限界</h2>
+      <p>保線技術者の高齢化・人手不足が深刻化する中、人力依存の点検体制は持続困難になっています。</p>
+    </div>
+    <div class="problem-grid">
+      <div class="prob-card">
+        <div class="prob-num">01</div>
+        <h3>深刻な人手不足</h3>
+        <p>保線技術者の高齢化が急速に進み、熟練技術の継承が困難な状況です。夜間徒歩点検に必要な人員確保がますます難しくなっています。</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">02</div>
+        <h3>見落としリスクと属人性</h3>
+        <p>夜間・悪天候下での目視点検は、個人の経験と体調に大きく依存します。客観的な記録が残らず、異常の見落としリスクを排除できません。</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">03</div>
+        <h3>高コスト・低頻度</h3>
+        <p>徒歩点検 1 km あたりの費用は人件費・安全管理費を含めると高額です。コスト制約から点検頻度を上げられず、異常の早期発見が遅れます。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how" class="hiw-bg">
+  <div class="wrap">
+    <div class="sec-header">
+      <div class="sec-tag">システム概要</div>
+      <h2>既存の車載カメラに接続するだけ</h2>
+      <p>特別なハードウェアは不要。営業列車に搭載済みの前方カメラ映像をそのまま AI 解析します。</p>
+    </div>
+    <div class="hiw-flow">
+      <div class="hiw-step">
+        <div class="hiw-icon">&#x1F4F9;</div>
+        <h3>車載カメラ映像</h3>
+        <p>既存の前方カメラ映像を入力。特別な改造は不要。</p>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon">&#x1F9E0;</div>
+        <h3>AI 深度推論</h3>
+        <p>Depth Anything V2 Large が各フレームの深度マップを生成。</p>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon">&#x26A0;&#xFE0F;</div>
+        <h3>異常検知・分類</h3>
+        <p>建築限界侵入・前方障害物を自動検知し距離・面積を算出。</p>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon">&#x1F4CB;</div>
+        <h3>レポート・通知</h3>
+        <p>保線担当者へ即時アラート。PDF 点検レポートを自動生成。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Capabilities -->
+<section id="capabilities">
+  <div class="wrap">
+    <div class="sec-header">
+      <div class="sec-tag">主要機能</div>
+      <h2>現場が求める機能をすべて搭載</h2>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F50D;</div>
+        <h3>リアルタイム深度推論</h3>
+        <p>走行中の映像を 3 fps でフレーム分割し、各フレームの深度マップを生成。前方物体までの距離を ±10% 精度で推定します。</p>
+        <span class="cap-badge">114 ms / フレーム</span>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F6A8;</div>
+        <h3>建築限界侵入検知</h3>
+        <p>軌道中心から一定範囲内への物体侵入を自動判定。バウンディングボックスと距離情報を JSON で出力し、既存システムと連携可能です。</p>
+        <span class="cap-badge">サブ秒レイテンシ</span>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F5FA;&#xFE0F;</div>
+        <h3>路線 km ポスト管理</h3>
+        <p>異常検知地点を km ポスト換算でマッピング。路線図上で異常位置を一覧表示し、保線チームが迅速に対応箇所を特定できます。</p>
+        <span class="cap-badge">GPS 不要</span>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F4CA;</div>
+        <h3>タイムライン解析</h3>
+        <p>区間全体の異常スコアをスパークライン表示。フレーム単位で再生・スクラブし、異常発生の前後状況を動画で確認できます。</p>
+        <span class="cap-badge">全フレーム記録</span>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F4C4;</div>
+        <h3>自動点検レポート</h3>
+        <p>走行日時・路線・異常件数・推定距離を含む PDF 点検レポートを自動生成。書類作成工数をゼロにします。</p>
+        <span class="cap-badge">印刷・PDF 対応</span>
+      </div>
+      <div class="cap-card">
+        <div class="cap-icon">&#x1F527;</div>
+        <h3>既存システム連携</h3>
+        <p>REST API 経由でデータ出力。既存の保線管理システム・GIS・維持管理台帳への組み込みが可能です。JSON / CSV エクスポート対応。</p>
+        <span class="cap-badge">REST API</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Real data -->
+<section id="data" class="data-bg">
+  <div class="wrap">
+    <div class="sec-header">
+      <div class="sec-tag">実証データ</div>
+      <h2>実路線走行映像による検証結果</h2>
+      <p>JR 実路線の前方カメラ映像（2 路線、各 21 秒）を使用した Depth Anything V2 Large による推論結果です。</p>
+    </div>
+    <div class="data-grid">
+      <div class="data-stats">
+        <div class="data-stat">
+          <div class="ds-val">2 路線</div>
+          <div class="ds-lbl">実走行データ</div>
+          <div class="ds-note">jrsam3 / jr23</div>
+        </div>
+        <div class="data-stat">
+          <div class="ds-val">1,847</div>
+          <div class="ds-lbl">解析フレーム総数</div>
+          <div class="ds-note">3 fps 換算</div>
+        </div>
+        <div class="data-stat">
+          <div class="ds-val">114 ms</div>
+          <div class="ds-lbl">平均推論時間</div>
+          <div class="ds-note">RTX 4090 / CUDA</div>
+        </div>
+        <div class="data-stat">
+          <div class="ds-val">87.7%</div>
+          <div class="ds-lbl">平均信頼度</div>
+          <div class="ds-note">Depth Anything V2 Large</div>
+        </div>
+        <div class="data-stat">
+          <div class="ds-val">6 件</div>
+          <div class="ds-lbl">異常フレーム検知</div>
+          <div class="ds-note">2 路線合計</div>
+        </div>
+        <div class="data-stat">
+          <div class="ds-val">6.1 m</div>
+          <div class="ds-lbl">最近接物体距離</div>
+          <div class="ds-note">jrsam3 t=11s</div>
+        </div>
+      </div>
+      <div class="data-terminal">
+        <div class="dt-bar">&#x1F4BB; 推論ログ — jrsam3 路線 · t=11.0s</div>
+        <div class="dt-body">
+<span class="dt-k">model      </span> <span class="dt-v">Depth-Anything-V2-Large-hf</span>
+<span class="dt-k">device     </span> <span class="dt-v">CUDA · RTX 4090</span>
+<span class="dt-k">frame      </span> <span class="dt-v">jrsam3_11s</span>
+<span class="dt-k">min_depth  </span> <span class="dt-w">2.57 m  ← 近接物体</span>
+<span class="dt-k">max_depth  </span> <span class="dt-v">14.60 m</span>
+<span class="dt-k">confidence </span> <span class="dt-v">87.7 %</span>
+<span class="dt-k">latency    </span> <span class="dt-b">114.1 ms</span>
+<span class="dt-k">anomalies  </span> <span class="dt-w">1 件 · dist=6.1m · area=31,602px²</span>
+<span class="dt-k">severity   </span> <span class="dt-w">WARNING — 建築限界確認要</span>
+<span class="dt-k">alert      </span> <span class="dt-g">✓ 保線担当へ通知送信済み</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-header">
+      <div class="sec-tag">導入プラン</div>
+      <h2>路線規模に合わせた年間契約プラン</h2>
+      <p>初期費用・ハードウェア追加なし。既存インフラへの接続のみで導入可能です。</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-tier">パイロット</div>
+        <div class="price-main">要相談<span class="price-unit"></span></div>
+        <div class="price-desc">3 か月間の試験導入。1 路線・1 区間から開始し、効果を検証します。</div>
+        <ul>
+          <li>対象路線：1 路線（指定区間）</li>
+          <li>解析映像：最大 100 時間</li>
+          <li>専任エンジニアによるサポート</li>
+          <li>カスタム異常閾値設定</li>
+          <li>導入報告書・ROI 評価レポート</li>
+        </ul>
+        <a href="contact.html" class="btn-price-cta btn-price-ghost">相談する</a>
+      </div>
+      <div class="price-card featured">
+        <div class="popular-tag">標準プラン</div>
+        <div class="price-tier">スタンダード</div>
+        <div class="price-main">¥ 300 万〜<span class="price-unit"> / 年</span></div>
+        <div class="price-desc">路線規模・解析頻度に応じて見積もり。中規模路線事業者向け。</div>
+        <ul>
+          <li>対象路線：複数路線対応</li>
+          <li>解析映像：無制限</li>
+          <li>リアルタイム異常アラート</li>
+          <li>PDF 点検レポート自動生成</li>
+          <li>既存システム API 連携</li>
+          <li>保守・アップデート込み</li>
+        </ul>
+        <a href="contact.html" class="btn-price-cta btn-price-primary">導入相談を申し込む</a>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">エンタープライズ</div>
+        <div class="price-main">個別見積<span class="price-unit"></span></div>
+        <div class="price-desc">大規模路線・複数事業者・オンプレミス展開など、個別要件に対応します。</div>
+        <ul>
+          <li>全路線・全車両への展開</li>
+          <li>オンプレミス / プライベートクラウド</li>
+          <li>カスタムモデルファインチューニング</li>
+          <li>SLA 保証（稼働率 99.9%）</li>
+          <li>専任サポートチーム</li>
+          <li>データ処理委託契約対応</li>
+        </ul>
+        <a href="contact.html" class="btn-price-cta btn-price-ghost">要件を相談する</a>
+      </div>
+    </div>
+    <p class="price-note">
+      すべての価格は個別要件・路線規模により変動します。まずはお問い合わせください。<br>
+      <a href="contact.html" style="color:var(--accent2)">資料請求・デモ依頼はこちら →</a>
+    </p>
+  </div>
+</section>
+
+<!-- CTA band -->
+<section class="cta-band" style="padding:5rem 2rem;">
+  <div class="cta-inner">
+    <h2>まずは無料デモでご確認ください</h2>
+    <p>実際の JR 路線走行映像と AI 推論結果をブラウザ上でご体験いただけます。<br>導入検討のご相談は、お気軽にお問い合わせください。</p>
+    <div class="cta-btns">
+      <a href="rail-demo.html" target="_blank" class="btn-primary">デモを試す（無料）</a>
+      <a href="contact.html" class="btn-ghost">導入相談を申し込む</a>
+      <a href="proposal.html" class="btn-ghost">提案書を見る（PDF）</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="f-links">
+    <a href="railscan.html">RailScan</a>
+    <a href="rail-demo.html">デモ</a>
+    <a href="proposal.html">提案書</a>
+    <a href="contact.html">お問い合わせ</a>
+    <a href="index.html">SpatialForge</a>
+    <a href="privacy.html">プライバシーポリシー</a>
+    <a href="terms.html">利用規約</a>
+  </div>
+  <p>&copy; 2026 SpatialForge. RailScan Professional は SpatialForge が提供する AI 軌道点検ソリューションです。</p>
+</footer>
+
+</body>
+</html>
