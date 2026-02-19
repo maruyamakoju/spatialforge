@@ -266,9 +266,11 @@ def main():
         if api_key:
             # Download from Roboflow (these are known good datasets)
             datasets_to_download = [
-                # (workspace, project, version)
-                ("rail-defect", "rail-track-defect", 1),
-                ("rail-defects-uykr3", "rail-defect-jqi5c", 1),
+                # (workspace, project, version) — ordered by size/quality
+                ("defect-rexb3", "rail-defect", 1),           # ~4900 images, 6 classes (BEST)
+                ("kakashi-fmrs2", "rail-surface-defects-d9i8o", 1),  # 9 classes
+                ("thesis-group", "railway-crack-detection", 1),       # 936 images
+                ("raildefectunal", "rail-defects-detection", 2),      # 207 images, 6 pro classes
             ]
 
             for ws, proj, ver in datasets_to_download:
