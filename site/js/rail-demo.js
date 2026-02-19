@@ -81,6 +81,13 @@ function selectVideo(vid) {
   // Stop webcam when leaving webcam tab
   if (!isWebcam && webcamRunning) stopWebcam();
 
+  // Stop player playback when leaving player tab
+  if (!isPlayer && playerInterval) {
+    clearInterval(playerInterval);
+    playerInterval = null;
+    document.getElementById('playBtn').textContent = '▶';
+  }
+
   if (isKeyframe) {
     renderFrameStrip(vid);
     const frames = FRAMES.filter(f => f.video === vid);
@@ -374,7 +381,8 @@ function printReport() {
 }
 
 async function loadTimeline(name, tabEl) {
-  document.querySelectorAll('.pvtab').forEach(t => t.classList.toggle('active', t === tabEl));
+  document.querySelectorAll('.pvtab').forEach(t =>
+    t.classList.toggle('active', tabEl ? t === tabEl : t.textContent.includes(name)));
 
   if (playerInterval) { clearInterval(playerInterval); playerInterval = null; }
   document.getElementById('playBtn').textContent = '▶';
@@ -1049,6 +1057,7 @@ function turboPixelToDepth(r, g, b) {
 }
 
 let threeRenderer, threeScene, threeCamera, threePoints, threeMesh;
+let _threeCanvas = null;   // cached once in initThreeJs — avoids getElementById per RAF tick
 let autoRotate = false;
 let vizMode    = 'point';
 let isDragging = false, prevMouse = {x:0, y:0};
@@ -1063,6 +1072,7 @@ function seededNoise(x, y, s) {
 
 function initThreeJs() {
   const canvas = document.getElementById('threeCanvas');
+  _threeCanvas = canvas;   // cache for animate() RAF loop
   threeRenderer = new THREE.WebGLRenderer({canvas, antialias:true});
   threeRenderer.setPixelRatio(window.devicePixelRatio);
   threeRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
@@ -1259,7 +1269,7 @@ function toggleAutoRotate(e) {
 function animate() {
   requestAnimationFrame(animate);
   if (autoRotate) { spherical.theta += 0.004; updateThreeCamera(); }
-  const canvas = document.getElementById('threeCanvas');
+  const canvas = _threeCanvas;
   if (!canvas || !threeRenderer) return;
   if (canvas.clientWidth  !== threeRenderer.domElement.width ||
       canvas.clientHeight !== threeRenderer.domElement.height) {
@@ -1421,8 +1431,16 @@ window.addEventListener('DOMContentLoaded', () => {
   // Three.js — wait for THREE to be ready (handles CDN async / offline fallback)
   waitForThree(initThreeJs);
 
-  // Dashboard
-  initDashboard();
+  // Dashboard — lazy-init when section scrolls into view (below the fold)
+  const dashSection = document.getElementById('dashboard');
+  if (dashSection) {
+    const dashObs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { initDashboard(); dashObs.disconnect(); } });
+    }, {threshold: 0.1});
+    dashObs.observe(dashSection);
+  } else {
+    initDashboard();
+  }
 
   // Keyboard navigation
   initKeyboardNav();
@@ -1452,8 +1470,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Canvas resize
   window.addEventListener('resize', () => {
-    if (!threeRenderer) return;
-    const c = document.getElementById('threeCanvas');
+    if (!threeRenderer || !_threeCanvas) return;
+    const c = _threeCanvas;
     threeRenderer.setSize(c.clientWidth, c.clientHeight);
     threeCamera.aspect = c.clientWidth / c.clientHeight;
     threeCamera.updateProjectionMatrix();
