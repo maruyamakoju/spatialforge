@@ -35,8 +35,13 @@ Thumbs.db
 uploads/
 results/
 benchmarks/results/
+datasets/
 *.ply
 *.exr
+
+# Training artifacts
+runs/
+*.labels.cache
 
 # Testing
 .coverage

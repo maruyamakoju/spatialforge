@@ -21,9 +21,39 @@
 'use strict';
 
 // ══════════════════════════════════════════════════════════════
-// 1. FRAME DATA — from Depth Anything V2 Large inference
-//    RTX 4090, ~114ms/frame average, 12 frames across 2 JR videos
+// 1. FRAME DATA — from Depth Anything V2 Large + YOLOv8 defect detection
+//    RTX 4090, ~40ms/frame depth + ~12ms/frame defect, 12 keyframes across 2 JR videos
 // ══════════════════════════════════════════════════════════════
+
+// Defect class labels (matches spatialforge/models/inspection.py)
+const DEFECT_LABELS_JA = {
+  rail_crack:       'レールき裂',
+  rail_wear:        'レール摩耗',
+  rail_corrugation: 'レール波状摩耗',
+  rail_spalling:    'レール剥離',
+  fastener_missing: '締結装置欠損',
+  fastener_broken:  '締結装置破損',
+  sleeper_crack:    'まくらぎき裂',
+  sleeper_decay:    'まくらぎ腐食',
+  ballast_fouling:  'バラスト異状',
+  joint_defect:     '継目異状',
+  gauge_anomaly:    '軌間異常',
+};
+
+const SEV_LABELS_JA = {
+  critical: '緊急',
+  major:    '重要',
+  minor:    '軽微',
+  info:     '参考',
+};
+
+const SEV_COLORS = {
+  critical: '#ef4444',
+  major:    '#f59e0b',
+  minor:    '#3b82f6',
+  info:     '#6b7280',
+};
+
 const FRAMES = [
   { name:'jrsam3_02s', ts:2,  video:'jrsam3', label:'jrsam3 02s', min:2.02, max:200.0, conf:0.894, ms:379.8,
     anoms:[] },
@@ -32,11 +62,19 @@ const FRAMES = [
   { name:'jrsam3_07s', ts:7,  video:'jrsam3', label:'jrsam3 07s', min:3.35, max:200.0, conf:0.871, ms:115.3,
     anoms:[] },
   { name:'jrsam3_11s', ts:11, video:'jrsam3', label:'jrsam3 11s', min:2.57, max:14.6,  conf:0.877, ms:114.1,
-    anoms:[{x:96,  y:216, w:140, h:280, dist:6.1,  area:31602, sev:'warning'}] },
+    anoms:[
+      {x:96,  y:216, w:140, h:280, dist:6.1, area:31602, sev:'critical', cls:'rail_crack',       clsConf:0.92, depth:6.1},
+      {x:280, y:360, w:48,  h:36,  dist:5.8, area:1728,  sev:'major',    cls:'fastener_missing', clsConf:0.87, depth:5.8},
+    ] },
   { name:'jrsam3_16s', ts:16, video:'jrsam3', label:'jrsam3 16s', min:2.56, max:200.0, conf:0.863, ms:111.0,
-    anoms:[{x:822, y:404, w:42,  h:92,  dist:8.6,  area:2235,  sev:'warning'}] },
+    anoms:[
+      {x:822, y:404, w:42,  h:92,  dist:8.6, area:2235, sev:'minor', cls:'ballast_fouling', clsConf:0.78, depth:8.6},
+    ] },
   { name:'jrsam3_21s', ts:21, video:'jrsam3', label:'jrsam3 21s', min:2.24, max:9.9,   conf:0.880, ms:113.1,
-    anoms:[{x:96,  y:216, w:134, h:280, dist:6.2,  area:32697, sev:'warning'}] },
+    anoms:[
+      {x:96,  y:216, w:134, h:280, dist:6.2, area:32697, sev:'major', cls:'rail_wear',     clsConf:0.85, depth:6.2},
+      {x:340, y:300, w:80,  h:60,  dist:5.4, area:4800,  sev:'major', cls:'gauge_anomaly', clsConf:0.81, depth:5.4},
+    ] },
   { name:'jr23_02s',   ts:2,  video:'jr23',   label:'jr23 02s',   min:2.50, max:88.2,  conf:0.861, ms:112.0,
     anoms:[] },
   { name:'jr23_04s',   ts:4,  video:'jr23',   label:'jr23 04s',   min:2.68, max:200.0, conf:0.873, ms:114.3,
@@ -44,11 +82,18 @@ const FRAMES = [
   { name:'jr23_07s',   ts:7,  video:'jr23',   label:'jr23 07s',   min:2.10, max:200.0, conf:0.898, ms:114.7,
     anoms:[] },
   { name:'jr23_11s',   ts:11, video:'jr23',   label:'jr23 11s',   min:1.99, max:200.0, conf:0.869, ms:115.4,
-    anoms:[{x:834, y:353, w:30,  h:143, dist:7.5,  area:3129,  sev:'warning'}] },
+    anoms:[
+      {x:834, y:353, w:30,  h:143, dist:7.5, area:3129, sev:'major', cls:'sleeper_crack', clsConf:0.83, depth:7.5},
+    ] },
   { name:'jr23_16s',   ts:16, video:'jr23',   label:'jr23 16s',   min:1.76, max:200.0, conf:0.877, ms:113.2,
-    anoms:[{x:809, y:216, w:55,  h:280, dist:10.6, area:7757,  sev:'warning'}] },
+    anoms:[
+      {x:809, y:216, w:55,  h:280, dist:10.6, area:7757, sev:'minor', cls:'rail_corrugation', clsConf:0.76, depth:10.6},
+    ] },
   { name:'jr23_21s',   ts:21, video:'jr23',   label:'jr23 21s',   min:1.82, max:200.0, conf:0.898, ms:114.4,
-    anoms:[{x:778, y:216, w:86,  h:280, dist:7.2,  area:20287, sev:'warning'}] },
+    anoms:[
+      {x:778, y:216, w:86,  h:280, dist:7.2, area:20287, sev:'critical', cls:'joint_defect',   clsConf:0.91, depth:7.2},
+      {x:650, y:280, w:60,  h:45,  dist:8.1, area:2700,  sev:'major',    cls:'rail_spalling',  clsConf:0.84, depth:8.1},
+    ] },
 ];
 
 // Assumed speed for km-post conversion: 80 km/h = 22.22 m/s
@@ -101,19 +146,25 @@ function selectVideo(vid) {
 function renderFrameStrip(vid) {
   const inner = document.getElementById('frameStripInner');
   const frames = FRAMES.filter(f => f.video === vid);
-  inner.innerHTML = frames.map(f => `
+  inner.innerHTML = frames.map(f => {
+    const hasCritical = f.anoms.some(a => a.sev === 'critical');
+    const hasMajor    = f.anoms.some(a => a.sev === 'major');
+    const topSev      = hasCritical ? 'critical' : hasMajor ? 'major' : f.anoms.length > 0 ? 'minor' : null;
+    const dotColor    = topSev ? SEV_COLORS[topSev] : null;
+    const dotLabel    = topSev ? SEV_LABELS_JA[topSev] : null;
+    return `
     <div class="frame-card ${f.name === currentFrame?.name ? 'active' : ''}"
          onclick="selectFrame('${f.name}')" id="fcard-${f.name}">
       <div class="frame-thumb">
         <img src="rail-assets/${f.name}_camera.jpg" alt="${f.ts}s" loading="lazy">
         ${f.anoms.length > 0
-          ? `<span class="frame-anom-dot">⚠ ${f.anoms.length}</span>`
+          ? `<span class="frame-anom-dot" style="background:${dotColor}">${dotLabel} ${f.anoms.length}</span>`
           : `<span class="frame-ok-dot">✓</span>`
         }
       </div>
       <div class="frame-ts">${f.ts}s</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function selectFrame(name) {
@@ -162,9 +213,17 @@ function updateMetricPanel(frame) {
     frame.max >= 200 ? '200+ m' : frame.max.toFixed(1) + ' m';
 
   const clearEl = document.getElementById('m-clearance');
-  if (frame.anoms.length > 0) {
-    clearEl.textContent = '要確認 ⚠';
+  const hasCritical = frame.anoms.some(a => a.sev === 'critical');
+  const hasMajor    = frame.anoms.some(a => a.sev === 'major');
+  if (hasCritical) {
+    clearEl.textContent = '緊急対応 ⚠';
     clearEl.className = 'metric-val danger';
+  } else if (hasMajor) {
+    clearEl.textContent = '要確認 ⚠';
+    clearEl.className = 'metric-val accent';
+  } else if (frame.anoms.length > 0) {
+    clearEl.textContent = '経過観察';
+    clearEl.className = 'metric-val accent';
   } else {
     clearEl.textContent = '問題なし ✓';
     clearEl.className = 'metric-val safe';
@@ -179,7 +238,7 @@ function updateMetricPanel(frame) {
   anomEl.className = 'metric-val ' + (frame.anoms.length > 0 ? 'danger' : 'safe');
 
   document.getElementById('m-time').textContent = frame.ms.toFixed(1) + ' ms';
-  document.getElementById('m-model').textContent = 'DA V2 Large-hf';
+  document.getElementById('m-model').textContent = 'DA V2 Large + YOLOv8';
 }
 
 function updateAlertPanel(frame) {
@@ -196,29 +255,36 @@ function updateAlertPanel(frame) {
       <div class="alert-item ok">
         <span class="alert-badge badge-ok">済</span>
         <div class="alert-text">
-          <strong>建築限界内 — 全視野正常</strong>
-          <span>処理時間: ${frame.ms.toFixed(1)}ms | RTX 4090 / CUDA</span>
+          <strong>欠陥検知 0件 — 軌道状態良好</strong>
+          <span>処理時間: ${frame.ms.toFixed(1)}ms | DA V2 Large + YOLOv8 | RTX 4090</span>
         </div>
       </div>`;
     return;
   }
 
-  list.innerHTML = frame.anoms.map((a, i) => `
-    <div class="alert-item ${a.sev}">
-      <span class="alert-badge badge-${a.sev === 'critical' ? 'critical' : 'warning'}">${a.sev === 'critical' ? '緊急' : '注意'}</span>
+  const sevBadgeClass = (sev) => sev === 'critical' ? 'badge-critical' : sev === 'major' ? 'badge-warning' : 'badge-info';
+
+  list.innerHTML = frame.anoms.map((a) => {
+    const clsJa   = DEFECT_LABELS_JA[a.cls] || a.cls;
+    const sevJa   = SEV_LABELS_JA[a.sev] || a.sev;
+    const sevCol  = SEV_COLORS[a.sev] || '#6b7280';
+    const confPct = a.clsConf ? (a.clsConf * 100).toFixed(0) + '%' : '—';
+    return `
+    <div class="alert-item ${a.sev}" style="border-left:3px solid ${sevCol}">
+      <span class="alert-badge ${sevBadgeClass(a.sev)}">${sevJa}</span>
       <div class="alert-text">
-        <strong>近接物体検知 — 前方 ${a.dist.toFixed(1)} m</strong>
+        <strong>${clsJa}を検知 — 前方 ${a.dist.toFixed(1)} m</strong>
         <span>
-          位置: (${a.x}, ${a.y}) / サイズ: ${a.w}×${a.h}px / 面積: ${a.area.toLocaleString()} px²
+          分類信頼度: ${confPct} / 位置: (${a.x},${a.y}) / サイズ: ${a.w}×${a.h}px / 深度: ${a.depth?.toFixed(1) || '—'}m
         </span>
       </div>
-    </div>
-  `).join('') + `
+    </div>`;
+  }).join('') + `
     <div class="alert-item ok">
-      <span class="alert-badge badge-ok">送信済</span>
+      <span class="alert-badge badge-ok">通知済</span>
       <div class="alert-text">
-        <strong>保線担当へアラート自動通知</strong>
-        <span>推論: ${frame.ms.toFixed(1)}ms | 信頼度: ${(frame.conf*100).toFixed(1)}%</span>
+        <strong>保線担当へアラート自動通知（${frame.anoms.length}件）</strong>
+        <span>深度推論: ${frame.ms.toFixed(1)}ms + 欠陥検知: ~12ms | 信頼度: ${(frame.conf*100).toFixed(1)}%</span>
       </div>
     </div>`;
 }
@@ -264,17 +330,19 @@ function buildEventsPanel(data) {
     html += `<div style="color:var(--safe);font-size:0.85rem;padding:0.5rem 0">✓ 異常なし — 全区間正常</div>`;
   } else {
     html += anomFrames.map(f => {
-      const sev   = f.anomalies[0]?.severity || 'warning';
-      const dist  = f.dist_m != null ? `前方 ${f.dist_m} m` : '距離不明';
-      const score = (f.anomaly_score * 100).toFixed(0);
-      const label = sev === 'critical' ? '緊急' : '注意';
-      return `<div class="event-row">
+      const sev     = f.anomalies[0]?.severity || 'warning';
+      const dist    = f.dist_m != null ? `前方 ${f.dist_m} m` : '距離不明';
+      const score   = (f.anomaly_score * 100).toFixed(0);
+      const clsJa   = DEFECT_LABELS_JA[f.anomalies[0]?.defect_class] || '近接物体';
+      const sevJa   = SEV_LABELS_JA[sev] || '注意';
+      const sevCol  = SEV_COLORS[sev] || '#f59e0b';
+      return `<div class="event-row" style="border-left:3px solid ${sevCol}">
         <span class="event-time">${f.ts.toFixed(1)}s</span>
         <div class="event-details">
-          <div class="event-title">近接物体検知 — ${dist}</div>
+          <div class="event-title">${clsJa}検知 — ${dist}</div>
           <div class="event-meta">スコア ${score}% / 信頼度 ${(f.confidence*100).toFixed(0)}% / ${f.processing_ms.toFixed(0)} ms</div>
         </div>
-        <span class="event-badge ${sev}">${label}</span>
+        <span class="event-badge ${sev}" style="background:${sevCol}">${sevJa}</span>
       </div>`;
     }).join('');
   }
@@ -291,21 +359,24 @@ function printReport() {
   const avgMs   = (data.frames.reduce((s, f) => s + f.processing_ms, 0) / data.frames.length).toFixed(1);
 
   const eventRows = anomaly.map((f, i) => {
-    const a   = f.anomalies[0] || {};
-    const sev = a.severity === 'critical' ? '緊急' : '注意';
+    const a       = f.anomalies[0] || {};
+    const sevJa   = SEV_LABELS_JA[a.severity] || a.severity || '注意';
+    const clsJa   = DEFECT_LABELS_JA[a.defect_class] || a.defect_class || '近接物体';
+    const sevCol  = SEV_COLORS[a.severity] || '#a60';
     return `<tr>
       <td>${i + 1}</td>
       <td>${f.ts.toFixed(1)} s</td>
+      <td>${clsJa}</td>
       <td>${f.dist_m != null ? f.dist_m + ' m' : '—'}</td>
       <td>${(f.anomaly_score * 100).toFixed(0)}%</td>
       <td>${(f.confidence * 100).toFixed(0)}%</td>
-      <td><span style="color:${a.severity==='critical'?'#c00':'#a60'};font-weight:700">${sev}</span></td>
+      <td><span style="color:${sevCol};font-weight:700">${sevJa}</span></td>
       <td>${a.area_px ? a.area_px.toLocaleString() + ' px²' : '—'}</td>
     </tr>`;
   }).join('');
 
   const noAnomRow = anomaly.length === 0
-    ? `<tr><td colspan="7" style="text-align:center;color:#080;font-weight:700">異常なし — 全区間正常</td></tr>` : '';
+    ? `<tr><td colspan="8" style="text-align:center;color:#080;font-weight:700">異常なし — 全区間正常</td></tr>` : '';
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html lang="ja"><head>
@@ -352,7 +423,7 @@ function printReport() {
     <div class="meta-row"><span class="meta-key">処理フレームレート</span><span class="meta-val">${data.fps_processed} fps</span></div>
   </div>
   <div>
-    <div class="meta-row"><span class="meta-key">使用モデル</span><span class="meta-val">Depth Anything V2 Large</span></div>
+    <div class="meta-row"><span class="meta-key">使用モデル</span><span class="meta-val">DA V2 Large + YOLOv8 (欠陥検知)</span></div>
     <div class="meta-row"><span class="meta-key">推論デバイス</span><span class="meta-val">RTX 4090 (CUDA)</span></div>
     <div class="meta-row"><span class="meta-key">平均推論時間</span><span class="meta-val">${avgMs} ms/フレーム</span></div>
     <div class="meta-row"><span class="meta-key">平均信頼度</span><span class="meta-val">${avgConf}%</span></div>
@@ -366,7 +437,7 @@ function printReport() {
 <h2>異常検知イベント一覧</h2>
 <table>
   <thead>
-    <tr><th>#</th><th>タイムスタンプ</th><th>推定距離</th><th>異常スコア</th><th>信頼度</th><th>重症度</th><th>ブロブ面積</th></tr>
+    <tr><th>#</th><th>タイムスタンプ</th><th>欠陥種別</th><th>推定距離</th><th>異常スコア</th><th>信頼度</th><th>重症度</th><th>ブロブ面積</th></tr>
   </thead>
   <tbody>${eventRows}${noAnomRow}</tbody>
 </table>
@@ -988,17 +1059,19 @@ function renderKmMap(vid) {
     const km   = (f.ts * ASSUMED_SPEED_MS) / 1000;
     const x    = kmToX(km);
     const hasA = f.anoms.length > 0;
-    const col  = hasA ? (f.anoms[0].sev === 'critical' ? '#ef4444' : '#f59e0b') : '#22c55e';
+    const topSev = hasA ? (f.anoms.some(a=>a.sev==='critical') ? 'critical' : f.anoms.some(a=>a.sev==='major') ? 'major' : 'minor') : null;
+    const col  = topSev ? SEV_COLORS[topSev] : '#22c55e';
     const sym  = hasA ? '⚠' : '✓';
     const r    = hasA ? 9 : 6;
     const cursor = 'cursor:pointer';
+    const defectList = hasA ? f.anoms.map(a => DEFECT_LABELS_JA[a.cls] || a.cls).join('・') : '正常';
     markers += `
       <g onclick="selectFrame('${f.name}');document.getElementById('demo').scrollIntoView({behavior:'smooth',block:'start'})"
          style="${cursor}" class="km-marker" data-frame="${f.name}">
         <line x1="${x}" y1="${TRACK_Y}" x2="${x}" y2="${TRACK_Y + (hasA ? 24 : 16)}" stroke="${col}" stroke-width="1.5" stroke-dasharray="${hasA ? '' : '2,2'}"/>
         <circle cx="${x}" cy="${TRACK_Y + (hasA ? 24 : 16) + r}" r="${r}" fill="${col}" fill-opacity="0.2" stroke="${col}" stroke-width="1.5"/>
         <text x="${x}" y="${TRACK_Y + (hasA ? 24 : 16) + r + 3.5}" text-anchor="middle" font-size="${hasA ? 7 : 6}" fill="${col}" font-weight="700">${sym}</text>
-        <title>${f.label}  ${hasA ? '異常 ' + f.anoms.length + '件' : '正常'}  @${(km*1000).toFixed(0)}m</title>
+        <title>${f.label}  ${defectList} (${hasA ? f.anoms.length + '件' : '正常'})  @${(km*1000).toFixed(0)}m</title>
       </g>`;
   });
 
@@ -1319,11 +1392,11 @@ function initDashboard() {
   new Chart(document.getElementById('typeChart'),{
     type:'doughnut',
     data:{
-      labels:['近接物体','建築限界支障','軌道変形','バラスト異状','その他'],
-      datasets:[{data:[42,24,18,10,6],
-        backgroundColor:['#f59e0b','#ef4444','#fb923c','#6366f1','#8888a0'], borderWidth:0}]},
+      labels:['レールき裂','レール摩耗','レール波状摩耗','締結装置欠損','まくらぎき裂','バラスト異状','継目異状','軌間異常','その他'],
+      datasets:[{data:[28,18,12,15,8,10,5,3,1],
+        backgroundColor:['#ef4444','#f59e0b','#fb923c','#dc2626','#8b5cf6','#6366f1','#f97316','#3b82f6','#8888a0'], borderWidth:0}]},
     options:{responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:11},padding:10,boxWidth:12}}},
+      plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:10},padding:8,boxWidth:10}}},
       cutout:'65%'}
   });
 }

@@ -235,11 +235,15 @@ section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
 }
 @keyframes fadeSlide { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 .alert-item.critical { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); }
+.alert-item.major    { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
 .alert-item.warning  { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
+.alert-item.minor    { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); }
+.alert-item.info     { background: rgba(107,114,128,0.06); border-color: rgba(107,114,128,0.2); }
 .alert-item.ok       { background: rgba(34,197,94,0.08);  border-color: rgba(34,197,94,0.25);  }
 .alert-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.06em; white-space: nowrap; margin-top: 2px; }
 .badge-critical { background: var(--danger); color: #fff; }
 .badge-warning  { background: var(--warning); color: #000; }
+.badge-info     { background: #3b82f6;        color: #fff; }
 .badge-ok       { background: var(--safe);    color: #000; }
 .alert-text { font-size: 0.83rem; line-height: 1.5; }
 .alert-text strong { display: block; color: var(--text); font-weight: 600; }

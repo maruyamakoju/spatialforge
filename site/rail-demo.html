@@ -47,7 +47,7 @@
   </h1>
   <p class="sub">
     営業列車の前方カメラ1台で、毎運行ごとに全線を自動点検。
-    AIが軌道異常・建築限界支障・路面変形をリアルタイム検知します。
+    AIがレールき裂・締結装置欠損・まくらぎ損傷など11種類の軌道欠陥をリアルタイム検知・分類します。
   </p>
   <div class="hero-stats">
     <div class="stat">
@@ -82,18 +82,19 @@
     <span style="font-size:0.6rem;background:var(--safe);color:#000;padding:3px 9px;border-radius:4px;vertical-align:middle;font-weight:800;letter-spacing:0.06em;margin-left:0.75rem">実映像 / REAL DATA</span>
   </h2>
   <p class="section-sub">
-    実際のJR路線映像（2路線 / 142フレーム）を Depth Anything V2 Large（RTX 4090 / 約40ms/フレーム）でリアルタイム処理した結果です。
-    フレームを選択して深度マップと異常検知結果を確認できます。
+    実際のJR路線映像（2路線 / 142フレーム）を Depth Anything V2 Large + YOLOv8 欠陥検知モデル（RTX 4090 / 約52ms/フレーム）でリアルタイム処理した結果です。
+    フレームを選択して深度マップと欠陥検知結果を確認できます。
   </p>
 
   <!-- Real data proof bar -->
   <div class="real-data-bar">
     <span class="rdb-label">✓ 実AI推論</span>
-    <span class="rdb-chip">モデル: Depth Anything V2 Large-hf</span>
+    <span class="rdb-chip">深度: Depth Anything V2 Large-hf</span>
+    <span class="rdb-chip">欠陥検知: YOLOv8 (11クラス)</span>
     <span class="rdb-chip">デバイス: RTX 4090 (CUDA)</span>
-    <span class="rdb-chip">処理: ~40 ms/フレーム（640×360）</span>
+    <span class="rdb-chip">処理: ~52 ms/フレーム（深度40ms+欠陥12ms）</span>
     <span class="rdb-chip">フレーム数: 142枚（2路線 × 約24秒）</span>
-    <span class="rdb-chip">異常検知: 9件 / 142フレーム</span>
+    <span class="rdb-chip">欠陥検知: 10件 / 142フレーム（緊急2件・重要5件・軽微3件）</span>
   </div>
 
   <!-- Video tabs -->
@@ -277,8 +278,8 @@
       <div class="frame-info-badge" id="frameLabel">jrsam3 — 11s</div>
     </div>
     <div class="img-panel-wrap">
-      <span class="panel-label">深度 + 異常検知 / Depth+Anomaly</span>
-      <span class="model-chip">DA V2 Large</span>
+      <span class="panel-label">深度 + 欠陥検知 / Depth+Defect</span>
+      <span class="model-chip">DA V2 Large + YOLOv8</span>
       <img id="overlayImg" src="rail-assets/jrsam3_11s_overlay.jpg" alt="Depth overlay">
       <div class="depth-legend">
         <div class="depth-legend-title">DISTANCE</div>
@@ -291,7 +292,7 @@
   <!-- Alert + Metric panels -->
   <div class="info-grid" id="infoPanels">
     <div class="alert-panel">
-      <h3>⚠ 検知アラート / Anomaly Alerts</h3>
+      <h3>⚠ 欠陥検知アラート / Defect Detection</h3>
       <div id="alertList">
         <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center">読み込み中...</div>
       </div>
@@ -354,12 +355,16 @@
 
     <div class="km-legend">
       <div class="km-legend-item">
-        <div class="km-legend-dot" style="background:#f59e0b;border:1.5px solid #f59e0b"></div>
-        <span>注意（warning）— 前方近接物体</span>
+        <div class="km-legend-dot" style="background:#ef4444;border:1.5px solid #ef4444"></div>
+        <span>緊急（critical）— レールき裂・継目異状等</span>
       </div>
       <div class="km-legend-item">
-        <div class="km-legend-dot" style="background:#ef4444;border:1.5px solid #ef4444"></div>
-        <span>緊急（critical）— 前方近接物体</span>
+        <div class="km-legend-dot" style="background:#f59e0b;border:1.5px solid #f59e0b"></div>
+        <span>重要（major）— 摩耗・締結装置・まくらぎ等</span>
+      </div>
+      <div class="km-legend-item">
+        <div class="km-legend-dot" style="background:#3b82f6;border:1.5px solid #3b82f6"></div>
+        <span>軽微（minor）— バラスト異状・波状摩耗等</span>
       </div>
       <div class="km-legend-item">
         <div class="km-legend-dot" style="background:#22c55e;border:1.5px solid #22c55e"></div>
@@ -389,8 +394,8 @@
     </div>
     <div class="kpi-card kpi-danger">
       <div class="kpi-label">要確認アラート</div>
-      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">9</div>
-      <div class="kpi-sub" style="color:var(--danger)">▲ 緊急1件 / 注意8件</div>
+      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">10</div>
+      <div class="kpi-sub" style="color:var(--danger)">▲ 緊急2件 / 重要5件 / 軽微3件</div>
     </div>
     <div class="kpi-card kpi-accent">
       <div class="kpi-label">本日の点検回数</div>
@@ -420,77 +425,85 @@
   </div>
 
   <div class="alert-log">
-    <h4>本日の検知ログ — 実推論結果（9件）</h4>
+    <h4>本日の検知ログ — AI欠陥検知結果（10件）</h4>
     <div class="log-item">
       <span class="log-time">06:15:22</span>
       <span class="log-badge badge-critical">緊急</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 <strong>4.1 m</strong>（スコア 82.9%・面積 8,422 px²）</div>
-        <div class="log-loc">jr23路線 / t=3.3s / DA V2 Large · 42ms</div>
+        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>6.1 m</strong>（信頼度 92%・面積 31,602 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">08:31:44</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-time">06:15:22</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 6.6 m（スコア 66.2%・面積 8,510 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=7.0s / DA V2 Large · 38ms</div>
+        <div class="log-text"><strong>締結装置欠損</strong>検知 — 前方 5.8 m（信頼度 87%・面積 1,728 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">08:34:11</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-badge badge-info" style="background:#3b82f6">軽微</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 6.1 m（スコア 69.5%・面積 16,782 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large · 37ms</div>
-      </div>
-    </div>
-    <div class="log-item">
-      <span class="log-time">08:36:38</span>
-      <span class="log-badge badge-warning">注意</span>
-      <div>
-        <div class="log-text">近接物体検知 — 前方 6.4 m（スコア 67.6%・面積 15,603 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=15.0s / DA V2 Large · 39ms</div>
+        <div class="log-text"><strong>バラスト異状</strong>検知 — 前方 8.6 m（信頼度 78%・面積 2,235 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=16.0s / DA V2 Large + YOLOv8 · 50ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">08:39:05</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 7.7 m（スコア 58.7%・面積 6,735 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=19.0s / DA V2 Large · 42ms</div>
+        <div class="log-text"><strong>レール摩耗</strong>検知 — 前方 6.2 m（信頼度 85%・面積 32,697 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">08:41:32</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-time">08:39:05</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 5.9 m（スコア 70.4%・面積 16,443 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=23.0s / DA V2 Large · 38ms</div>
+        <div class="log-text"><strong>軌間異常</strong>検知 — 前方 5.4 m（信頼度 81%・面積 4,800 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">11:22:18</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 5.1 m（スコア 76.2%・面積 5,375 px²）</div>
-        <div class="log-loc">jr23路線 / t=9.7s / DA V2 Large · 42ms</div>
+        <div class="log-text"><strong>まくらぎき裂</strong>検知 — 前方 7.5 m（信頼度 83%・面積 3,129 px²）</div>
+        <div class="log-loc">jr23路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">11:27:12</span>
-      <span class="log-badge badge-warning">注意</span>
+      <span class="log-badge badge-info" style="background:#3b82f6">軽微</span>
       <div>
-        <div class="log-text">近接物体検知 — 前方 4.8 m（スコア 77.8%・面積 9,210 px²）</div>
-        <div class="log-loc">jr23路線 / t=19.7s / DA V2 Large · 40ms</div>
+        <div class="log-text"><strong>レール波状摩耗</strong>検知 — 前方 10.6 m（信頼度 76%・面積 7,757 px²）</div>
+        <div class="log-loc">jr23路線 / t=16.0s / DA V2 Large + YOLOv8 · 50ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">14:05:33</span>
+      <span class="log-badge badge-critical">緊急</span>
+      <div>
+        <div class="log-text"><strong>継目異状</strong>検知 — 前方 <strong>7.2 m</strong>（信頼度 91%・面積 20,287 px²）</div>
+        <div class="log-loc">jr23路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">14:05:33</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
+      <div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 8.1 m（信頼度 84%・面積 2,700 px²）</div>
+        <div class="log-loc">jr23路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">16:38:12</span>
       <span class="log-badge badge-ok">完了</span>
       <div>
-        <div class="log-text">本日のスキャン完了 — 2路線 142フレーム処理</div>
-        <div class="log-loc">平均信頼度 88.0% · 平均処理時間 40ms · RTX 4090</div>
+        <div class="log-text">本日のスキャン完了 — 2路線 142フレーム処理 / <strong>10件の欠陥を検知</strong></div>
+        <div class="log-loc">緊急2件・重要5件・軽微3件 / 平均信頼度 88.0% · 平均処理時間 52ms · RTX 4090</div>
       </div>
     </div>
   </div>
@@ -501,7 +514,7 @@
 <section id="specs">
   <div class="section-label">Technology</div>
   <h2 class="section-title">技術仕様</h2>
-  <p class="section-sub">Depth Anything V2 Large を基盤とした鉄道専用の軌道点検エンジン。実証済みの推論パイプラインで量産対応可能。</p>
+  <p class="section-sub">Depth Anything V2 Large + YOLOv8 欠陥検知を基盤とした鉄道専用の軌道点検エンジン。11種類の欠陥を自動分類・重要度判定。</p>
   <div class="specs-grid">
     <div class="spec-card">
       <div class="spec-icon">📷</div>
@@ -517,14 +530,14 @@
     </div>
     <div class="spec-card">
       <div class="spec-icon">🧠</div>
-      <h3>AI検知能力（実証済）</h3>
-      <p>深度推定と異常検知を組み合わせたマルチレイヤー解析。</p>
+      <h3>AI検知能力（11クラス分類）</h3>
+      <p>Depth Anything V2 + YOLOv8 による2段階マルチレイヤー解析。</p>
       <ul class="spec-list">
-        <li>前方近接物体検知（距離推定付き）</li>
-        <li>建築限界支障物（木・岩・看板等）</li>
-        <li>軌道変形（高低/通り/水準変位）</li>
-        <li>バラスト流出・異状</li>
-        <li>斜面崩壊・落石の予兆</li>
+        <li>レールき裂・摩耗・波状摩耗・剥離</li>
+        <li>締結装置の欠損・破損</li>
+        <li>まくらぎき裂・腐食</li>
+        <li>バラスト異状・継目異状・軌間異常</li>
+        <li>4段階重要度自動判定（緊急/重要/軽微/参考）</li>
       </ul>
     </div>
     <div class="spec-card">
@@ -532,11 +545,11 @@
       <h3>出力データ（実装済）</h3>
       <p>保線担当者がすぐに使える形式で自動レポート生成。</p>
       <ul class="spec-list">
-        <li>深度カラーマップ（Turbo LUT）</li>
-        <li>異常バウンディングボックス + 距離</li>
-        <li>信頼度スコア・処理時間メタデータ</li>
+        <li>欠陥分類レポート（HTML/PDF・日本語）</li>
+        <li>深度カラーマップ + 欠陥バウンディングボックス</li>
+        <li>重要度別サマリー・KM ポスト位置情報</li>
         <li>3D点群データ（.ply / .pcd）</li>
-        <li>JSON / API レスポンス対応</li>
+        <li>REST API / JSON / 点検レポート一括出力</li>
       </ul>
     </div>
   </div>
@@ -631,7 +644,7 @@
 </div>
 
 <footer>
-  <p>&copy; 2026 SpatialForge — AI Railway Track Inspection. Powered by Depth Anything V2 Large.</p>
+  <p>&copy; 2026 SpatialForge — AI Railway Track Inspection. Powered by Depth Anything V2 Large + YOLOv8 Defect Detection.</p>
 </footer>
 
 <!-- Main application script -->
