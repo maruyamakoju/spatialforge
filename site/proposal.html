@@ -22,6 +22,7 @@
       --radius: 12px;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
       background: var(--bg);
@@ -35,7 +36,7 @@
       position: fixed; top:0; width:100%; padding:0 2rem; height:64px;
       display:flex; justify-content:space-between; align-items:center;
       background:rgba(10,10,15,0.92); backdrop-filter:blur(16px);
-      border-bottom:1px solid var(--border); z-index:100;
+      border-bottom:1px solid var(--border); z-index:200;
     }
     .logo { font-size:1.15rem; font-weight:700; letter-spacing:-0.02em; color:var(--text); text-decoration:none; display:flex; align-items:center; gap:0.5rem; }
     .logo-badge { background:var(--accent); color:#000; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px; letter-spacing:0.05em; }
@@ -45,8 +46,63 @@
     .nav-cta { background:var(--accent) !important; color:#000 !important; font-weight:700 !important; border-radius:8px; }
     .nav-print { background:var(--surface-2); border:1px solid var(--border); color:var(--text) !important; }
 
-    /* ── Layout ──────────────────────────────────── */
-    .wrapper { max-width:960px; margin:0 auto; padding:100px 2rem 80px; }
+    /* ── Page Layout with TOC ─────────────────────── */
+    .page-layout {
+      display: flex;
+      max-width: 1280px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* ── Sticky TOC Sidebar ───────────────────────── */
+    .toc-sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 80px;
+      height: calc(100vh - 80px);
+      overflow-y: auto;
+      padding: 32px 0 32px 24px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .toc-sidebar::-webkit-scrollbar { width: 4px; }
+    .toc-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .toc-title {
+      font-size: 0.68rem; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .toc-list { list-style: none; }
+    .toc-list li { margin-bottom: 2px; }
+    .toc-list a {
+      display: block; font-size: 0.8rem; color: var(--muted);
+      text-decoration: none; padding: 5px 8px;
+      border-left: 2px solid transparent;
+      border-radius: 0 6px 6px 0;
+      transition: all 0.15s;
+      line-height: 1.4;
+    }
+    .toc-list a:hover { color: var(--text); background: rgba(255,255,255,0.04); border-left-color: var(--border); }
+    .toc-list a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-glow); }
+
+    /* ── Main Content ─────────────────────────────── */
+    .wrapper {
+      flex: 1;
+      min-width: 0;
+      padding: 100px 2rem 80px;
+    }
+
+    /* ── Section Reveal Animations ────────────────── */
+    .section-reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .section-reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* ── Cover ───────────────────────────────────── */
     .cover {
@@ -85,7 +141,7 @@
 
     /* ── Section ─────────────────────────────────── */
     .section {
-      margin-bottom: 72px;
+      margin-bottom: 80px;
     }
     .section-header {
       display: flex; align-items: center; gap: 14px;
@@ -169,7 +225,7 @@
     .td-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 
     /* ── Cost comparison ─────────────────────────── */
-    .cost-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    .cost-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; }
     .cost-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 24px;
@@ -178,6 +234,10 @@
       border-color: rgba(245,158,11,0.45);
       background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, var(--surface) 60%);
     }
+    .cost-card.your-estimate {
+      border-color: rgba(99,102,241,0.45);
+      background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, var(--surface) 60%);
+    }
     .cost-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
     .cost-card h3 .tag {
       font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 5px;
@@ -185,11 +245,13 @@
     }
     .tag-old { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
     .tag-new { background: rgba(245,158,11,0.15); color: var(--accent); border: 1px solid rgba(245,158,11,0.35); }
+    .tag-you { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.35); }
     .cost-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
     .cost-line .label { font-size: 0.83rem; color: var(--muted); }
     .cost-line .value { font-size: 0.9rem; font-weight: 700; }
     .cost-line .value.accent { color: var(--accent); }
     .cost-line .value.danger { color: var(--danger); }
+    .cost-line .value.indigo { color: #818cf8; }
     .cost-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
     .cost-total { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
     .saving-banner {
@@ -200,6 +262,178 @@
     .saving-banner .save-big { font-size: 2rem; font-weight: 800; color: var(--accent); }
     .saving-banner p { font-size: 0.85rem; color: var(--muted); }
     .saving-banner p strong { color: var(--text); }
+
+    /* ── ROI Calculator ───────────────────────────── */
+    .roi-section {
+      background: var(--surface);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 16px;
+      padding: 36px;
+      margin-bottom: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .roi-section::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--indigo));
+    }
+    .roi-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 32px;
+    }
+    .roi-header-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--accent-glow); border: 1px solid rgba(245,158,11,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .roi-header-text h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+    .roi-header-text p { font-size: 0.83rem; color: var(--muted); margin-top: 2px; }
+
+    .roi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    .roi-inputs { display: flex; flex-direction: column; gap: 24px; }
+    .roi-input-group { display: flex; flex-direction: column; gap: 8px; }
+    .roi-label {
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .roi-label-text { font-size: 0.85rem; font-weight: 600; }
+    .roi-label-val {
+      font-size: 1rem; font-weight: 800; color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      min-width: 80px; text-align: right;
+    }
+    .roi-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px;
+      background: var(--surface-2); border-radius: 3px;
+      outline: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .roi-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+      transition: box-shadow 0.15s;
+    }
+    .roi-slider::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 6px rgba(245,158,11,0.25);
+    }
+    .roi-slider::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); cursor: pointer; border: none;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+    }
+    .roi-hint { font-size: 0.75rem; color: var(--muted); }
+
+    .roi-outputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .roi-output-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .roi-output-card:hover { border-color: rgba(245,158,11,0.3); }
+    .roi-output-icon { font-size: 1.4rem; margin-bottom: 6px; }
+    .roi-output-val {
+      font-size: 1.6rem; font-weight: 800; color: var(--accent);
+      letter-spacing: -0.03em; line-height: 1; margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.2s;
+    }
+    .roi-output-val.updating { color: var(--accent-bright); }
+    .roi-output-label { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+    .roi-output-card.highlight-card {
+      border-color: rgba(245,158,11,0.4);
+      background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, var(--surface-2) 100%);
+      grid-column: span 2;
+    }
+    .roi-output-card.highlight-card .roi-output-val { font-size: 2.2rem; }
+
+    /* ── Case Study ───────────────────────────────── */
+    .case-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      margin-bottom: 80px;
+    }
+    .case-header { margin-bottom: 28px; }
+    .case-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+      color: #818cf8; font-size: 0.72rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .case-header h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .case-header p { font-size: 0.85rem; color: var(--muted); }
+
+    .case-timeline {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .case-month {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+    }
+    .case-month::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .case-month.phase-setup::before { background: var(--indigo); }
+    .case-month.phase-collect::before { background: var(--accent); }
+    .case-month.phase-analyze::before { background: var(--safe); }
+    .case-month-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .phase-setup .case-month-label { color: #818cf8; }
+    .phase-collect .case-month-label { color: var(--accent); }
+    .phase-analyze .case-month-label { color: #4ade80; }
+    .case-month h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; line-height: 1.4; }
+    .case-month p { font-size: 0.77rem; color: var(--muted); line-height: 1.5; }
+
+    /* CSS Bar Chart */
+    .bar-chart {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .bar-chart-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+    .bar-chart-grid { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; }
+    .bar-row-label { font-size: 0.75rem; color: var(--muted); width: 72px; text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 26px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+    .bar-fill {
+      height: 100%; border-radius: 4px;
+      display: flex; align-items: center; padding-left: 8px;
+      font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .bar-fill.bar-setup { background: rgba(99,102,241,0.4); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.5); }
+    .bar-fill.bar-collect { background: rgba(245,158,11,0.35); color: var(--accent); border: 1px solid rgba(245,158,11,0.5); }
+    .bar-fill.bar-saving { background: linear-gradient(90deg, rgba(34,197,94,0.3), rgba(34,197,94,0.6)); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+    .bar-row-val { font-size: 0.78rem; font-weight: 700; width: 80px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
     /* ── Pilot plan ──────────────────────────────── */
     .pilot-timeline { position: relative; padding-left: 28px; }
@@ -238,22 +472,59 @@
     .cta-box {
       background: linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(99,102,241,0.08) 100%);
       border: 1px solid rgba(245,158,11,0.3); border-radius: 16px;
-      padding: 40px; text-align: center; margin-top: 60px;
+      padding: 48px 40px; text-align: center; margin-top: 60px;
+      position: relative; overflow: hidden;
     }
-    .cta-box h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; }
-    .cta-box p { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; }
+    .cta-box::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 100%, rgba(245,158,11,0.04), transparent);
+      pointer-events: none;
+    }
+    .cta-box h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em; }
+    .cta-box p { color: var(--muted); margin-bottom: 28px; font-size: 0.95rem; line-height: 1.7; }
+    .cta-buttons { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
     .cta-btn {
-      display: inline-block; background: var(--accent); color: #000;
-      font-weight: 700; font-size: 0.95rem; padding: 12px 28px;
-      border-radius: 10px; text-decoration: none; margin: 0 8px;
-      transition: background 0.15s;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #000;
+      font-weight: 700; font-size: 0.95rem; padding: 13px 28px;
+      border-radius: 10px; text-decoration: none; cursor: pointer; border: none;
+      transition: background 0.15s, transform 0.1s;
     }
-    .cta-btn:hover { background: var(--accent-bright); }
+    .cta-btn:hover { background: var(--accent-bright); transform: translateY(-1px); }
+    .cta-btn:active { transform: translateY(0); }
     .cta-btn.outline {
       background: transparent; color: var(--text);
       border: 1px solid var(--border);
     }
-    .cta-btn.outline:hover { background: rgba(255,255,255,0.05); }
+    .cta-btn.outline:hover { background: rgba(255,255,255,0.05); transform: translateY(-1px); }
+    .cta-contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .cta-contact-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      text-align: center;
+    }
+    .cta-contact-item .contact-icon { font-size: 1.4rem; margin-bottom: 6px; }
+    .cta-contact-item .contact-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; }
+    .cta-contact-item .contact-val { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .qr-placeholder {
+      width: 64px; height: 64px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; color: var(--muted);
+      margin: 0 auto 4px;
+      text-align: center; line-height: 1.3;
+      padding: 4px;
+    }
 
     /* ── Footer ──────────────────────────────────── */
     footer {
@@ -261,32 +532,73 @@
       text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 80px;
     }
 
+    /* ── Print Cover ─────────────────────────────── */
+    .print-cover {
+      display: none;
+      text-align: center;
+      padding: 60px 40px;
+      border-bottom: 3px solid #d97706;
+      margin-bottom: 40px;
+    }
+    .print-cover h1 { font-size: 2.2rem; font-weight: 800; color: #111; margin-bottom: 8px; }
+    .print-cover p { color: #555; font-size: 1rem; }
+    .print-cover .print-logo { font-size: 1.1rem; font-weight: 700; color: #d97706; margin-bottom: 16px; }
+
     /* ── Print styles ────────────────────────────── */
     @media print {
-      nav, .nav-print, .cta-btn { display: none !important; }
+      nav, .nav-print, .toc-sidebar, .roi-slider,
+      .cta-btn, .bar-fill { display: none !important; }
       body { background: #fff; color: #111; }
       :root {
         --bg: #fff; --surface: #f9f9f9; --surface-2: #f0f0f0;
         --border: #ddd; --text: #111; --muted: #666;
         --accent: #d97706; --danger: #dc2626; --safe: #16a34a;
+        --indigo: #4f46e5;
       }
+      .page-layout { display: block; }
       .wrapper { padding-top: 20px; }
       .cover { padding: 20px 0 30px; }
       .section { page-break-inside: avoid; }
-      .cost-grid { grid-template-columns: 1fr 1fr; }
+      .cost-grid { grid-template-columns: 1fr 1fr 1fr; }
       .solution-flow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .flow-arrow { display: none; }
+      .roi-grid { grid-template-columns: 1fr; }
+      .roi-inputs { display: none; }
+      .roi-outputs { grid-template-columns: 1fr 1fr; }
+      .case-timeline { grid-template-columns: 1fr 1fr 1fr; }
+      .cta-contact-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .print-cover { display: block; }
+      .section-reveal { opacity: 1; transform: none; }
+    }
+
+    @media (max-width: 1100px) {
+      .toc-sidebar { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .roi-grid { grid-template-columns: 1fr; }
+      .cost-grid { grid-template-columns: 1fr; }
+      .case-timeline { grid-template-columns: 1fr; }
+      .cta-contact-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 640px) {
       .solution-flow { grid-template-columns: 1fr; }
       .flow-arrow { display: none; }
-      .cost-grid { grid-template-columns: 1fr; }
       .kpi-bar { grid-template-columns: 1fr 1fr; }
+      .roi-outputs { grid-template-columns: 1fr 1fr; }
+      .roi-output-card.highlight-card { grid-column: span 2; }
     }
   </style>
 </head>
 <body>
+
+<!-- Print-only cover page -->
+<div class="print-cover">
+  <div class="print-logo">SpatialForge</div>
+  <h1>RailScan AI 導入提案書</h1>
+  <p>AI軌道点検システム — 商談用機密資料<br>2026年2月 | 資料番号: SF-RAIL-2026-001</p>
+</div>
 
 <!-- Nav -->
 <nav>
@@ -298,423 +610,866 @@
     <a href="rail-demo.html">デモ</a>
     <a href="docs.html">API</a>
     <a href="pricing.html">料金</a>
-    <a class="nav-print" href="#" onclick="window.print();return false;">🖨 印刷</a>
+    <a class="nav-print" href="#" onclick="window.print();return false;">印刷</a>
     <a class="nav-cta" href="rail-demo.html">デモを試す →</a>
   </div>
 </nav>
 
-<div class="wrapper">
+<div class="page-layout">
 
-  <!-- Cover -->
-  <div class="cover">
-    <div class="cover-tag">機密 — 商談用資料</div>
-    <h1>
-      <span class="accent">RailScan AI</span> 導入提案書<br>
-      AI軌道点検システム
-    </h1>
-    <p class="subtitle">
-      営業列車に前方カメラを設置するだけで、毎運行ごとに線路全線を自動点検。<br>
-      専用検測車不要。コスト 1/30・精度 95%以上。
-    </p>
-    <div class="cover-meta">
-      <span><strong>提案先:</strong> 鉄道事業者様</span>
-      <span><strong>提案日:</strong> 2026年2月</span>
-      <span><strong>提案者:</strong> SpatialForge, Inc.</span>
-      <span><strong>資料番号:</strong> SF-RAIL-2026-001</span>
-    </div>
-  </div>
+  <!-- Sticky TOC Sidebar -->
+  <aside class="toc-sidebar" id="toc">
+    <div class="toc-title">目次</div>
+    <ul class="toc-list">
+      <li><a href="#cover" data-section="cover">表紙</a></li>
+      <li><a href="#sec-1" data-section="sec-1">1. 現状の課題</a></li>
+      <li><a href="#sec-2" data-section="sec-2">2. RailScan AI ソリューション</a></li>
+      <li><a href="#sec-3" data-section="sec-3">3. 実証データ</a></li>
+      <li><a href="#sec-4" data-section="sec-4">4. コスト比較・ROI</a></li>
+      <li><a href="#sec-roi" data-section="sec-roi">　ROI 試算ツール</a></li>
+      <li><a href="#sec-5" data-section="sec-5">5. 導入事例シミュレーション</a></li>
+      <li><a href="#sec-6" data-section="sec-6">6. パイロット提案</a></li>
+      <li><a href="#cta" data-section="cta">お問い合わせ</a></li>
+    </ul>
+  </aside>
 
-  <!-- KPI Summary Bar -->
-  <div class="kpi-bar">
-    <div class="kpi-cell">
-      <div class="kpi-val">1/30</div>
-      <div class="kpi-label">検測車比コスト</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-val">40ms</div>
-      <div class="kpi-label">フレーム処理時間</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-val">95%</div>
-      <div class="kpi-label">誤検知削減率</div>
-    </div>
-    <div class="kpi-cell">
-      <div class="kpi-val">毎日</div>
-      <div class="kpi-label">全線点検頻度</div>
-    </div>
-  </div>
+  <!-- Main Content -->
+  <div class="wrapper">
 
-  <!-- Section 1: 課題 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">1</div>
-      <div class="section-title">
-        現状の課題
-        <span class="ja">Current Challenges in Railway Track Inspection</span>
+    <!-- Cover -->
+    <div class="cover section-reveal" id="cover">
+      <div class="cover-tag">機密 — 商談用資料</div>
+      <h1>
+        <span class="accent">RailScan AI</span> 導入提案書<br>
+        AI軌道点検システム
+      </h1>
+      <p class="subtitle">
+        営業列車に前方カメラを設置するだけで、毎運行ごとに線路全線を自動点検。<br>
+        専用検測車不要。コスト 1/30・精度 95%以上。
+      </p>
+      <div class="cover-meta">
+        <span><strong>提案先:</strong> 鉄道事業者様</span>
+        <span><strong>提案日:</strong> 2026年2月</span>
+        <span><strong>提案者:</strong> SpatialForge, Inc.</span>
+        <span><strong>資料番号:</strong> SF-RAIL-2026-001</span>
       </div>
     </div>
 
-    <div class="problem-list">
-      <div class="problem-item">
-        <div class="problem-icon">💰</div>
-        <div>
-          <h4>高コスト・低頻度の検測車依存</h4>
-          <p>専用検測車は1両あたり数十億円の設備費。1回の走行で検測できるのは限られた区間のみ。月1〜2回程度の点検では突発的な異常を見逃すリスクが高い。年間維持費・運行費を含めると路線あたり数千万〜数億円規模のコスト。</p>
+    <!-- KPI Summary Bar -->
+    <div class="kpi-bar section-reveal">
+      <div class="kpi-cell">
+        <div class="kpi-val">1/30</div>
+        <div class="kpi-label">検測車比コスト</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-val">40ms</div>
+        <div class="kpi-label">フレーム処理時間</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-val">95%</div>
+        <div class="kpi-label">誤検知削減率</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-val">毎日</div>
+        <div class="kpi-label">全線点検頻度</div>
+      </div>
+    </div>
+
+    <!-- Section 1: 課題 -->
+    <div class="section section-reveal" id="sec-1">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">
+          現状の課題
+          <span class="ja">Current Challenges in Railway Track Inspection</span>
         </div>
       </div>
-      <div class="problem-item">
-        <div class="problem-icon">🔍</div>
-        <div>
-          <h4>目視点検の限界と人材不足</h4>
-          <p>深夜・早朝の徒歩巡回は労働集約的で危険。熟練技術者の高齢化・不足が全国的に深刻化。視認性の低い箇所（橋梁下・トンネル内）では特に見落としリスクが高い。</p>
+
+      <div class="problem-list">
+        <div class="problem-item">
+          <div class="problem-icon">💰</div>
+          <div>
+            <h4>高コスト・低頻度の検測車依存</h4>
+            <p>専用検測車は1両あたり数十億円の設備費。1回の走行で検測できるのは限られた区間のみ。月1〜2回程度の点検では突発的な異常を見逃すリスクが高い。年間維持費・運行費を含めると路線あたり数千万〜数億円規模のコスト。</p>
+          </div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-icon">🔍</div>
+          <div>
+            <h4>目視点検の限界と人材不足</h4>
+            <p>深夜・早朝の徒歩巡回は労働集約的で危険。熟練技術者の高齢化・不足が全国的に深刻化。視認性の低い箇所（橋梁下・トンネル内）では特に見落としリスクが高い。</p>
+          </div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-icon">⚡</div>
+          <div>
+            <h4>異常検知から対処までのタイムラグ</h4>
+            <p>月次点検では最大30日間、異常が放置される可能性がある。軌道上の障害物（落石・倒木・不法投棄物）はリアルタイム検知が困難。インシデント発生後の原因特定に時間とコストがかかる。</p>
+          </div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-icon">📊</div>
+          <div>
+            <h4>データ活用の遅れ</h4>
+            <p>既存の検測データは専用フォーマットで蓄積され、横断的な分析が困難。劣化傾向の予測や優先補修計画への活用が進んでいない。</p>
+          </div>
         </div>
       </div>
-      <div class="problem-item">
-        <div class="problem-icon">⚡</div>
-        <div>
-          <h4>異常検知から対処までのタイムラグ</h4>
-          <p>月次点検では最大30日間、異常が放置される可能性がある。軌道上の障害物（落石・倒木・不法投棄物）はリアルタイム検知が困難。インシデント発生後の原因特定に時間とコストがかかる。</p>
+    </div>
+
+    <!-- Section 2: 解決策 -->
+    <div class="section section-reveal" id="sec-2">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">
+          RailScan AI ソリューション
+          <span class="ja">Solution — AI-Powered Continuous Track Monitoring</span>
         </div>
       </div>
-      <div class="problem-item">
-        <div class="problem-icon">📊</div>
-        <div>
-          <h4>データ活用の遅れ</h4>
-          <p>既存の検測データは専用フォーマットで蓄積され、横断的な分析が困難。劣化傾向の予測や優先補修計画への活用が進んでいない。</p>
+
+      <div class="solution-flow" style="margin-bottom:28px">
+        <div class="flow-step">
+          <div class="flow-icon">📷</div>
+          <h4>前方カメラ取付</h4>
+          <p>既存車両の運転台前面に広角カメラを設置。改造工事不要。</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">🧠</div>
+          <h4>AI深度推定</h4>
+          <p>Depth Anything V2 Large。毎フレーム40msで3D構造を推定。</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">⚠️</div>
+          <h4>異常自動検知</h4>
+          <p>軌道上の障害物・近接物体をリアルタイム検知・分類。</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon">📱</div>
+          <h4>即時アラート</h4>
+          <p>異常検知時に指令室・スマートフォンへ即時通知。映像付き。</p>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card accent-border">
+          <div class="card-icon">🚂</div>
+          <h3>既存車両への後付け対応</h3>
+          <p>新規車両導入不要。既存の営業列車にカメラを取り付けるだけ。全ての営業運行が自動的に点検運行を兼ねる。</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h3>クラウド + エッジ対応</h3>
+          <p>車上処理でリアルタイム検知、走行後にクラウドへ全データ同期。トンネル内など通信不能区間も対応。</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📈</div>
+          <h3>劣化トレンド分析</h3>
+          <p>過去データとの比較で軌道状態の変化を自動追跡。予防保全・補修優先度の自動算出。</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <h3>セキュア・オンプレ対応</h3>
+          <p>全データは鉄道事業者のプライベートクラウドに保管可能。外部送信なしのオンプレミス構成も選択可能。</p>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Section 2: 解決策 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">2</div>
-      <div class="section-title">
-        RailScan AI ソリューション
-        <span class="ja">Solution — AI-Powered Continuous Track Monitoring</span>
+    <!-- Section 3: 実証データ -->
+    <div class="section section-reveal" id="sec-3">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">
+          実走行による実証データ
+          <span class="ja">Proof of Concept — Real Railway Footage Analysis</span>
+        </div>
+      </div>
+
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">
+        実際の鉄道走行映像（計142フレーム、約43秒）をDepth Anything V2 Largeで解析した結果。
+        フレームごとの深度推定・異常スコア・距離推定を自動算出。
+      </p>
+
+      <div class="card-grid" style="margin-bottom:24px">
+        <div class="card">
+          <div class="stat-big">142</div>
+          <div class="stat-label">解析フレーム数（@3fps）</div>
+        </div>
+        <div class="card">
+          <div class="stat-big">9</div>
+          <div class="stat-label">検出異常イベント（緊急1 / 注意8）</div>
+        </div>
+        <div class="card">
+          <div class="stat-big">40ms</div>
+          <div class="stat-label">平均処理時間 / フレーム（RTX 4090）</div>
+        </div>
+        <div class="card">
+          <div class="stat-big">95%</div>
+          <div class="stat-label">誤検知削減（時間的クールダウンフィルタ適用後）</div>
+        </div>
+      </div>
+
+      <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
+        路線 A（jrsam3） — 73フレーム / 5イベント検出
+      </h4>
+      <table class="data-table" style="margin-bottom:28px">
+        <thead>
+          <tr>
+            <th>時刻</th>
+            <th>重要度</th>
+            <th>推定距離</th>
+            <th>深度スコア</th>
+            <th>検知面積</th>
+            <th>信頼度</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-num">t = 7.0 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">7.7 m</td>
+            <td class="td-num">58.7%</td>
+            <td class="td-num">6,735 px²</td>
+            <td class="td-num">91.4%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 11.0 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">6.3 m</td>
+            <td class="td-num">65.2%</td>
+            <td class="td-num">9,180 px²</td>
+            <td class="td-num">92.8%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 15.0 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">6.8 m</td>
+            <td class="td-num">62.1%</td>
+            <td class="td-num">8,240 px²</td>
+            <td class="td-num">91.9%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 19.0 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">5.9 m</td>
+            <td class="td-num">70.4%</td>
+            <td class="td-num">16,782 px²</td>
+            <td class="td-num">93.1%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 23.0 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">6.1 m</td>
+            <td class="td-num">68.7%</td>
+            <td class="td-num">12,450 px²</td>
+            <td class="td-num">92.5%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
+        路線 B（jr23） — 69フレーム / 4イベント検出（緊急1件含む）
+      </h4>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>時刻</th>
+            <th>重要度</th>
+            <th>推定距離</th>
+            <th>深度スコア</th>
+            <th>検知面積</th>
+            <th>信頼度</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:rgba(239,68,68,0.04)">
+            <td class="td-num">t = 3.3 s</td>
+            <td><span class="badge-critical">緊急</span></td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">4.1 m</td>
+            <td class="td-num" style="color:var(--danger);font-weight:700">82.9%</td>
+            <td class="td-num">3,487 px²</td>
+            <td class="td-num">93.7%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 9.7 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">6.2 m</td>
+            <td class="td-num">66.4%</td>
+            <td class="td-num">5,920 px²</td>
+            <td class="td-num">91.5%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 15.7 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">7.1 m</td>
+            <td class="td-num">62.4%</td>
+            <td class="td-num">9,210 px²</td>
+            <td class="td-num">90.8%</td>
+          </tr>
+          <tr>
+            <td class="td-num">t = 19.7 s</td>
+            <td><span class="badge-warning">注意</span></td>
+            <td class="td-num">6.7 m</td>
+            <td class="td-num">64.1%</td>
+            <td class="td-num">7,340 px²</td>
+            <td class="td-num">91.2%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:12px">
+        ※ 深度スコア = 障害物候補領域の平均深度値（0〜100%、高いほど近距離）。推定距離は焦点距離モデルによる近似値。
+        実本番環境ではカメラキャリブレーション後に精度向上。
+      </p>
+    </div>
+
+    <!-- Section 4: コスト比較 -->
+    <div class="section section-reveal" id="sec-4">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">
+          コスト比較・ROI分析
+          <span class="ja">Cost Comparison &amp; Return on Investment</span>
+        </div>
+      </div>
+
+      <div class="cost-grid">
+        <!-- Traditional -->
+        <div class="cost-card">
+          <h3>現行：専用検測車方式 <span class="tag tag-old">従来</span></h3>
+          <div class="cost-line"><span class="label">検測車両設備費（1両）</span><span class="value danger">¥30億〜</span></div>
+          <div class="cost-line"><span class="label">年間維持・運行費</span><span class="value danger">¥5,000万〜</span></div>
+          <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value danger">¥5,000〜</span></div>
+          <div class="cost-line"><span class="label">点検頻度</span><span class="value">月1〜2回</span></div>
+          <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value danger">30日間</span></div>
+          <hr class="cost-divider">
+          <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value danger">¥8〜12億</span></div>
+        </div>
+
+        <!-- New system -->
+        <div class="cost-card new-system">
+          <h3>RailScan AI <span class="tag tag-new">新システム</span></h3>
+          <div class="cost-line"><span class="label">初期導入費（カメラ+ソフト）</span><span class="value accent">¥500万〜</span></div>
+          <div class="cost-line"><span class="label">年間SaaS利用料</span><span class="value accent">¥300万〜/路線</span></div>
+          <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value accent">¥150〜</span></div>
+          <div class="cost-line"><span class="label">点検頻度</span><span class="value accent">毎運行（日数回）</span></div>
+          <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value accent">リアルタイム</span></div>
+          <hr class="cost-divider">
+          <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value accent">¥3,500万〜</span></div>
+        </div>
+
+        <!-- Your estimate (updates from ROI calculator) -->
+        <div class="cost-card your-estimate">
+          <h3>御社試算 <span class="tag tag-you">カスタム</span></h3>
+          <div class="cost-line"><span class="label">路線距離</span><span class="value indigo" id="est-km">100 km</span></div>
+          <div class="cost-line"><span class="label">月間運行本数</span><span class="value indigo" id="est-runs">300 本/月</span></div>
+          <div class="cost-line"><span class="label">現在の年間点検コスト</span><span class="value danger" id="est-current-cost">5,000万円</span></div>
+          <div class="cost-line"><span class="label">RailScan AI 年間費用</span><span class="value accent" id="est-new-cost">800万円</span></div>
+          <div class="cost-line"><span class="label">人件費削減（年間）</span><span class="value accent" id="est-labor-save">1,200万円</span></div>
+          <hr class="cost-divider">
+          <div class="cost-line"><span class="label" style="font-weight:700">年間削減額（試算）</span><span class="value indigo" style="font-size:1.1rem" id="est-annual-save">5,400万円</span></div>
+        </div>
+      </div>
+
+      <div class="saving-banner">
+        <div>
+          <div class="save-big">〜96%</div>
+          <div style="font-size:0.75rem;color:var(--muted)">コスト削減</div>
+        </div>
+        <div>
+          <p><strong>100km路線で年間8億円以上の削減効果。</strong>初年度にコスト回収完了。<br>
+          点検頻度は月1回→毎日へ向上。安全性と経済性を両立。下記のROI試算ツールで御社の数字を試算してください。</p>
+        </div>
       </div>
     </div>
 
-    <div class="solution-flow" style="margin-bottom:28px">
-      <div class="flow-step">
-        <div class="flow-icon">📷</div>
-        <h4>前方カメラ取付</h4>
-        <p>既存車両の運転台前面に広角カメラを設置。改造工事不要。</p>
+    <!-- ROI Calculator Section -->
+    <div class="roi-section section-reveal" id="sec-roi">
+      <div class="roi-header">
+        <div class="roi-header-icon">🧮</div>
+        <div class="roi-header-text">
+          <h2>インタラクティブ ROI 試算ツール</h2>
+          <p>スライダーを動かすと御社の削減効果をリアルタイムで試算します。上記「御社試算」列も連動して更新されます。</p>
+        </div>
       </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="flow-icon">🧠</div>
-        <h4>AI深度推定</h4>
-        <p>Depth Anything V2 Large。毎フレーム40msで3D構造を推定。</p>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="flow-icon">⚠️</div>
-        <h4>異常自動検知</h4>
-        <p>軌道上の障害物・近接物体をリアルタイム検知・分類。</p>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="flow-icon">📱</div>
-        <h4>即時アラート</h4>
-        <p>異常検知時に指令室・スマートフォンへ即時通知。映像付き。</p>
+
+      <div class="roi-grid">
+        <!-- Inputs -->
+        <div class="roi-inputs">
+          <div class="roi-input-group">
+            <div class="roi-label">
+              <span class="roi-label-text">路線距離</span>
+              <span class="roi-label-val" id="lbl-km">100 km</span>
+            </div>
+            <input type="range" class="roi-slider" id="sl-km" min="10" max="500" value="100" step="5">
+            <span class="roi-hint">10km 〜 500km</span>
+          </div>
+
+          <div class="roi-input-group">
+            <div class="roi-label">
+              <span class="roi-label-text">月間運行本数</span>
+              <span class="roi-label-val" id="lbl-runs">300 本/月</span>
+            </div>
+            <input type="range" class="roi-slider" id="sl-runs" min="30" max="3000" value="300" step="30">
+            <span class="roi-hint">30本 〜 3,000本/月</span>
+          </div>
+
+          <div class="roi-input-group">
+            <div class="roi-label">
+              <span class="roi-label-text">現在の点検費用</span>
+              <span class="roi-label-val" id="lbl-cost">5 万円/km/年</span>
+            </div>
+            <input type="range" class="roi-slider" id="sl-cost" min="1" max="20" value="5" step="0.5">
+            <span class="roi-hint">1万円 〜 20万円 / km / 年</span>
+          </div>
+
+          <div class="roi-input-group">
+            <div class="roi-label">
+              <span class="roi-label-text">人件費（点検要員）</span>
+              <span class="roi-label-val" id="lbl-labor">200 万円/月</span>
+            </div>
+            <input type="range" class="roi-slider" id="sl-labor" min="50" max="500" value="200" step="10">
+            <span class="roi-hint">50万円 〜 500万円/月</span>
+          </div>
+        </div>
+
+        <!-- Outputs -->
+        <div class="roi-outputs">
+          <div class="roi-output-card highlight-card">
+            <div class="roi-output-icon">💴</div>
+            <div class="roi-output-val" id="out-annual">5,400万円</div>
+            <div class="roi-output-label">年間コスト削減額</div>
+          </div>
+          <div class="roi-output-card">
+            <div class="roi-output-icon">📅</div>
+            <div class="roi-output-val" id="out-3yr">1.6億円</div>
+            <div class="roi-output-label">3年間累計削減額</div>
+          </div>
+          <div class="roi-output-card">
+            <div class="roi-output-icon">⏱</div>
+            <div class="roi-output-val" id="out-payback">1.1ヶ月</div>
+            <div class="roi-output-label">初期投資回収期間</div>
+          </div>
+          <div class="roi-output-card">
+            <div class="roi-output-icon">🌿</div>
+            <div class="roi-output-val" id="out-co2">12.4 t/年</div>
+            <div class="roi-output-label">CO2削減相当<br><span style="font-size:0.7rem;font-weight:400;color:var(--muted)">（点検車両削減分）</span></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card-grid">
-      <div class="card accent-border">
-        <div class="card-icon">🚂</div>
-        <h3>既存車両への後付け対応</h3>
-        <p>新規車両導入不要。既存の営業列車にカメラを取り付けるだけ。全ての営業運行が自動的に点検運行を兼ねる。</p>
+    <!-- Section 5: 導入事例シミュレーション -->
+    <div class="section section-reveal" id="sec-5">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">
+          導入事例シミュレーション
+          <span class="ja">Simulated Deployment Case Study</span>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-icon">🌐</div>
-        <h3>クラウド + エッジ対応</h3>
-        <p>車上処理でリアルタイム検知、走行後にクラウドへ全データ同期。トンネル内など通信不能区間も対応。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📈</div>
-        <h3>劣化トレンド分析</h3>
-        <p>過去データとの比較で軌道状態の変化を自動追跡。予防保全・補修優先度の自動算出。</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">🔒</div>
-        <h3>セキュア・オンプレ対応</h3>
-        <p>全データは鉄道事業者のプライベートクラウドに保管可能。外部送信なしのオンプレミス構成も選択可能。</p>
-      </div>
-    </div>
-  </div>
 
-  <!-- Section 3: 実証データ -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">3</div>
-      <div class="section-title">
-        実走行による実証データ
-        <span class="ja">Proof of Concept — Real Railway Footage Analysis</span>
-      </div>
-    </div>
+      <div class="case-section">
+        <div class="case-header">
+          <div class="case-tag">シミュレーション事例</div>
+          <h2>A社（50km路線）の場合 — Year 1 導入タイムライン</h2>
+          <p>50km地方路線・月間運行200本・現行点検費 3万円/km/年 の想定事例です。</p>
+        </div>
 
-    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">
-      実際の鉄道走行映像（計142フレーム、約43秒）をDepth Anything V2 Largeで解析した結果。
-      フレームごとの深度推定・異常スコア・距離推定を自動算出。
-    </p>
+        <div class="case-timeline">
+          <div class="case-month phase-setup">
+            <div class="case-month-label">Month 1–2 &nbsp;|&nbsp; セットアップ</div>
+            <h4>機材設置・初期キャリブレーション</h4>
+            <p>対象2編成へのカメラ設置。エッジサーバー設定。初期走行3回でキャリブレーション完了。ダッシュボード研修。</p>
+          </div>
+          <div class="case-month phase-collect">
+            <div class="case-month-label">Month 3–6 &nbsp;|&nbsp; ベースライン収集</div>
+            <h4>全線データ蓄積・モデル最適化</h4>
+            <p>全営業運行で連続収集開始。週次レポート提供。路線固有パターンへのモデルファインチューニング。月次評価MTG実施。</p>
+          </div>
+          <div class="case-month phase-analyze">
+            <div class="case-month-label">Month 7–12 &nbsp;|&nbsp; 異常トレンド分析</div>
+            <h4>予防保全・ROI計測フェーズ</h4>
+            <p>劣化進行箇所の自動優先度付け開始。検測車データとの突合完了。ROI計算書作成。次フェーズ拡張計画策定。</p>
+          </div>
+        </div>
 
-    <!-- Summary cards -->
-    <div class="card-grid" style="margin-bottom:24px">
-      <div class="card">
-        <div class="stat-big">142</div>
-        <div class="stat-label">解析フレーム数（@3fps）</div>
-      </div>
-      <div class="card">
-        <div class="stat-big">9</div>
-        <div class="stat-label">検出異常イベント（緊急1 / 注意8）</div>
-      </div>
-      <div class="card">
-        <div class="stat-big">40ms</div>
-        <div class="stat-label">平均処理時間 / フレーム（RTX 4090）</div>
-      </div>
-      <div class="card">
-        <div class="stat-big">95%</div>
-        <div class="stat-label">誤検知削減（時間的クールダウンフィルタ適用後）</div>
-      </div>
-    </div>
-
-    <!-- Anomaly table: jrsam3 -->
-    <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
-      路線 A（jrsam3） — 73フレーム / 5イベント検出
-    </h4>
-    <table class="data-table" style="margin-bottom:28px">
-      <thead>
-        <tr>
-          <th>時刻</th>
-          <th>重要度</th>
-          <th>推定距離</th>
-          <th>深度スコア</th>
-          <th>検知面積</th>
-          <th>信頼度</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="td-num">t = 7.0 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">7.7 m</td>
-          <td class="td-num">58.7%</td>
-          <td class="td-num">6,735 px²</td>
-          <td class="td-num">91.4%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 11.0 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">6.3 m</td>
-          <td class="td-num">65.2%</td>
-          <td class="td-num">9,180 px²</td>
-          <td class="td-num">92.8%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 15.0 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">6.8 m</td>
-          <td class="td-num">62.1%</td>
-          <td class="td-num">8,240 px²</td>
-          <td class="td-num">91.9%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 19.0 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">5.9 m</td>
-          <td class="td-num">70.4%</td>
-          <td class="td-num">16,782 px²</td>
-          <td class="td-num">93.1%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 23.0 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">6.1 m</td>
-          <td class="td-num">68.7%</td>
-          <td class="td-num">12,450 px²</td>
-          <td class="td-num">92.5%</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Anomaly table: jr23 -->
-    <h4 style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;font-weight:600">
-      路線 B（jr23） — 69フレーム / 4イベント検出（緊急1件含む）
-    </h4>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>時刻</th>
-          <th>重要度</th>
-          <th>推定距離</th>
-          <th>深度スコア</th>
-          <th>検知面積</th>
-          <th>信頼度</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr style="background:rgba(239,68,68,0.04)">
-          <td class="td-num">t = 3.3 s</td>
-          <td><span class="badge-critical">緊急</span></td>
-          <td class="td-num" style="color:var(--danger);font-weight:700">4.1 m</td>
-          <td class="td-num" style="color:var(--danger);font-weight:700">82.9%</td>
-          <td class="td-num">3,487 px²</td>
-          <td class="td-num">93.7%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 9.7 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">6.2 m</td>
-          <td class="td-num">66.4%</td>
-          <td class="td-num">5,920 px²</td>
-          <td class="td-num">91.5%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 15.7 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">7.1 m</td>
-          <td class="td-num">62.4%</td>
-          <td class="td-num">9,210 px²</td>
-          <td class="td-num">90.8%</td>
-        </tr>
-        <tr>
-          <td class="td-num">t = 19.7 s</td>
-          <td><span class="badge-warning">注意</span></td>
-          <td class="td-num">6.7 m</td>
-          <td class="td-num">64.1%</td>
-          <td class="td-num">7,340 px²</td>
-          <td class="td-num">91.2%</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p style="font-size:0.78rem;color:var(--muted);margin-top:12px">
-      ※ 深度スコア = 障害物候補領域の平均深度値（0〜100%、高いほど近距離）。推定距離は焦点距離モデルによる近似値。
-      実本番環境ではカメラキャリブレーション後に精度向上。
-    </p>
-  </div>
-
-  <!-- Section 4: コスト比較 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">4</div>
-      <div class="section-title">
-        コスト比較・ROI分析
-        <span class="ja">Cost Comparison &amp; Return on Investment</span>
+        <!-- CSS Bar Chart: projected monthly savings -->
+        <div class="bar-chart">
+          <div class="bar-chart-title">月別削減効果の推移（A社・50km路線 想定）</div>
+          <div class="bar-chart-grid">
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 1</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-setup" style="width:8%">導入費 ▼</div>
+              </div>
+              <div class="bar-row-val" style="color:#a5b4fc">− 200万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 2</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-setup" style="width:5%">設定</div>
+              </div>
+              <div class="bar-row-val" style="color:#a5b4fc">− 50万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 3</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-collect" style="width:18%">+ 40万</div>
+              </div>
+              <div class="bar-row-val" style="color:var(--accent)">+ 40万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 4</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-collect" style="width:25%">+ 55万</div>
+              </div>
+              <div class="bar-row-val" style="color:var(--accent)">+ 55万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 5</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-collect" style="width:30%">+ 65万</div>
+              </div>
+              <div class="bar-row-val" style="color:var(--accent)">+ 65万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 6</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-collect" style="width:32%">+ 70万</div>
+              </div>
+              <div class="bar-row-val" style="color:var(--accent)">+ 70万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 7</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:45%">+ 100万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 100万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 8</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:50%">+ 110万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 110万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 9</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:55%">+ 120万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 120万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 10</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:58%">+ 128万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 128万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 11</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:62%">+ 136万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 136万</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label" style="color:var(--muted);font-size:0.7rem">Month 12</div>
+              <div class="bar-track">
+                <div class="bar-fill bar-saving" style="width:68%">+ 150万</div>
+              </div>
+              <div class="bar-row-val" style="color:#4ade80">+ 150万</div>
+            </div>
+          </div>
+          <p style="font-size:0.75rem;color:var(--muted);margin-top:14px">
+            ※ Month 1–2 はシステム構築費（初期投資）。Month 3 以降は月次削減額。Month 7 以降は予防保全効果が加わり削減額が増大。Year 1 累計削減額（試算）: <strong style="color:var(--safe)">約 +674万円</strong>（初期投資 250万円差し引き後）。
+          </p>
+        </div>
       </div>
     </div>
 
-    <div class="cost-grid">
-      <!-- Traditional -->
-      <div class="cost-card">
-        <h3>現行：専用検測車方式 <span class="tag tag-old">従来</span></h3>
-        <div class="cost-line"><span class="label">検測車両設備費（1両）</span><span class="value danger">¥30億〜</span></div>
-        <div class="cost-line"><span class="label">年間維持・運行費</span><span class="value danger">¥5,000万〜</span></div>
-        <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value danger">¥5,000〜</span></div>
-        <div class="cost-line"><span class="label">点検頻度</span><span class="value">月1〜2回</span></div>
-        <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value danger">30日間</span></div>
-        <hr class="cost-divider">
-        <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value danger">¥8〜12億</span></div>
+    <!-- Section 6: パイロット提案 -->
+    <div class="section section-reveal" id="sec-6">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <div class="section-title">
+          パイロット導入プラン
+          <span class="ja">Pilot Program Proposal</span>
+        </div>
       </div>
 
-      <!-- New system -->
-      <div class="cost-card new-system">
-        <h3>RailScan AI <span class="tag tag-new">新システム</span></h3>
-        <div class="cost-line"><span class="label">初期導入費（カメラ+ソフト）</span><span class="value accent">¥500万〜</span></div>
-        <div class="cost-line"><span class="label">年間SaaS利用料</span><span class="value accent">¥300万〜/路線</span></div>
-        <div class="cost-line"><span class="label">点検費用（1km当たり）</span><span class="value accent">¥150〜</span></div>
-        <div class="cost-line"><span class="label">点検頻度</span><span class="value accent">毎運行（日数回）</span></div>
-        <div class="cost-line"><span class="label">検知遅延（最大）</span><span class="value accent">リアルタイム</span></div>
-        <hr class="cost-divider">
-        <div class="cost-line"><span class="label" style="font-weight:700">100km路線・年間コスト試算</span><span class="value accent">¥3,500万〜</span></div>
+      <div class="card-grid" style="margin-bottom:32px">
+        <div class="card accent-border">
+          <div class="card-icon">🎯</div>
+          <h3>推奨パイロット規模</h3>
+          <p>対象路線：1路線（20〜50km区間）<br>
+          対象車両：1〜2編成<br>
+          期間：3ヶ月（評価含む）<br>
+          費用：¥200万〜（初期費用含む）</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📋</div>
+          <h3>提供物</h3>
+          <p>・前方カメラ機材一式<br>
+          ・AI処理サーバー（または クラウド接続）<br>
+          ・ダッシュボード閲覧ライセンス<br>
+          ・専任エンジニアサポート（月4回）</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h3>評価指標（KPI）</h3>
+          <p>・異常検知精度（適合率・再現率）<br>
+          ・従来点検との比較検証<br>
+          ・処理遅延・システム稼働率<br>
+          ・保守担当者の操作性評価</p>
+        </div>
+      </div>
+
+      <div class="pilot-timeline">
+        <div class="pilot-step">
+          <div class="month">Month 1</div>
+          <h4>環境構築・カメラ取付・初期キャリブレーション</h4>
+          <p>対象車両へのカメラ設置。AI推論サーバーのセットアップ。初期キャリブレーション走行（3回程度）。ダッシュボードアカウント発行。</p>
+        </div>
+        <div class="pilot-step">
+          <div class="month">Month 2</div>
+          <h4>本番走行・データ収集・モデルファインチューニング</h4>
+          <p>全営業運行での自動収集開始。週次で異常検知レポートを提供。路線固有の誤検知パターンに対してモデルを最適化。中間評価ミーティング。</p>
+        </div>
+        <div class="pilot-step">
+          <div class="month">Month 3</div>
+          <h4>精度評価・従来点検比較・本格導入検討</h4>
+          <p>検測車データとの突合評価。ROI計算書の作成。本格導入に向けたコスト・仕様確認。対象路線拡大の検討。</p>
+        </div>
       </div>
     </div>
 
-    <div class="saving-banner">
-      <div>
-        <div class="save-big">〜96%</div>
-        <div style="font-size:0.75rem;color:var(--muted)">コスト削減</div>
+    <!-- CTA -->
+    <div class="cta-box section-reveal" id="cta">
+      <h2>まずは30分のオンラインデモから</h2>
+      <p>実際の映像解析デモ・技術詳細・料金詳細をご説明します。<br>ご要望に合わせてパイロット提案書を個別にご用意します。</p>
+      <div class="cta-buttons">
+        <a class="cta-btn" href="rail-demo.html">ライブデモを見る</a>
+        <a class="cta-btn outline" href="mailto:hello@spatialforge.ai?subject=RailScan AI 商談希望&body=会社名：%0A担当者名：%0Aご希望日時：">商談を申し込む</a>
+        <button class="cta-btn outline" onclick="window.print()">資料ダウンロード（PDF）</button>
       </div>
-      <div>
-        <p><strong>100km路線で年間8億円以上の削減効果。</strong>初年度にコスト回収完了。<br>
-        点検頻度は月1回→毎日へ向上。安全性と経済性を両立。</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 5: パイロット提案 -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">5</div>
-      <div class="section-title">
-        パイロット導入プラン
-        <span class="ja">Pilot Program Proposal</span>
-      </div>
-    </div>
-
-    <div class="card-grid" style="margin-bottom:32px">
-      <div class="card accent-border">
-        <div class="card-icon">🎯</div>
-        <h3>推奨パイロット規模</h3>
-        <p>対象路線：1路線（20〜50km区間）<br>
-        対象車両：1〜2編成<br>
-        期間：3ヶ月（評価含む）<br>
-        費用：¥200万〜（初期費用含む）</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📋</div>
-        <h3>提供物</h3>
-        <p>・前方カメラ機材一式<br>
-        ・AI処理サーバー（または クラウド接続）<br>
-        ・ダッシュボード閲覧ライセンス<br>
-        ・専任エンジニアサポート（月4回）</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📊</div>
-        <h3>評価指標（KPI）</h3>
-        <p>・異常検知精度（適合率・再現率）<br>
-        ・従来点検との比較検証<br>
-        ・処理遅延・システム稼働率<br>
-        ・保守担当者の操作性評価</p>
+      <div class="cta-contact-grid">
+        <div class="cta-contact-item">
+          <div class="contact-icon">📞</div>
+          <div class="contact-label">お電話</div>
+          <div class="contact-val">03-xxxx-xxxx</div>
+        </div>
+        <div class="cta-contact-item">
+          <div class="contact-icon">✉️</div>
+          <div class="contact-label">メール</div>
+          <div class="contact-val">hello@spatialforge.ai</div>
+        </div>
+        <div class="cta-contact-item">
+          <div class="qr-placeholder">QR<br>コード</div>
+          <div class="contact-label">デモページ</div>
+          <div class="contact-val">spatialforge.ai</div>
+        </div>
       </div>
     </div>
 
-    <div class="pilot-timeline">
-      <div class="pilot-step">
-        <div class="month">Month 1</div>
-        <h4>環境構築・カメラ取付・初期キャリブレーション</h4>
-        <p>対象車両へのカメラ設置。AI推論サーバーのセットアップ。初期キャリブレーション走行（3回程度）。ダッシュボードアカウント発行。</p>
-      </div>
-      <div class="pilot-step">
-        <div class="month">Month 2</div>
-        <h4>本番走行・データ収集・モデルファインチューニング</h4>
-        <p>全営業運行での自動収集開始。週次で異常検知レポートを提供。路線固有の誤検知パターンに対してモデルを最適化。中間評価ミーティング。</p>
-      </div>
-      <div class="pilot-step">
-        <div class="month">Month 3</div>
-        <h4>精度評価・従来点検比較・本格導入検討</h4>
-        <p>検測車データとの突合評価。ROI計算書の作成。本格導入に向けたコスト・仕様確認。対象路線拡大の検討。</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <div class="cta-box">
-    <h2>まずは30分のオンラインデモから</h2>
-    <p>実際の映像解析デモ・技術詳細・料金詳細をご説明します。<br>ご要望に合わせてパイロット提案書を個別にご用意します。</p>
-    <a class="cta-btn" href="rail-demo.html">ライブデモを見る</a>
-    <a class="cta-btn outline" href="mailto:hello@spatialforge.ai?subject=RailScan AI 商談希望&body=会社名：%0A担当者名：%0Aご希望日時：">商談を申し込む</a>
-  </div>
-
-</div>
+  </div><!-- /wrapper -->
+</div><!-- /page-layout -->
 
 <footer>
   <p>© 2026 SpatialForge, Inc. — 本資料は商談目的の機密資料です。無断転載・配布を禁じます。</p>
   <p style="margin-top:6px"><a href="https://maruyamakoju.github.io/spatialforge/" style="color:var(--accent);text-decoration:none">spatialforge.ai</a> · <a href="rail-demo.html" style="color:var(--muted);text-decoration:none">デモ</a> · <a href="docs.html" style="color:var(--muted);text-decoration:none">API Docs</a></p>
 </footer>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ── Intersection Observer for section reveals ── */
+  const revealEls = document.querySelectorAll('.section-reveal');
+  const revealObs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.07, rootMargin: '0px 0px -40px 0px' });
+  revealEls.forEach(function(el) { revealObs.observe(el); });
+
+  /* ── TOC active link highlighting ── */
+  var sections = [
+    { id: 'cover', el: document.getElementById('cover') },
+    { id: 'sec-1', el: document.getElementById('sec-1') },
+    { id: 'sec-2', el: document.getElementById('sec-2') },
+    { id: 'sec-3', el: document.getElementById('sec-3') },
+    { id: 'sec-4', el: document.getElementById('sec-4') },
+    { id: 'sec-roi', el: document.getElementById('sec-roi') },
+    { id: 'sec-5', el: document.getElementById('sec-5') },
+    { id: 'sec-6', el: document.getElementById('sec-6') },
+    { id: 'cta', el: document.getElementById('cta') }
+  ].filter(function(s) { return s.el; });
+
+  var tocLinks = document.querySelectorAll('.toc-list a');
+
+  function setActiveToc(id) {
+    tocLinks.forEach(function(a) {
+      if (a.getAttribute('data-section') === id) {
+        a.classList.add('active');
+      } else {
+        a.classList.remove('active');
+      }
+    });
+  }
+
+  var tocObs = new IntersectionObserver(function(entries) {
+    var visible = sections.filter(function(s) {
+      var rect = s.el.getBoundingClientRect();
+      return rect.top < window.innerHeight * 0.5 && rect.bottom > 0;
+    });
+    if (visible.length > 0) {
+      setActiveToc(visible[0].id);
+    }
+  }, { threshold: 0, rootMargin: '-10% 0px -50% 0px' });
+
+  sections.forEach(function(s) { tocObs.observe(s.el); });
+
+  /* ── ROI Calculator ── */
+  var slKm    = document.getElementById('sl-km');
+  var slRuns  = document.getElementById('sl-runs');
+  var slCost  = document.getElementById('sl-cost');
+  var slLabor = document.getElementById('sl-labor');
+
+  var lblKm    = document.getElementById('lbl-km');
+  var lblRuns  = document.getElementById('lbl-runs');
+  var lblCost  = document.getElementById('lbl-cost');
+  var lblLabor = document.getElementById('lbl-labor');
+
+  var outAnnual  = document.getElementById('out-annual');
+  var out3yr     = document.getElementById('out-3yr');
+  var outPayback = document.getElementById('out-payback');
+  var outCo2     = document.getElementById('out-co2');
+
+  // Column in cost table
+  var estKm          = document.getElementById('est-km');
+  var estRuns        = document.getElementById('est-runs');
+  var estCurrentCost = document.getElementById('est-current-cost');
+  var estNewCost     = document.getElementById('est-new-cost');
+  var estLaborSave   = document.getElementById('est-labor-save');
+  var estAnnualSave  = document.getElementById('est-annual-save');
+
+  function fmt(val) {
+    // Returns formatted Japanese currency string (万円)
+    if (val >= 10000) {
+      return (val / 10000).toFixed(1).replace(/\.0$/, '') + '億円';
+    }
+    return val.toLocaleString('ja-JP') + '万円';
+  }
+
+  function animateVal(el, newText) {
+    el.classList.add('updating');
+    el.textContent = newText;
+    setTimeout(function() { el.classList.remove('updating'); }, 300);
+  }
+
+  function calcRoi() {
+    var km     = parseFloat(slKm.value);
+    var runs   = parseFloat(slRuns.value);
+    var cost   = parseFloat(slCost.value);   // 万円/km/年
+    var labor  = parseFloat(slLabor.value);  // 万円/月
+
+    // Update labels
+    lblKm.textContent    = km + ' km';
+    lblRuns.textContent  = runs.toLocaleString('ja-JP') + ' 本/月';
+    lblCost.textContent  = cost + ' 万円/km/年';
+    lblLabor.textContent = labor.toLocaleString('ja-JP') + ' 万円/月';
+
+    // Current annual inspection cost (万円)
+    var currentAnnual = km * cost;
+
+    // RailScan AI cost model:
+    //   Initial cost amortised at 500万 base + 3万/km, over 5 years
+    //   Annual SaaS: 300万 base + 1.5万/km
+    var initialTotal = 500 + km * 3;
+    var annualSaas   = 300 + km * 1.5;
+
+    // Labor saving: assume AI reduces inspection personnel by 70%
+    var laborAnnual = labor * 12;
+    var laborSaving = laborAnnual * 0.70;
+
+    // Total current cost = inspection + labor
+    var totalCurrentCost = currentAnnual + laborAnnual;
+
+    // Annual saving = currentInspection - annualSaas + laborSaving
+    var annualSaving = Math.round(currentAnnual - annualSaas + laborSaving);
+    var save3yr      = Math.round(annualSaving * 3 - initialTotal);  // net of initial
+    var paybackMonths;
+    if (annualSaving > 0) {
+      paybackMonths = initialTotal / (annualSaving / 12);
+    } else {
+      paybackMonths = 999;
+    }
+
+    // CO2: assume each inspection vehicle trip = 50km roundtrip, diesel van 0.18 kg/km
+    // Monthly trips replaced = 4 (weekly schedule) * 12 months
+    var tripsPerYear  = 4 * 12;
+    var co2PerTrip    = km * 2 * 0.18 / 1000; // tonnes
+    var co2Saving     = Math.round(tripsPerYear * co2PerTrip * 10) / 10;
+
+    // Format outputs
+    var annualStr  = annualSaving >= 0 ? fmt(annualSaving) : '−' + fmt(-annualSaving);
+    var save3yrStr = save3yr >= 0 ? fmt(save3yr) : '−' + fmt(-save3yr);
+    var paybackStr;
+    if (paybackMonths < 1) {
+      paybackStr = (paybackMonths * 30).toFixed(0) + '日';
+    } else if (paybackMonths < 120) {
+      paybackStr = paybackMonths.toFixed(1).replace(/\.0$/, '') + 'ヶ月';
+    } else {
+      paybackStr = '—';
+    }
+    var co2Str = co2Saving.toFixed(1) + ' t/年';
+
+    animateVal(outAnnual, annualStr);
+    animateVal(out3yr, save3yrStr);
+    animateVal(outPayback, paybackStr);
+    animateVal(outCo2, co2Str);
+
+    // Update the cost comparison "your estimate" column
+    estKm.textContent          = km + ' km';
+    estRuns.textContent        = runs.toLocaleString('ja-JP') + ' 本/月';
+    estCurrentCost.textContent = fmt(Math.round(currentAnnual));
+    estNewCost.textContent     = fmt(Math.round(annualSaas));
+    estLaborSave.textContent   = fmt(Math.round(laborSaving));
+    estAnnualSave.textContent  = annualStr;
+  }
+
+  [slKm, slRuns, slCost, slLabor].forEach(function(sl) {
+    sl.addEventListener('input', calcRoi);
+  });
+
+  // Initial calculation
+  calcRoi();
+
+  /* ── Animate bar chart fills on scroll ── */
+  var barFills = document.querySelectorAll('.bar-fill');
+  var barAnimated = false;
+  var barObs = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting && !barAnimated) {
+      barAnimated = true;
+      barFills.forEach(function(bar) {
+        var target = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(function() { bar.style.width = target; }, 100);
+      });
+    }
+  }, { threshold: 0.2 });
+  var barChart = document.querySelector('.bar-chart');
+  if (barChart) barObs.observe(barChart);
+
+})();
+</script>
 
 </body>
 </html>
