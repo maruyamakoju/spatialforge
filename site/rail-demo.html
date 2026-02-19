@@ -430,6 +430,66 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Player mode toggle ──────────────────── */
+    .player-mode-toggle {
+      display: flex; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+    .pmode-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--muted); font-size: 0.82rem; font-weight: 600;
+      padding: 0.4rem 1.1rem; border-radius: 6px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pmode-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pmode-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+    /* ── MP4 video element ────────────────────── */
+    #pm-video-wrap video {
+      width: 100%; border-radius: var(--radius);
+      background: #000; display: block; max-height: 420px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Anomaly events panel ─────────────────── */
+    .events-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem; margin-top: 0.75rem;
+    }
+    .events-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .events-panel-header h3 { font-size: 0.88rem; font-weight: 700; }
+    .events-count { font-size: 0.78rem; color: var(--muted); }
+    .event-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+    }
+    .event-row:last-child { border-bottom: none; }
+    .event-time {
+      font-size: 0.78rem; color: var(--accent); font-weight: 700;
+      font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 38px;
+    }
+    .event-details { flex: 1; }
+    .event-title { font-size: 0.83rem; font-weight: 700; }
+    .event-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .event-badge {
+      font-size: 0.65rem; font-weight: 800; padding: 2px 7px;
+      border-radius: 4px; letter-spacing: 0.05em; white-space: nowrap;
+    }
+    .event-badge.warning  { background: rgba(245,158,11,0.12); color: var(--accent);  border: 1px solid rgba(245,158,11,0.3); }
+    .event-badge.critical { background: rgba(239, 68, 68,0.12); color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+
+    /* ── Download btn ─────────────────────────── */
+    .mp4-dl-btn {
+      text-decoration: none; font-size: 0.8rem; font-weight: 600;
+      padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer;
+      border: 1px solid rgba(99,102,241,0.4);
+      background: rgba(99,102,241,0.1); color: var(--indigo);
+      display: none; align-items: center; gap: 0.4rem; transition: all 0.15s;
+    }
+    .mp4-dl-btn:hover { background: rgba(99,102,241,0.2); }
+
     /* ── CTA ──────────────────────────────────── */
     .cta-section {
       text-align: center; padding: 6rem 2rem;
@@ -545,9 +605,14 @@
 
   <!-- ── Video Player (hidden by default) ─────────────────── -->
   <div id="videoPlayerSection" style="display:none">
-    <div class="player-sub-tabs">
-      <button class="pvtab active" onclick="loadTimeline('jrsam3',this)">jrsam3 路線</button>
-      <button class="pvtab" onclick="loadTimeline('jr23',this)">jr23 路線</button>
+    <div class="player-sub-tabs" style="justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+      <div style="display:flex;gap:0.5rem">
+        <button class="pvtab active" onclick="loadTimeline('jrsam3',this)">jrsam3 路線</button>
+        <button class="pvtab" onclick="loadTimeline('jr23',this)">jr23 路線</button>
+      </div>
+      <a id="mp4DownloadBtn" href="" download class="mp4-dl-btn">
+        📥 MP4 ダウンロード
+      </a>
     </div>
 
     <!-- Loading placeholder -->
@@ -558,48 +623,70 @@
 
     <!-- Player (shown after timeline loads) -->
     <div id="playerReady" style="display:none">
-      <div class="player-wrap">
-        <img id="playerImg" src="" alt="frame">
-        <div class="player-hud">
-          <span class="player-ts-badge" id="playerTs">0.0s</span>
-          <span class="player-anom-hud" id="playerAnomHud"></span>
+
+      <!-- Mode toggle -->
+      <div class="player-mode-toggle">
+        <button class="pmode-btn active" id="pmBtn-video" onclick="setPlayerMode('video')">▶ 動画再生</button>
+        <button class="pmode-btn" id="pmBtn-frame" onclick="setPlayerMode('frame')">🔬 フレーム解析</button>
+      </div>
+
+      <!-- ── VIDEO MODE ─────────────────────────────── -->
+      <div id="pm-video-wrap">
+        <video id="playerVideo" controls loop playsinline preload="metadata">
+          お使いのブラウザは動画再生に対応していません。
+        </video>
+        <!-- Anomaly events summary -->
+        <div class="events-panel" id="eventsPanel">
+          <!-- populated by buildEventsPanel() -->
         </div>
-        <span class="player-model-chip">DA V2 Large</span>
-        <div class="player-anom-flash" id="playerAnomFlash"></div>
       </div>
 
-      <div class="player-controls">
-        <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
-        <input type="range" id="playerScrubber" min="0" max="1" value="0" step="1"
-               oninput="scrubTo(parseInt(this.value))">
-        <span class="player-time-display" id="playerTimeDisplay">0.0s / 0.0s</span>
-        <button class="speed-btn" id="speedBtn" onclick="cycleSpeed()">1×</button>
-      </div>
+      <!-- ── FRAME MODE ─────────────────────────────── -->
+      <div id="pm-frame-wrap" style="display:none">
+        <div class="player-wrap">
+          <img id="playerImg" src="" alt="frame">
+          <div class="player-hud">
+            <span class="player-ts-badge" id="playerTs">0.0s</span>
+            <span class="player-anom-hud" id="playerAnomHud"></span>
+          </div>
+          <span class="player-model-chip">DA V2 Large</span>
+          <div class="player-anom-flash" id="playerAnomFlash"></div>
+        </div>
 
-      <div class="spark-wrap">
-        <div class="spark-title">⚠ 異常スコアタイムライン — クリックでジャンプ</div>
-        <canvas id="sparkCanvas" height="64"></canvas>
-      </div>
+        <div class="player-controls">
+          <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+          <input type="range" id="playerScrubber" min="0" max="1" value="0" step="1"
+                 oninput="scrubTo(parseInt(this.value))">
+          <span class="player-time-display" id="playerTimeDisplay">0.0s / 0.0s</span>
+          <button class="speed-btn" id="speedBtn" onclick="cycleSpeed()">1×</button>
+        </div>
 
-      <div class="info-grid" style="margin-top:1rem">
-        <div class="alert-panel">
-          <h3>⚠ フレーム検知アラート</h3>
-          <div id="playerAlertList">
-            <div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0">フレームを選択中...</div>
+        <div class="spark-wrap">
+          <div class="spark-title">⚠ 異常スコアタイムライン — クリックでジャンプ</div>
+          <canvas id="sparkCanvas" height="64"></canvas>
+        </div>
+
+        <div class="info-grid" style="margin-top:1rem">
+          <div class="alert-panel">
+            <h3>⚠ フレーム検知アラート</h3>
+            <div id="playerAlertList">
+              <div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0">フレームを選択中...</div>
+            </div>
+          </div>
+          <div class="metric-panel">
+            <h3>📐 フレーム計測データ</h3>
+            <div class="metric-row"><span class="metric-key">タイムスタンプ</span><span class="metric-val" id="pm-ts">—</span></div>
+            <div class="metric-row"><span class="metric-key">前方距離（最短）</span><span class="metric-val" id="pm-near">—</span></div>
+            <div class="metric-row"><span class="metric-key">前方距離（最遠）</span><span class="metric-val" id="pm-far">—</span></div>
+            <div class="metric-row"><span class="metric-key">異常スコア</span><span class="metric-val" id="pm-score">—</span></div>
+            <div class="metric-row"><span class="metric-key">信頼度</span><span class="metric-val" id="pm-conf">—</span></div>
+            <div class="metric-row"><span class="metric-key">処理時間</span><span class="metric-val" id="pm-ms">—</span></div>
           </div>
         </div>
-        <div class="metric-panel">
-          <h3>📐 フレーム計測データ</h3>
-          <div class="metric-row"><span class="metric-key">タイムスタンプ</span><span class="metric-val" id="pm-ts">—</span></div>
-          <div class="metric-row"><span class="metric-key">前方距離（最短）</span><span class="metric-val" id="pm-near">—</span></div>
-          <div class="metric-row"><span class="metric-key">前方距離（最遠）</span><span class="metric-val" id="pm-far">—</span></div>
-          <div class="metric-row"><span class="metric-key">異常スコア</span><span class="metric-val" id="pm-score">—</span></div>
-          <div class="metric-row"><span class="metric-key">信頼度</span><span class="metric-val" id="pm-conf">—</span></div>
-          <div class="metric-row"><span class="metric-key">処理時間</span><span class="metric-val" id="pm-ms">—</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </div><!-- /pm-frame-wrap -->
+
+    </div><!-- /playerReady -->
+  </div><!-- /videoPlayerSection -->
 
   <!-- Upload Zone (hidden by default) -->
   <div id="uploadZone" style="display:none">
@@ -1016,6 +1103,55 @@ let playerSpeed      = 1;      // 0.5, 1, 2
 const PLAYER_SPEEDS  = [0.5, 1, 2];
 let playerSpeedIdx   = 1;
 let sparkChart       = null;
+let playerMode       = 'video';
+
+function setPlayerMode(mode) {
+  playerMode = mode;
+  document.getElementById('pm-video-wrap').style.display  = mode === 'video' ? 'block' : 'none';
+  document.getElementById('pm-frame-wrap').style.display  = mode === 'frame' ? 'block' : 'none';
+  document.getElementById('pmBtn-video').classList.toggle('active', mode === 'video');
+  document.getElementById('pmBtn-frame').classList.toggle('active', mode === 'frame');
+  if (mode === 'frame' && playerTimeline) {
+    // Pause native video when switching to frame mode
+    const vid = document.getElementById('playerVideo');
+    if (vid) vid.pause();
+    // Redraw sparkline (canvas may need resize)
+    setTimeout(() => drawSparkline(playerTimeline), 50);
+  }
+}
+
+function buildEventsPanel(data) {
+  const frames      = data.frames;
+  const anomFrames  = frames.filter(f => f.anomaly_count > 0);
+  const total       = anomFrames.length;
+  const panel       = document.getElementById('eventsPanel');
+
+  const countColor  = total > 0 ? 'var(--danger)' : 'var(--safe)';
+  let html = `<div class="events-panel-header">
+    <h3>⚠ 異常イベント一覧</h3>
+    <span class="events-count">${frames.length} フレーム中 <strong style="color:${countColor}">${total}</strong> 件検知</span>
+  </div>`;
+
+  if (total === 0) {
+    html += `<div style="color:var(--safe);font-size:0.85rem;padding:0.5rem 0">✓ 異常なし — 全区間正常</div>`;
+  } else {
+    html += anomFrames.map(f => {
+      const sev   = f.anomalies[0]?.severity || 'warning';
+      const dist  = f.dist_m != null ? `前方 ${f.dist_m} m` : '距離不明';
+      const score = (f.anomaly_score * 100).toFixed(0);
+      const label = sev === 'critical' ? '緊急' : '注意';
+      return `<div class="event-row">
+        <span class="event-time">${f.ts.toFixed(1)}s</span>
+        <div class="event-details">
+          <div class="event-title">近接物体検知 — ${dist}</div>
+          <div class="event-meta">スコア ${score}% / 信頼度 ${(f.confidence*100).toFixed(0)}% / ${f.processing_ms.toFixed(0)} ms</div>
+        </div>
+        <span class="event-badge ${sev}">${label}</span>
+      </div>`;
+    }).join('');
+  }
+  panel.innerHTML = html;
+}
 
 async function loadTimeline(name, tabEl) {
   // Update sub-tabs
@@ -1038,6 +1174,21 @@ async function loadTimeline(name, tabEl) {
     const data = await res.json();
     playerTimeline = data;
 
+    // Wire up native video element
+    const vid    = document.getElementById('playerVideo');
+    const mp4Src = `rail-assets/video/${name}/${name}_analysis.mp4`;
+    vid.src = mp4Src;
+    vid.load();
+
+    // Show download button
+    const dlBtn      = document.getElementById('mp4DownloadBtn');
+    dlBtn.href        = mp4Src;
+    dlBtn.download    = `${name}_analysis.mp4`;
+    dlBtn.style.display = 'flex';
+
+    // Build events panel
+    buildEventsPanel(data);
+
     // Initialize scrubber
     const scrubber = document.getElementById('playerScrubber');
     scrubber.max   = data.total_frames - 1;
@@ -1046,7 +1197,10 @@ async function loadTimeline(name, tabEl) {
     // Draw sparkline
     drawSparkline(data);
 
-    // Show first frame
+    // Start in video mode
+    setPlayerMode('video');
+
+    // Show player
     document.getElementById('playerLoading').style.display = 'none';
     document.getElementById('playerReady').style.display   = 'block';
     displayPlayerFrame(0);
