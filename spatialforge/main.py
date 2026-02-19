@@ -281,7 +281,7 @@ def create_app() -> FastAPI:
         return build_security_txt(settings)
 
     # Register API v1 routes
-    from .api.v1 import depth, floorplan, measure, pose, reconstruct, segment
+    from .api.v1 import depth, floorplan, inspect, measure, pose, reconstruct, segment
 
     app.include_router(depth.router, prefix="/v1", tags=["depth"])
     app.include_router(pose.router, prefix="/v1", tags=["pose"])
@@ -289,6 +289,7 @@ def create_app() -> FastAPI:
     app.include_router(measure.router, prefix="/v1", tags=["measure"])
     app.include_router(floorplan.router, prefix="/v1", tags=["floorplan"])
     app.include_router(segment.router, prefix="/v1", tags=["segment-3d"])
+    app.include_router(inspect.router, prefix="/v1", tags=["inspect"])
 
     # Admin routes
     from .api.v1 import admin
