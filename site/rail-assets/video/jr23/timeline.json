@@ -16,7 +16,7 @@
       "near_m": 2.46,
       "far_m": 63.4,
       "confidence": 0.876,
-      "processing_ms": 38.5,
+      "processing_ms": 240.9,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -33,7 +33,7 @@
       "near_m": 2.12,
       "far_m": 60.8,
       "confidence": 0.873,
-      "processing_ms": 38.3,
+      "processing_ms": 536.1,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -50,7 +50,7 @@
       "near_m": 2.44,
       "far_m": 73.4,
       "confidence": 0.87,
-      "processing_ms": 38.4,
+      "processing_ms": 161.9,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -67,7 +67,7 @@
       "near_m": 2.56,
       "far_m": 83.4,
       "confidence": 0.863,
-      "processing_ms": 41.1,
+      "processing_ms": 40.0,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -84,7 +84,7 @@
       "near_m": 2.84,
       "far_m": 42.1,
       "confidence": 0.862,
-      "processing_ms": 41.4,
+      "processing_ms": 40.4,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -101,7 +101,7 @@
       "near_m": 2.99,
       "far_m": 52.8,
       "confidence": 0.864,
-      "processing_ms": 42.7,
+      "processing_ms": 41.1,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -118,7 +118,7 @@
       "near_m": 2.82,
       "far_m": 76.7,
       "confidence": 0.866,
-      "processing_ms": 40.4,
+      "processing_ms": 39.6,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -135,7 +135,7 @@
       "near_m": 2.9,
       "far_m": 113.7,
       "confidence": 0.865,
-      "processing_ms": 42.7,
+      "processing_ms": 38.9,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -152,7 +152,7 @@
       "near_m": 3.09,
       "far_m": 200.0,
       "confidence": 0.86,
-      "processing_ms": 41.7,
+      "processing_ms": 40.5,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -169,7 +169,7 @@
       "near_m": 3.2,
       "far_m": 200.0,
       "confidence": 0.861,
-      "processing_ms": 40.7,
+      "processing_ms": 44.9,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -186,7 +186,7 @@
       "near_m": 3.26,
       "far_m": 200.0,
       "confidence": 0.883,
-      "processing_ms": 40.7,
+      "processing_ms": 38.8,
       "anomaly_count": 1,
       "anomaly_score": 0.829,
       "dist_m": 4.1,
@@ -217,7 +217,7 @@
       "near_m": 2.94,
       "far_m": 200.0,
       "confidence": 0.879,
-      "processing_ms": 41.9,
+      "processing_ms": 39.0,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -234,7 +234,7 @@
       "near_m": 3.11,
       "far_m": 200.0,
       "confidence": 0.875,
-      "processing_ms": 39.8,
+      "processing_ms": 40.2,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -251,7 +251,7 @@
       "near_m": 3.94,
       "far_m": 200.0,
       "confidence": 0.827,
-      "processing_ms": 44.8,
+      "processing_ms": 38.5,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -268,7 +268,7 @@
       "near_m": 3.45,
       "far_m": 200.0,
       "confidence": 0.874,
-      "processing_ms": 41.1,
+      "processing_ms": 39.8,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -285,7 +285,7 @@
       "near_m": 2.94,
       "far_m": 200.0,
       "confidence": 0.892,
-      "processing_ms": 41.8,
+      "processing_ms": 40.5,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -302,7 +302,7 @@
       "near_m": 2.51,
       "far_m": 200.0,
       "confidence": 0.891,
-      "processing_ms": 39.6,
+      "processing_ms": 41.7,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -319,7 +319,7 @@
       "near_m": 2.84,
       "far_m": 200.0,
       "confidence": 0.878,
-      "processing_ms": 40.0,
+      "processing_ms": 39.3,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -336,7 +336,7 @@
       "near_m": 2.35,
       "far_m": 200.0,
       "confidence": 0.904,
-      "processing_ms": 43.9,
+      "processing_ms": 38.7,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -353,25 +353,11 @@
       "near_m": 2.57,
       "far_m": 200.0,
       "confidence": 0.908,
-      "processing_ms": 42.7,
-      "anomaly_count": 1,
-      "anomaly_score": 0.853,
-      "dist_m": 3.7,
-      "anomalies": [
-        {
-          "x": 64,
-          "y": 230,
-          "w": 43,
-          "h": 101,
-          "cx": 77,
-          "cy": 288,
-          "depth_max": 0.914,
-          "depth_mean": 0.853,
-          "dist_m": 3.7,
-          "severity": "critical",
-          "area_px": 2511
-        }
-      ],
+      "processing_ms": 41.7,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0019_overlay.jpg",
         "depth": "jr23_0019_depth.jpg"
@@ -384,7 +370,7 @@
       "near_m": 2.94,
       "far_m": 200.0,
       "confidence": 0.875,
-      "processing_ms": 42.1,
+      "processing_ms": 38.6,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -401,7 +387,7 @@
       "near_m": 2.57,
       "far_m": 200.0,
       "confidence": 0.905,
-      "processing_ms": 42.6,
+      "processing_ms": 38.8,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -418,7 +404,7 @@
       "near_m": 2.98,
       "far_m": 200.0,
       "confidence": 0.854,
-      "processing_ms": 39.5,
+      "processing_ms": 38.4,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -435,7 +421,7 @@
       "near_m": 2.08,
       "far_m": 205.7,
       "confidence": 0.867,
-      "processing_ms": 38.5,
+      "processing_ms": 38.8,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -452,7 +438,7 @@
       "near_m": 3.09,
       "far_m": 200.0,
       "confidence": 0.879,
-      "processing_ms": 39.3,
+      "processing_ms": 38.8,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -469,7 +455,7 @@
       "near_m": 3.84,
       "far_m": 200.0,
       "confidence": 0.843,
-      "processing_ms": 40.3,
+      "processing_ms": 38.9,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -486,7 +472,7 @@
       "near_m": 4.75,
       "far_m": 200.0,
       "confidence": 0.833,
-      "processing_ms": 39.8,
+      "processing_ms": 40.0,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -503,7 +489,7 @@
       "near_m": 1.77,
       "far_m": 200.0,
       "confidence": 0.862,
-      "processing_ms": 38.2,
+      "processing_ms": 39.4,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -520,25 +506,11 @@
       "near_m": 1.96,
       "far_m": 200.0,
       "confidence": 0.88,
-      "processing_ms": 38.6,
-      "anomaly_count": 1,
-      "anomaly_score": 0.719,
-      "dist_m": 5.7,
-      "anomalies": [
-        {
-          "x": 558,
-          "y": 144,
-          "w": 18,
-          "h": 187,
-          "cx": 567,
-          "cy": 243,
-          "depth_max": 0.9,
-          "depth_mean": 0.719,
-          "dist_m": 5.7,
-          "severity": "warning",
-          "area_px": 2737
-        }
-      ],
+      "processing_ms": 38.5,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0028_overlay.jpg",
         "depth": "jr23_0028_depth.jpg"
@@ -551,7 +523,7 @@
       "near_m": 2.04,
       "far_m": 200.0,
       "confidence": 0.891,
-      "processing_ms": 39.4,
+      "processing_ms": 40.3,
       "anomaly_count": 1,
       "anomaly_score": 0.762,
       "dist_m": 5.1,
@@ -582,25 +554,11 @@
       "near_m": 2.54,
       "far_m": 200.0,
       "confidence": 0.881,
-      "processing_ms": 42.7,
-      "anomaly_count": 1,
-      "anomaly_score": 0.769,
-      "dist_m": 5.0,
-      "anomalies": [
-        {
-          "x": 541,
-          "y": 144,
-          "w": 35,
-          "h": 187,
-          "cx": 559,
-          "cy": 240,
-          "depth_max": 0.899,
-          "depth_mean": 0.769,
-          "dist_m": 5.0,
-          "severity": "warning",
-          "area_px": 5829
-        }
-      ],
+      "processing_ms": 42.1,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0030_overlay.jpg",
         "depth": "jr23_0030_depth.jpg"
@@ -613,25 +571,11 @@
       "near_m": 2.49,
       "far_m": 200.0,
       "confidence": 0.883,
-      "processing_ms": 41.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.71,
-      "dist_m": 5.9,
-      "anomalies": [
-        {
-          "x": 538,
-          "y": 144,
-          "w": 38,
-          "h": 187,
-          "cx": 559,
-          "cy": 242,
-          "depth_max": 0.891,
-          "depth_mean": 0.71,
-          "dist_m": 5.9,
-          "severity": "warning",
-          "area_px": 5903
-        }
-      ],
+      "processing_ms": 40.5,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0031_overlay.jpg",
         "depth": "jr23_0031_depth.jpg"
@@ -644,25 +588,11 @@
       "near_m": 2.06,
       "far_m": 200.0,
       "confidence": 0.881,
-      "processing_ms": 42.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.651,
-      "dist_m": 6.7,
-      "anomalies": [
-        {
-          "x": 542,
-          "y": 144,
-          "w": 34,
-          "h": 187,
-          "cx": 562,
-          "cy": 247,
-          "depth_max": 0.893,
-          "depth_mean": 0.651,
-          "dist_m": 6.7,
-          "severity": "warning",
-          "area_px": 4624
-        }
-      ],
+      "processing_ms": 9976.0,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0032_overlay.jpg",
         "depth": "jr23_0032_depth.jpg"
@@ -675,25 +605,11 @@
       "near_m": 2.1,
       "far_m": 200.0,
       "confidence": 0.869,
-      "processing_ms": 40.3,
-      "anomaly_count": 1,
-      "anomaly_score": 0.685,
-      "dist_m": 6.2,
-      "anomalies": [
-        {
-          "x": 555,
-          "y": 236,
-          "w": 21,
-          "h": 95,
-          "cx": 567,
-          "cy": 288,
-          "depth_max": 0.887,
-          "depth_mean": 0.685,
-          "dist_m": 6.2,
-          "severity": "warning",
-          "area_px": 1473
-        }
-      ],
+      "processing_ms": 1265.8,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0033_overlay.jpg",
         "depth": "jr23_0033_depth.jpg"
@@ -706,25 +622,11 @@
       "near_m": 2.11,
       "far_m": 200.0,
       "confidence": 0.867,
-      "processing_ms": 42.1,
-      "anomaly_count": 1,
-      "anomaly_score": 0.71,
-      "dist_m": 5.9,
-      "anomalies": [
-        {
-          "x": 557,
-          "y": 257,
-          "w": 19,
-          "h": 74,
-          "cx": 567,
-          "cy": 297,
-          "depth_max": 0.872,
-          "depth_mean": 0.71,
-          "dist_m": 5.9,
-          "severity": "warning",
-          "area_px": 1070
-        }
-      ],
+      "processing_ms": 39.8,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0034_overlay.jpg",
         "depth": "jr23_0034_depth.jpg"
@@ -737,25 +639,11 @@
       "near_m": 3.07,
       "far_m": 200.0,
       "confidence": 0.865,
-      "processing_ms": 42.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.709,
-      "dist_m": 5.9,
-      "anomalies": [
-        {
-          "x": 556,
-          "y": 249,
-          "w": 20,
-          "h": 82,
-          "cx": 567,
-          "cy": 294,
-          "depth_max": 0.875,
-          "depth_mean": 0.709,
-          "dist_m": 5.9,
-          "severity": "warning",
-          "area_px": 1237
-        }
-      ],
+      "processing_ms": 38.9,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0035_overlay.jpg",
         "depth": "jr23_0035_depth.jpg"
@@ -768,25 +656,11 @@
       "near_m": 2.51,
       "far_m": 200.0,
       "confidence": 0.868,
-      "processing_ms": 38.4,
-      "anomaly_count": 1,
-      "anomaly_score": 0.74,
-      "dist_m": 5.4,
-      "anomalies": [
-        {
-          "x": 559,
-          "y": 270,
-          "w": 17,
-          "h": 61,
-          "cx": 568,
-          "cy": 302,
-          "depth_max": 0.876,
-          "depth_mean": 0.74,
-          "dist_m": 5.4,
-          "severity": "warning",
-          "area_px": 822
-        }
-      ],
+      "processing_ms": 39.8,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0036_overlay.jpg",
         "depth": "jr23_0036_depth.jpg"
@@ -799,25 +673,11 @@
       "near_m": 2.63,
       "far_m": 200.0,
       "confidence": 0.868,
-      "processing_ms": 40.8,
-      "anomaly_count": 1,
-      "anomaly_score": 0.731,
-      "dist_m": 5.5,
-      "anomalies": [
-        {
-          "x": 558,
-          "y": 271,
-          "w": 18,
-          "h": 60,
-          "cx": 568,
-          "cy": 303,
-          "depth_max": 0.871,
-          "depth_mean": 0.731,
-          "dist_m": 5.5,
-          "severity": "warning",
-          "area_px": 838
-        }
-      ],
+      "processing_ms": 40.6,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0037_overlay.jpg",
         "depth": "jr23_0037_depth.jpg"
@@ -830,25 +690,11 @@
       "near_m": 2.95,
       "far_m": 200.0,
       "confidence": 0.867,
-      "processing_ms": 40.2,
-      "anomaly_count": 1,
-      "anomaly_score": 0.742,
-      "dist_m": 5.4,
-      "anomalies": [
-        {
-          "x": 559,
-          "y": 273,
-          "w": 17,
-          "h": 58,
-          "cx": 568,
-          "cy": 304,
-          "depth_max": 0.865,
-          "depth_mean": 0.742,
-          "dist_m": 5.4,
-          "severity": "warning",
-          "area_px": 787
-        }
-      ],
+      "processing_ms": 39.6,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0038_overlay.jpg",
         "depth": "jr23_0038_depth.jpg"
@@ -861,25 +707,11 @@
       "near_m": 2.79,
       "far_m": 200.0,
       "confidence": 0.869,
-      "processing_ms": 41.0,
-      "anomaly_count": 1,
-      "anomaly_score": 0.728,
-      "dist_m": 5.6,
-      "anomalies": [
-        {
-          "x": 557,
-          "y": 262,
-          "w": 19,
-          "h": 69,
-          "cx": 567,
-          "cy": 299,
-          "depth_max": 0.881,
-          "depth_mean": 0.728,
-          "dist_m": 5.6,
-          "severity": "warning",
-          "area_px": 1005
-        }
-      ],
+      "processing_ms": 39.9,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0039_overlay.jpg",
         "depth": "jr23_0039_depth.jpg"
@@ -892,25 +724,11 @@
       "near_m": 2.61,
       "far_m": 200.0,
       "confidence": 0.869,
-      "processing_ms": 40.6,
-      "anomaly_count": 1,
-      "anomaly_score": 0.731,
-      "dist_m": 5.5,
-      "anomalies": [
-        {
-          "x": 558,
-          "y": 270,
-          "w": 18,
-          "h": 61,
-          "cx": 568,
-          "cy": 302,
-          "depth_max": 0.881,
-          "depth_mean": 0.731,
-          "dist_m": 5.5,
-          "severity": "warning",
-          "area_px": 848
-        }
-      ],
+      "processing_ms": 42.1,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0040_overlay.jpg",
         "depth": "jr23_0040_depth.jpg"
@@ -923,7 +741,7 @@
       "near_m": 3.0,
       "far_m": 200.0,
       "confidence": 0.868,
-      "processing_ms": 40.2,
+      "processing_ms": 39.7,
       "anomaly_count": 0,
       "anomaly_score": 0.0,
       "dist_m": null,
@@ -940,25 +758,11 @@
       "near_m": 2.79,
       "far_m": 200.0,
       "confidence": 0.871,
-      "processing_ms": 40.1,
-      "anomaly_count": 1,
-      "anomaly_score": 0.717,
-      "dist_m": 5.7,
-      "anomalies": [
-        {
-          "x": 557,
-          "y": 261,
-          "w": 19,
-          "h": 70,
-          "cx": 567,
-          "cy": 299,
-          "depth_max": 0.868,
-          "depth_mean": 0.717,
-          "dist_m": 5.7,
-          "severity": "warning",
-          "area_px": 1014
-        }
-      ],
+      "processing_ms": 39.0,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0042_overlay.jpg",
         "depth": "jr23_0042_depth.jpg"
@@ -971,25 +775,11 @@
       "near_m": 2.28,
       "far_m": 200.0,
       "confidence": 0.87,
-      "processing_ms": 40.7,
-      "anomaly_count": 1,
-      "anomaly_score": 0.734,
-      "dist_m": 5.5,
-      "anomalies": [
-        {
-          "x": 558,
-          "y": 260,
-          "w": 18,
-          "h": 71,
-          "cx": 568,
-          "cy": 298,
-          "depth_max": 0.892,
-          "depth_mean": 0.734,
-          "dist_m": 5.5,
-          "severity": "warning",
-          "area_px": 988
-        }
-      ],
+      "processing_ms": 39.2,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0043_overlay.jpg",
         "depth": "jr23_0043_depth.jpg"
@@ -1002,25 +792,11 @@
       "near_m": 2.33,
       "far_m": 200.0,
       "confidence": 0.874,
-      "processing_ms": 38.7,
-      "anomaly_count": 1,
-      "anomaly_score": 0.703,
-      "dist_m": 6.0,
-      "anomalies": [
-        {
-          "x": 555,
-          "y": 221,
-          "w": 21,
-          "h": 110,
-          "cx": 567,
-          "cy": 282,
-          "depth_max": 0.907,
-          "depth_mean": 0.703,
-          "dist_m": 6.0,
-          "severity": "warning",
-          "area_px": 1692
-        }
-      ],
+      "processing_ms": 39.2,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0044_overlay.jpg",
         "depth": "jr23_0044_depth.jpg"
@@ -1033,25 +809,11 @@
       "near_m": 2.56,
       "far_m": 200.0,
       "confidence": 0.872,
-      "processing_ms": 41.2,
-      "anomaly_count": 1,
-      "anomaly_score": 0.636,
-      "dist_m": 7.0,
-      "anomalies": [
-        {
-          "x": 552,
-          "y": 211,
-          "w": 24,
-          "h": 120,
-          "cx": 566,
-          "cy": 279,
-          "depth_max": 0.883,
-          "depth_mean": 0.636,
-          "dist_m": 7.0,
-          "severity": "warning",
-          "area_px": 1920
-        }
-      ],
+      "processing_ms": 40.1,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0045_overlay.jpg",
         "depth": "jr23_0045_depth.jpg"
@@ -1064,25 +826,11 @@
       "near_m": 2.18,
       "far_m": 218.5,
       "confidence": 0.875,
-      "processing_ms": 41.1,
-      "anomaly_count": 1,
-      "anomaly_score": 0.656,
-      "dist_m": 6.7,
-      "anomalies": [
-        {
-          "x": 552,
-          "y": 183,
-          "w": 24,
-          "h": 148,
-          "cx": 566,
-          "cy": 266,
-          "depth_max": 0.9,
-          "depth_mean": 0.656,
-          "dist_m": 6.7,
-          "severity": "warning",
-          "area_px": 2482
-        }
-      ],
+      "processing_ms": 44.6,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0046_overlay.jpg",
         "depth": "jr23_0046_depth.jpg"
@@ -1095,7 +843,7 @@
       "near_m": 2.27,
       "far_m": 200.0,
       "confidence": 0.878,
-      "processing_ms": 42.1,
+      "processing_ms": 39.4,
       "anomaly_count": 1,
       "anomaly_score": 0.624,
       "dist_m": 7.1,
@@ -1126,25 +874,11 @@
       "near_m": 2.01,
       "far_m": 200.0,
       "confidence": 0.876,
-      "processing_ms": 42.2,
-      "anomaly_count": 1,
-      "anomaly_score": 0.524,
-      "dist_m": 8.6,
-      "anomalies": [
-        {
-          "x": 538,
-          "y": 144,
-          "w": 38,
-          "h": 187,
-          "cx": 564,
-          "cy": 253,
-          "depth_max": 0.934,
-          "depth_mean": 0.524,
-          "dist_m": 8.6,
-          "severity": "warning",
-          "area_px": 3680
-        }
-      ],
+      "processing_ms": 40.6,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0048_overlay.jpg",
         "depth": "jr23_0048_depth.jpg"
@@ -1157,25 +891,11 @@
       "near_m": 2.05,
       "far_m": 200.0,
       "confidence": 0.881,
-      "processing_ms": 39.4,
-      "anomaly_count": 1,
-      "anomaly_score": 0.661,
-      "dist_m": 6.6,
-      "anomalies": [
-        {
-          "x": 542,
-          "y": 144,
-          "w": 34,
-          "h": 187,
-          "cx": 562,
-          "cy": 247,
-          "depth_max": 0.929,
-          "depth_mean": 0.661,
-          "dist_m": 6.6,
-          "severity": "warning",
-          "area_px": 4512
-        }
-      ],
+      "processing_ms": 38.5,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0049_overlay.jpg",
         "depth": "jr23_0049_depth.jpg"
@@ -1188,38 +908,11 @@
       "near_m": 3.05,
       "far_m": 151.1,
       "confidence": 0.875,
-      "processing_ms": 41.7,
-      "anomaly_count": 2,
-      "anomaly_score": 0.664,
-      "dist_m": 6.5,
-      "anomalies": [
-        {
-          "x": 537,
-          "y": 144,
-          "w": 39,
-          "h": 187,
-          "cx": 559,
-          "cy": 243,
-          "depth_max": 0.845,
-          "depth_mean": 0.664,
-          "dist_m": 6.5,
-          "severity": "warning",
-          "area_px": 6015
-        },
-        {
-          "x": 64,
-          "y": 144,
-          "w": 85,
-          "h": 187,
-          "cx": 90,
-          "cy": 251,
-          "depth_max": 0.605,
-          "depth_mean": 0.516,
-          "dist_m": 8.8,
-          "severity": "warning",
-          "area_px": 9281
-        }
-      ],
+      "processing_ms": 39.4,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0050_overlay.jpg",
         "depth": "jr23_0050_depth.jpg"
@@ -1232,25 +925,11 @@
       "near_m": 2.46,
       "far_m": 200.0,
       "confidence": 0.881,
-      "processing_ms": 42.8,
-      "anomaly_count": 1,
-      "anomaly_score": 0.675,
-      "dist_m": 6.4,
-      "anomalies": [
-        {
-          "x": 529,
-          "y": 144,
-          "w": 47,
-          "h": 187,
-          "cx": 556,
-          "cy": 243,
-          "depth_max": 0.877,
-          "depth_mean": 0.675,
-          "dist_m": 6.4,
-          "severity": "warning",
-          "area_px": 6938
-        }
-      ],
+      "processing_ms": 40.3,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0051_overlay.jpg",
         "depth": "jr23_0051_depth.jpg"
@@ -1263,25 +942,11 @@
       "near_m": 2.06,
       "far_m": 300.0,
       "confidence": 0.895,
-      "processing_ms": 42.2,
-      "anomaly_count": 1,
-      "anomaly_score": 0.738,
-      "dist_m": 5.4,
-      "anomalies": [
-        {
-          "x": 521,
-          "y": 144,
-          "w": 55,
-          "h": 187,
-          "cx": 551,
-          "cy": 241,
-          "depth_max": 0.915,
-          "depth_mean": 0.738,
-          "dist_m": 5.4,
-          "severity": "warning",
-          "area_px": 8754
-        }
-      ],
+      "processing_ms": 41.4,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0052_overlay.jpg",
         "depth": "jr23_0052_depth.jpg"
@@ -1294,38 +959,11 @@
       "near_m": 2.67,
       "far_m": 200.0,
       "confidence": 0.887,
-      "processing_ms": 40.8,
-      "anomaly_count": 2,
-      "anomaly_score": 0.734,
-      "dist_m": 5.5,
-      "anomalies": [
-        {
-          "x": 511,
-          "y": 144,
-          "w": 65,
-          "h": 187,
-          "cx": 545,
-          "cy": 240,
-          "depth_max": 0.908,
-          "depth_mean": 0.734,
-          "dist_m": 5.5,
-          "severity": "warning",
-          "area_px": 10970
-        },
-        {
-          "x": 64,
-          "y": 146,
-          "w": 84,
-          "h": 185,
-          "cx": 88,
-          "cy": 269,
-          "depth_max": 0.537,
-          "depth_mean": 0.438,
-          "dist_m": 9.9,
-          "severity": "warning",
-          "area_px": 6611
-        }
-      ],
+      "processing_ms": 39.9,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0053_overlay.jpg",
         "depth": "jr23_0053_depth.jpg"
@@ -1338,38 +976,11 @@
       "near_m": 3.02,
       "far_m": 18.8,
       "confidence": 0.89,
-      "processing_ms": 43.5,
-      "anomaly_count": 2,
-      "anomaly_score": 0.744,
-      "dist_m": 5.3,
-      "anomalies": [
-        {
-          "x": 64,
-          "y": 144,
-          "w": 98,
-          "h": 187,
-          "cx": 109,
-          "cy": 238,
-          "depth_max": 0.862,
-          "depth_mean": 0.744,
-          "dist_m": 5.3,
-          "severity": "warning",
-          "area_px": 17032
-        },
-        {
-          "x": 555,
-          "y": 144,
-          "w": 21,
-          "h": 187,
-          "cx": 567,
-          "cy": 229,
-          "depth_max": 0.693,
-          "depth_mean": 0.66,
-          "dist_m": 6.6,
-          "severity": "warning",
-          "area_px": 2855
-        }
-      ],
+      "processing_ms": 40.3,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0054_overlay.jpg",
         "depth": "jr23_0054_depth.jpg"
@@ -1382,25 +993,11 @@
       "near_m": 2.46,
       "far_m": 200.0,
       "confidence": 0.9,
-      "processing_ms": 43.1,
-      "anomaly_count": 1,
-      "anomaly_score": 0.761,
-      "dist_m": 5.1,
-      "anomalies": [
-        {
-          "x": 504,
-          "y": 144,
-          "w": 72,
-          "h": 187,
-          "cx": 543,
-          "cy": 240,
-          "depth_max": 0.929,
-          "depth_mean": 0.761,
-          "dist_m": 5.1,
-          "severity": "warning",
-          "area_px": 11939
-        }
-      ],
+      "processing_ms": 38.7,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0055_overlay.jpg",
         "depth": "jr23_0055_depth.jpg"
@@ -1413,38 +1010,11 @@
       "near_m": 2.87,
       "far_m": 200.0,
       "confidence": 0.887,
-      "processing_ms": 42.0,
-      "anomaly_count": 2,
-      "anomaly_score": 0.748,
-      "dist_m": 5.3,
-      "anomalies": [
-        {
-          "x": 511,
-          "y": 144,
-          "w": 65,
-          "h": 187,
-          "cx": 545,
-          "cy": 239,
-          "depth_max": 0.91,
-          "depth_mean": 0.748,
-          "dist_m": 5.3,
-          "severity": "warning",
-          "area_px": 11195
-        },
-        {
-          "x": 64,
-          "y": 144,
-          "w": 81,
-          "h": 187,
-          "cx": 90,
-          "cy": 249,
-          "depth_max": 0.536,
-          "depth_mean": 0.457,
-          "dist_m": 9.7,
-          "severity": "warning",
-          "area_px": 9284
-        }
-      ],
+      "processing_ms": 40.4,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0056_overlay.jpg",
         "depth": "jr23_0056_depth.jpg"
@@ -1457,38 +1027,11 @@
       "near_m": 2.87,
       "far_m": 200.0,
       "confidence": 0.887,
-      "processing_ms": 41.7,
-      "anomaly_count": 2,
-      "anomaly_score": 0.745,
-      "dist_m": 5.3,
-      "anomalies": [
-        {
-          "x": 513,
-          "y": 144,
-          "w": 63,
-          "h": 187,
-          "cx": 547,
-          "cy": 240,
-          "depth_max": 0.906,
-          "depth_mean": 0.745,
-          "dist_m": 5.3,
-          "severity": "warning",
-          "area_px": 10538
-        },
-        {
-          "x": 64,
-          "y": 204,
-          "w": 66,
-          "h": 127,
-          "cx": 84,
-          "cy": 285,
-          "depth_max": 0.483,
-          "depth_mean": 0.413,
-          "dist_m": 10.3,
-          "severity": "warning",
-          "area_px": 4193
-        }
-      ],
+      "processing_ms": 39.6,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0057_overlay.jpg",
         "depth": "jr23_0057_depth.jpg"
@@ -1501,25 +1044,11 @@
       "near_m": 2.22,
       "far_m": 233.5,
       "confidence": 0.9,
-      "processing_ms": 42.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.754,
-      "dist_m": 5.2,
-      "anomalies": [
-        {
-          "x": 517,
-          "y": 144,
-          "w": 59,
-          "h": 187,
-          "cx": 550,
-          "cy": 241,
-          "depth_max": 0.923,
-          "depth_mean": 0.754,
-          "dist_m": 5.2,
-          "severity": "warning",
-          "area_px": 9359
-        }
-      ],
+      "processing_ms": 39.0,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0058_overlay.jpg",
         "depth": "jr23_0058_depth.jpg"
@@ -1532,7 +1061,7 @@
       "near_m": 1.84,
       "far_m": 201.4,
       "confidence": 0.896,
-      "processing_ms": 42.6,
+      "processing_ms": 39.2,
       "anomaly_count": 1,
       "anomaly_score": 0.778,
       "dist_m": 4.8,
@@ -1563,25 +1092,11 @@
       "near_m": 1.85,
       "far_m": 203.5,
       "confidence": 0.897,
-      "processing_ms": 42.1,
-      "anomaly_count": 1,
-      "anomaly_score": 0.775,
-      "dist_m": 4.9,
-      "anomalies": [
-        {
-          "x": 519,
-          "y": 144,
-          "w": 57,
-          "h": 187,
-          "cx": 550,
-          "cy": 240,
-          "depth_max": 0.917,
-          "depth_mean": 0.775,
-          "dist_m": 4.9,
-          "severity": "warning",
-          "area_px": 9387
-        }
-      ],
+      "processing_ms": 38.7,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0060_overlay.jpg",
         "depth": "jr23_0060_depth.jpg"
@@ -1594,25 +1109,11 @@
       "near_m": 2.34,
       "far_m": 246.0,
       "confidence": 0.897,
-      "processing_ms": 43.0,
-      "anomaly_count": 1,
-      "anomaly_score": 0.775,
-      "dist_m": 4.9,
-      "anomalies": [
-        {
-          "x": 519,
-          "y": 144,
-          "w": 57,
-          "h": 187,
-          "cx": 549,
-          "cy": 239,
-          "depth_max": 0.909,
-          "depth_mean": 0.775,
-          "dist_m": 4.9,
-          "severity": "warning",
-          "area_px": 9737
-        }
-      ],
+      "processing_ms": 9430.3,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0061_overlay.jpg",
         "depth": "jr23_0061_depth.jpg"
@@ -1625,25 +1126,11 @@
       "near_m": 2.54,
       "far_m": 218.3,
       "confidence": 0.897,
-      "processing_ms": 41.3,
-      "anomaly_count": 1,
-      "anomaly_score": 0.766,
-      "dist_m": 5.0,
-      "anomalies": [
-        {
-          "x": 518,
-          "y": 144,
-          "w": 58,
-          "h": 187,
-          "cx": 549,
-          "cy": 239,
-          "depth_max": 0.922,
-          "depth_mean": 0.766,
-          "dist_m": 5.0,
-          "severity": "warning",
-          "area_px": 9772
-        }
-      ],
+      "processing_ms": 178.3,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0062_overlay.jpg",
         "depth": "jr23_0062_depth.jpg"
@@ -1656,38 +1143,11 @@
       "near_m": 3.09,
       "far_m": 60.8,
       "confidence": 0.882,
-      "processing_ms": 39.7,
-      "anomaly_count": 2,
-      "anomaly_score": 0.728,
-      "dist_m": 5.6,
-      "anomalies": [
-        {
-          "x": 521,
-          "y": 144,
-          "w": 55,
-          "h": 187,
-          "cx": 549,
-          "cy": 239,
-          "depth_max": 0.874,
-          "depth_mean": 0.728,
-          "dist_m": 5.6,
-          "severity": "warning",
-          "area_px": 9509
-        },
-        {
-          "x": 64,
-          "y": 144,
-          "w": 93,
-          "h": 187,
-          "cx": 95,
-          "cy": 250,
-          "depth_max": 0.633,
-          "depth_mean": 0.533,
-          "dist_m": 8.5,
-          "severity": "warning",
-          "area_px": 11372
-        }
-      ],
+      "processing_ms": 303.2,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0063_overlay.jpg",
         "depth": "jr23_0063_depth.jpg"
@@ -1700,38 +1160,11 @@
       "near_m": 3.39,
       "far_m": 23.9,
       "confidence": 0.894,
-      "processing_ms": 39.6,
-      "anomaly_count": 2,
-      "anomaly_score": 0.734,
-      "dist_m": 5.5,
-      "anomalies": [
-        {
-          "x": 530,
-          "y": 144,
-          "w": 46,
-          "h": 187,
-          "cx": 555,
-          "cy": 244,
-          "depth_max": 0.866,
-          "depth_mean": 0.734,
-          "dist_m": 5.5,
-          "severity": "warning",
-          "area_px": 7332
-        },
-        {
-          "x": 64,
-          "y": 144,
-          "w": 106,
-          "h": 187,
-          "cx": 106,
-          "cy": 243,
-          "depth_max": 0.829,
-          "depth_mean": 0.685,
-          "dist_m": 6.2,
-          "severity": "warning",
-          "area_px": 15709
-        }
-      ],
+      "processing_ms": 619.4,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0064_overlay.jpg",
         "depth": "jr23_0064_depth.jpg"
@@ -1744,25 +1177,11 @@
       "near_m": 2.49,
       "far_m": 200.0,
       "confidence": 0.893,
-      "processing_ms": 41.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.748,
-      "dist_m": 5.3,
-      "anomalies": [
-        {
-          "x": 519,
-          "y": 144,
-          "w": 57,
-          "h": 187,
-          "cx": 549,
-          "cy": 239,
-          "depth_max": 0.901,
-          "depth_mean": 0.748,
-          "dist_m": 5.3,
-          "severity": "warning",
-          "area_px": 9773
-        }
-      ],
+      "processing_ms": 324.7,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0065_overlay.jpg",
         "depth": "jr23_0065_depth.jpg"
@@ -1775,38 +1194,11 @@
       "near_m": 2.72,
       "far_m": 200.0,
       "confidence": 0.894,
-      "processing_ms": 41.5,
-      "anomaly_count": 2,
-      "anomaly_score": 0.791,
-      "dist_m": 4.6,
-      "anomalies": [
-        {
-          "x": 518,
-          "y": 144,
-          "w": 58,
-          "h": 187,
-          "cx": 546,
-          "cy": 237,
-          "depth_max": 0.897,
-          "depth_mean": 0.791,
-          "dist_m": 4.6,
-          "severity": "warning",
-          "area_px": 10636
-        },
-        {
-          "x": 64,
-          "y": 258,
-          "w": 51,
-          "h": 73,
-          "cx": 82,
-          "cy": 301,
-          "depth_max": 0.452,
-          "depth_mean": 0.411,
-          "dist_m": 10.3,
-          "severity": "warning",
-          "area_px": 2435
-        }
-      ],
+      "processing_ms": 42.1,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0066_overlay.jpg",
         "depth": "jr23_0066_depth.jpg"
@@ -1819,25 +1211,11 @@
       "near_m": 1.98,
       "far_m": 201.5,
       "confidence": 0.909,
-      "processing_ms": 42.5,
-      "anomaly_count": 1,
-      "anomaly_score": 0.777,
-      "dist_m": 4.8,
-      "anomalies": [
-        {
-          "x": 510,
-          "y": 144,
-          "w": 66,
-          "h": 187,
-          "cx": 544,
-          "cy": 238,
-          "depth_max": 0.911,
-          "depth_mean": 0.777,
-          "dist_m": 4.8,
-          "severity": "warning",
-          "area_px": 11428
-        }
-      ],
+      "processing_ms": 38.7,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0067_overlay.jpg",
         "depth": "jr23_0067_depth.jpg"
@@ -1850,38 +1228,11 @@
       "near_m": 2.82,
       "far_m": 200.0,
       "confidence": 0.891,
-      "processing_ms": 43.6,
-      "anomaly_count": 2,
-      "anomaly_score": 0.76,
-      "dist_m": 5.1,
-      "anomalies": [
-        {
-          "x": 510,
-          "y": 144,
-          "w": 66,
-          "h": 187,
-          "cx": 544,
-          "cy": 237,
-          "depth_max": 0.91,
-          "depth_mean": 0.76,
-          "dist_m": 5.1,
-          "severity": "warning",
-          "area_px": 11700
-        },
-        {
-          "x": 64,
-          "y": 202,
-          "w": 80,
-          "h": 129,
-          "cx": 92,
-          "cy": 282,
-          "depth_max": 0.552,
-          "depth_mean": 0.473,
-          "dist_m": 9.4,
-          "severity": "warning",
-          "area_px": 6171
-        }
-      ],
+      "processing_ms": 39.4,
+      "anomaly_count": 0,
+      "anomaly_score": 0.0,
+      "dist_m": null,
+      "anomalies": [],
       "files": {
         "overlay": "jr23_0068_overlay.jpg",
         "depth": "jr23_0068_depth.jpg"
