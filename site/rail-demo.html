@@ -565,7 +565,7 @@
     <span style="font-size:0.6rem;background:var(--safe);color:#000;padding:3px 9px;border-radius:4px;vertical-align:middle;font-weight:800;letter-spacing:0.06em;margin-left:0.75rem">実映像 / REAL DATA</span>
   </h2>
   <p class="section-sub">
-    実際のJR路線映像を Depth Anything V2 Large（RTX 4090 / ~114ms/frame）で処理した結果です。
+    実際のJR路線映像（2路線 / 142フレーム）を Depth Anything V2 Large（RTX 4090 / 約40ms/フレーム）でリアルタイム処理した結果です。
     フレームを選択して深度マップと異常検知結果を確認できます。
   </p>
 
@@ -574,9 +574,9 @@
     <span class="rdb-label">✓ 実AI推論</span>
     <span class="rdb-chip">モデル: Depth Anything V2 Large-hf</span>
     <span class="rdb-chip">デバイス: RTX 4090 (CUDA)</span>
-    <span class="rdb-chip">処理: ~114 ms/フレーム</span>
-    <span class="rdb-chip">フレーム数: 12枚（2路線 × 6時点）</span>
-    <span class="rdb-chip">異常検知: 6件 / 12フレーム</span>
+    <span class="rdb-chip">処理: ~40 ms/フレーム（640×360）</span>
+    <span class="rdb-chip">フレーム数: 142枚（2路線 × 約24秒）</span>
+    <span class="rdb-chip">異常検知: 9件 / 142フレーム</span>
   </div>
 
   <!-- Video tabs -->
@@ -638,6 +638,11 @@
         <!-- Anomaly events summary -->
         <div class="events-panel" id="eventsPanel">
           <!-- populated by buildEventsPanel() -->
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:0.6rem">
+          <button onclick="printReport()" class="btn-secondary" style="font-size:0.82rem;padding:0.45rem 1.1rem;gap:0.4rem">
+            📋 点検レポート出力
+          </button>
         </div>
       </div>
 
@@ -1151,6 +1156,109 @@ function buildEventsPanel(data) {
     }).join('');
   }
   panel.innerHTML = html;
+}
+
+function printReport() {
+  if (!playerTimeline) return;
+  const data     = playerTimeline;
+  const name     = playerVideoName;
+  const today    = new Date().toLocaleDateString('ja-JP', {year:'numeric', month:'2-digit', day:'2-digit'});
+  const anomaly  = data.frames.filter(f => f.anomaly_count > 0);
+  const avgConf  = (data.frames.reduce((s, f) => s + f.confidence, 0) / data.frames.length * 100).toFixed(1);
+  const avgMs    = (data.frames.reduce((s, f) => s + f.processing_ms, 0) / data.frames.length).toFixed(1);
+
+  const eventRows = anomaly.map((f, i) => {
+    const a   = f.anomalies[0] || {};
+    const sev = a.severity === 'critical' ? '緊急' : '注意';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${f.ts.toFixed(1)} s</td>
+      <td>${f.dist_m != null ? f.dist_m + ' m' : '—'}</td>
+      <td>${(f.anomaly_score * 100).toFixed(0)}%</td>
+      <td>${(f.confidence * 100).toFixed(0)}%</td>
+      <td><span style="color:${a.severity==='critical'?'#c00':'#a60'};font-weight:700">${sev}</span></td>
+      <td>${a.area_px ? a.area_px.toLocaleString() + ' px²' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const noAnomRow = anomaly.length === 0
+    ? `<tr><td colspan="7" style="text-align:center;color:#080;font-weight:700">異常なし — 全区間正常</td></tr>` : '';
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>RailScan AI 点検レポート — ${name}</title>
+<style>
+  body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; margin: 0; padding: 2cm; color: #111; font-size: 11pt; }
+  h1 { font-size: 18pt; margin-bottom: 4px; }
+  .subtitle { color: #555; font-size: 10pt; margin-bottom: 1.5rem; }
+  .header-bar { display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 2px solid #f59e0b; padding-bottom: 0.75rem; margin-bottom: 1.5rem; }
+  .logo { font-size: 13pt; font-weight: 800; }
+  .logo span { color: #f59e0b; }
+  .badge { background:#f59e0b; color:#000; font-size:8pt; font-weight:800; padding:2px 7px; border-radius:4px; }
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem 2rem; margin-bottom:1.5rem; font-size:10pt; }
+  .meta-row { display:flex; justify-content:space-between; border-bottom:1px solid #e5e5e5; padding:4px 0; }
+  .meta-key { color:#555; }
+  .meta-val { font-weight:700; }
+  h2 { font-size:13pt; border-left:3px solid #f59e0b; padding-left:0.5rem; margin:1.5rem 0 0.75rem; }
+  table { width:100%; border-collapse:collapse; font-size:10pt; }
+  th { background:#f5f5f5; text-align:left; padding:6px 8px; border:1px solid #ddd; font-size:9pt; }
+  td { padding:6px 8px; border:1px solid #ddd; }
+  tr:nth-child(even) { background:#fafafa; }
+  .summary-box { background:#fff8e6; border:1px solid #f59e0b; border-radius:6px; padding:0.75rem 1rem; margin-bottom:1.5rem; }
+  .summary-ok  { background:#f0fff4; border-color:#22c55e; }
+  .footer { margin-top:2rem; font-size:9pt; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:0.75rem; }
+  @media print { body { padding: 1cm 1.5cm; } button { display:none !important; } }
+</style></head><body>
+<div class="header-bar">
+  <div>
+    <div class="logo">Spatial<span>Forge</span> <span class="badge">RAIL</span></div>
+    <h1>AI軌道点検レポート</h1>
+    <div class="subtitle">RailScan AI — Depth Anything V2 Large by SpatialForge</div>
+  </div>
+  <div style="text-align:right;font-size:9pt;color:#555">
+    <div>出力日時: ${today}</div>
+    <div>対象路線: ${name}</div>
+  </div>
+</div>
+
+<div class="meta-grid">
+  <div>
+    <div class="meta-row"><span class="meta-key">対象路線</span><span class="meta-val">${name}</span></div>
+    <div class="meta-row"><span class="meta-key">解析フレーム数</span><span class="meta-val">${data.total_frames} フレーム</span></div>
+    <div class="meta-row"><span class="meta-key">動画時間</span><span class="meta-val">${data.duration_s.toFixed(1)} 秒</span></div>
+    <div class="meta-row"><span class="meta-key">処理フレームレート</span><span class="meta-val">${data.fps_processed} fps</span></div>
+  </div>
+  <div>
+    <div class="meta-row"><span class="meta-key">使用モデル</span><span class="meta-val">Depth Anything V2 Large</span></div>
+    <div class="meta-row"><span class="meta-key">推論デバイス</span><span class="meta-val">RTX 4090 (CUDA)</span></div>
+    <div class="meta-row"><span class="meta-key">平均推論時間</span><span class="meta-val">${avgMs} ms/フレーム</span></div>
+    <div class="meta-row"><span class="meta-key">平均信頼度</span><span class="meta-val">${avgConf}%</span></div>
+  </div>
+</div>
+
+<div class="summary-box ${anomaly.length === 0 ? 'summary-ok' : ''}">
+  ${anomaly.length === 0
+    ? '<strong style="color:#166534">✓ 異常なし</strong> — 解析区間全体で軌道異常は検知されませんでした。'
+    : `<strong style="color:#92400e">⚠ ${anomaly.length} 件の異常イベントを検知</strong> — 下表の各フレームで軌道前方への近接物体が確認されました。速やかに保線担当者へご確認ください。`}
+</div>
+
+<h2>異常検知イベント一覧</h2>
+<table>
+  <thead>
+    <tr><th>#</th><th>タイムスタンプ</th><th>推定距離</th><th>異常スコア</th><th>信頼度</th><th>重症度</th><th>ブロブ面積</th></tr>
+  </thead>
+  <tbody>${eventRows}${noAnomRow}</tbody>
+</table>
+
+<div class="footer">
+  本レポートは SpatialForge RailScan AI が自動生成した暫定レポートです。最終判断は保線担当者が現地確認の上で行ってください。<br>
+  SpatialForge — spatialforge-demo.fly.dev — ${today}
+</div>
+<br>
+<button onclick="window.print()" style="padding:8px 20px;background:#f59e0b;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:11pt">🖨 印刷 / PDF保存</button>
+</body></html>`);
+  w.document.close();
 }
 
 async function loadTimeline(name, tabEl) {
@@ -1816,7 +1924,7 @@ window.addEventListener('DOMContentLoaded', () => {
     entries.forEach(e => {
       if (e.isIntersecting) {
         animateCounter(document.getElementById('stat1'), 1847, '', 1800);
-        animateCounter(document.getElementById('stat2'), 114,  '', 1600);
+        animateCounter(document.getElementById('stat2'), 40,   '', 1600);
         animateCounter(document.getElementById('stat3'), 30,   'x', 1600);
         animateCounter(document.getElementById('stat4'), 47,   '', 1900);
         obs.disconnect();
