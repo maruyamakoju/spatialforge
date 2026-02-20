@@ -1664,9 +1664,9 @@ window.addEventListener('DOMContentLoaded', () => {
     entries.forEach(e => {
       if (e.isIntersecting) {
         animateCounter(document.getElementById('stat1'), 1847, '', 1800);
-        animateCounter(document.getElementById('stat2'), 40,   '', 1600);
+        animateCounter(document.getElementById('stat2'), 13,   '', 1600);
         animateCounter(document.getElementById('stat3'), 30,   'x', 1600);
-        animateCounter(document.getElementById('stat4'), 47,   '', 1900);
+        animateCounter(document.getElementById('stat4'), 95,   '', 1900);
         obs.disconnect();
       }
     });

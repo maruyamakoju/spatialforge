@@ -619,6 +619,43 @@
       .roi-outputs { grid-template-columns: 1fr 1fr; }
       .roi-output-card.highlight-card { grid-column: span 2; }
     }
+
+    /* ── Competitive comparison ─────────────────── */
+    .compare-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .compare-table th { background: var(--surface-2); color: var(--muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 12px 16px; text-align: center; border-bottom: 2px solid var(--border); }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table th.highlight { color: var(--accent); border-bottom-color: rgba(245,158,11,0.5); }
+    .compare-table td { padding: 12px 16px; border-bottom: 1px solid rgba(30,30,46,0.6); text-align: center; }
+    .compare-table td:first-child { text-align: left; font-weight: 600; color: var(--text); }
+    .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .compare-check { color: var(--safe); font-weight: 700; }
+    .compare-cross { color: var(--danger); font-weight: 700; }
+    .compare-partial { color: var(--accent); font-weight: 700; }
+
+    /* ── Roadmap timeline ──────────────────────── */
+    .roadmap-flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 0; align-items: stretch; margin-bottom: 28px; }
+    .roadmap-phase { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 20px; position: relative; overflow: hidden; }
+    .roadmap-phase::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .roadmap-phase.phase-1::before { background: var(--indigo); }
+    .roadmap-phase.phase-2::before { background: var(--accent); }
+    .roadmap-phase.phase-3::before { background: var(--safe); }
+    .roadmap-phase-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .phase-1 .roadmap-phase-label { color: #818cf8; }
+    .phase-2 .roadmap-phase-label { color: var(--accent); }
+    .phase-3 .roadmap-phase-label { color: #4ade80; }
+    .roadmap-phase h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .roadmap-phase p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    .roadmap-phase .duration { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 8px; display: inline-block; background: var(--surface-2); padding: 2px 10px; border-radius: 4px; }
+    .roadmap-arrow { color: var(--accent); font-size: 1.4rem; padding: 0 12px; font-weight: 300; display: flex; align-items: center; }
+    .roadmap-items { list-style: none; margin-top: 10px; }
+    .roadmap-items li { font-size: 0.8rem; color: var(--muted); padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+    .roadmap-items li::before { content: '\2192'; color: var(--accent); font-size: 0.75rem; flex-shrink: 0; }
+
+    @media (max-width: 768px) {
+      .roadmap-flow { grid-template-columns: 1fr; gap: 12px; }
+      .roadmap-arrow { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -653,11 +690,13 @@
       <li><a href="#cover" data-section="cover">表紙</a></li>
       <li><a href="#sec-1" data-section="sec-1">1. 現状の課題</a></li>
       <li><a href="#sec-2" data-section="sec-2">2. RailScan AI ソリューション</a></li>
+      <li><a href="#sec-compare" data-section="sec-compare">　競合比較</a></li>
       <li><a href="#sec-3" data-section="sec-3">3. 実証データ</a></li>
       <li><a href="#sec-4" data-section="sec-4">4. コスト比較・ROI</a></li>
       <li><a href="#sec-roi" data-section="sec-roi">　ROI 試算ツール</a></li>
       <li><a href="#sec-5" data-section="sec-5">5. 導入事例シミュレーション</a></li>
       <li><a href="#sec-6" data-section="sec-6">6. パイロット提案</a></li>
+      <li><a href="#sec-roadmap" data-section="sec-roadmap">　導入ロードマップ</a></li>
       <li><a href="#cta" data-section="cta">お問い合わせ</a></li>
     </ul>
   </aside>
@@ -803,6 +842,86 @@
           <h3>セキュア・オンプレ対応</h3>
           <p>全データは鉄道事業者のプライベートクラウドに保管可能。外部送信なしのオンプレミス構成も選択可能。</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Section 2.5: 競合比較 -->
+    <div class="section section-reveal" id="sec-compare">
+      <div class="section-header">
+        <div class="section-num" style="font-size:0.8rem">⚖</div>
+        <div class="section-title">
+          競合比較
+          <span class="ja">Competitive Analysis</span>
+        </div>
+      </div>
+
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>比較項目</th>
+              <th>手動検査<br><span style="font-size:0.65rem;font-weight:400;text-transform:none;letter-spacing:0">Manual</span></th>
+              <th>既存AIシステム<br><span style="font-size:0.65rem;font-weight:400;text-transform:none;letter-spacing:0">Existing AI</span></th>
+              <th class="highlight">RailScan AI<br><span style="font-size:0.65rem;font-weight:400;text-transform:none;letter-spacing:0">Our Solution</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>初期コスト</td>
+              <td><span class="compare-check">低（人件費中心）</span></td>
+              <td><span class="compare-cross">高（専用車両必要）</span></td>
+              <td><span class="compare-check">低（カメラ後付け）</span></td>
+            </tr>
+            <tr>
+              <td>点検頻度</td>
+              <td><span class="compare-cross">月1〜2回</span></td>
+              <td><span class="compare-partial">月2〜4回</span></td>
+              <td><span class="compare-check">毎運行（日数回）</span></td>
+            </tr>
+            <tr>
+              <td>リアルタイム検知</td>
+              <td><span class="compare-cross">&#x2717;</span></td>
+              <td><span class="compare-partial">&#x25CB; 一部対応</span></td>
+              <td><span class="compare-check">&#x2713; 完全対応</span></td>
+            </tr>
+            <tr>
+              <td>検出精度</td>
+              <td><span class="compare-partial">経験依存</span></td>
+              <td><span class="compare-check">高精度</span></td>
+              <td><span class="compare-check">高精度（4クラス）</span></td>
+            </tr>
+            <tr>
+              <td>導入期間</td>
+              <td><span class="compare-check">即日</span></td>
+              <td><span class="compare-cross">6〜12ヶ月</span></td>
+              <td><span class="compare-check">1〜2ヶ月</span></td>
+            </tr>
+            <tr>
+              <td>カバレッジ</td>
+              <td><span class="compare-cross">巡回区間のみ</span></td>
+              <td><span class="compare-partial">検測車走行区間</span></td>
+              <td><span class="compare-check">全営業路線</span></td>
+            </tr>
+            <tr>
+              <td>深夜作業</td>
+              <td><span class="compare-cross">必要</span></td>
+              <td><span class="compare-partial">一部必要</span></td>
+              <td><span class="compare-check">不要</span></td>
+            </tr>
+            <tr>
+              <td>データ分析</td>
+              <td><span class="compare-cross">手動記録</span></td>
+              <td><span class="compare-partial">専用フォーマット</span></td>
+              <td><span class="compare-check">自動トレンド分析</span></td>
+            </tr>
+            <tr>
+              <td>スケーラビリティ</td>
+              <td><span class="compare-cross">人員比例</span></td>
+              <td><span class="compare-cross">車両追加必要</span></td>
+              <td><span class="compare-check">カメラ追加のみ</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1285,6 +1404,55 @@
       </div>
     </div>
 
+    <!-- Section: 導入ロードマップ -->
+    <div class="section section-reveal" id="sec-roadmap">
+      <div class="section-header">
+        <div class="section-num" style="font-size:0.8rem">🗺</div>
+        <div class="section-title">
+          導入ロードマップ
+          <span class="ja">Implementation Roadmap</span>
+        </div>
+      </div>
+
+      <div class="roadmap-flow">
+        <div class="roadmap-phase phase-1">
+          <div class="roadmap-phase-label">Phase 1</div>
+          <h4>PoC（実証実験）</h4>
+          <span class="duration">3ヶ月</span>
+          <p>1路線1編成での概念実証。</p>
+          <ul class="roadmap-items">
+            <li>1路線1編成で実施</li>
+            <li>カメラ設置・AI推論開始</li>
+            <li>既存点検との比較検証</li>
+          </ul>
+        </div>
+        <div class="roadmap-arrow">→</div>
+        <div class="roadmap-phase phase-2">
+          <div class="roadmap-phase-label">Phase 2</div>
+          <h4>本線試験</h4>
+          <span class="duration">6ヶ月</span>
+          <p>複数路線への拡張と最適化。</p>
+          <ul class="roadmap-items">
+            <li>3〜5路線展開</li>
+            <li>モデルファインチューニング</li>
+            <li>ダッシュボード本番運用</li>
+          </ul>
+        </div>
+        <div class="roadmap-arrow">→</div>
+        <div class="roadmap-phase phase-3">
+          <div class="roadmap-phase-label">Phase 3</div>
+          <h4>全線展開</h4>
+          <span class="duration">12ヶ月〜</span>
+          <p>全路線・全車両への本格展開。</p>
+          <ul class="roadmap-items">
+            <li>全路線・全車両展開</li>
+            <li>予防保全の本格運用</li>
+            <li>API連携・外部システム統合</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- CTA -->
     <div class="cta-box section-reveal" id="cta">
       <h2>まずは30分のオンラインデモから</h2>
@@ -1341,11 +1509,13 @@
     { id: 'cover', el: document.getElementById('cover') },
     { id: 'sec-1', el: document.getElementById('sec-1') },
     { id: 'sec-2', el: document.getElementById('sec-2') },
+    { id: 'sec-compare', el: document.getElementById('sec-compare') },
     { id: 'sec-3', el: document.getElementById('sec-3') },
     { id: 'sec-4', el: document.getElementById('sec-4') },
     { id: 'sec-roi', el: document.getElementById('sec-roi') },
     { id: 'sec-5', el: document.getElementById('sec-5') },
     { id: 'sec-6', el: document.getElementById('sec-6') },
+    { id: 'sec-roadmap', el: document.getElementById('sec-roadmap') },
     { id: 'cta', el: document.getElementById('cta') }
   ].filter(function(s) { return s.el; });
 

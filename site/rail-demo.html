@@ -25,11 +25,11 @@
   </a>
   <div class="nav-links">
     <a href="#demo">デモ</a>
+    <a href="#summary">サマリー</a>
     <a href="#kmmap">KM マップ</a>
     <a href="#dashboard">ダッシュボード</a>
     <a href="#specs">技術仕様</a>
     <a href="#roi">ROI比較</a>
-    <a href="index.html">API</a>
     <a href="proposal.html">提案書</a>
     <a href="#cta" class="nav-cta">資料請求</a>
   </div>
@@ -82,7 +82,7 @@
     <span style="font-size:0.6rem;background:var(--safe);color:#000;padding:3px 9px;border-radius:4px;vertical-align:middle;font-weight:800;letter-spacing:0.06em;margin-left:0.75rem">実映像 / REAL DATA</span>
   </h2>
   <p class="section-sub">
-    実際のJR路線映像（2路線 / 142フレーム）を Depth Anything V2 Large + YOLOv8 欠陥検知モデル（RTX 4090 / 約52ms/フレーム）でリアルタイム処理した結果です。
+    実際のJR路線映像（2路線 / 12キーフレーム）を YOLOv8m v2 欠陥検知モデル（5,052枚学習 / RTX 4090 / 平均13ms/フレーム）でリアルタイム処理した結果です。
     フレームを選択して深度マップと欠陥検知結果を確認できます。
   </p>
 
@@ -90,11 +90,11 @@
   <div class="real-data-bar">
     <span class="rdb-label">✓ 実AI推論</span>
     <span class="rdb-chip">深度: Depth Anything V2 Large-hf</span>
-    <span class="rdb-chip">欠陥検知: YOLOv8 (11クラス)</span>
+    <span class="rdb-chip">欠陥検知: YOLOv8m v2 (4クラス)</span>
     <span class="rdb-chip">デバイス: RTX 4090 (CUDA)</span>
-    <span class="rdb-chip">処理: ~52 ms/フレーム（深度40ms+欠陥12ms）</span>
-    <span class="rdb-chip">フレーム数: 142枚（2路線 × 約24秒）</span>
-    <span class="rdb-chip">欠陥検知: 10件 / 142フレーム（緊急2件・重要5件・軽微3件）</span>
+    <span class="rdb-chip">処理: ~13 ms/フレーム</span>
+    <span class="rdb-chip">学習: 5,052枚 / mAP@50=44.7%</span>
+    <span class="rdb-chip">検出: 39件 / 12フレーム（緊急13件・重要20件・軽微6件）</span>
   </div>
 
   <!-- Video tabs -->
@@ -121,7 +121,6 @@
   <!-- Keyboard hint -->
   <div style="margin-bottom:0.75rem">
     <span class="kbd-hint">
-      キーボード:
       <kbd class="kbd">1</kbd>–<kbd class="kbd">5</kbd> タブ切替 &nbsp;
       <kbd class="kbd">←</kbd><kbd class="kbd">→</kbd> フレーム &nbsp;
       <kbd class="kbd">Space</kbd> 再生/停止 &nbsp;
@@ -311,6 +310,101 @@
 </section>
 </div>
 
+<!-- Detection Summary Dashboard -->
+<div style="background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section id="summary">
+  <div class="section-label">Detection Summary</div>
+  <h2 class="section-title">検出サマリーダッシュボード</h2>
+  <p class="section-sub">12キーフレームの全検出結果を重要度別・欠陥種別に集計。YOLOv8m v2モデルによる実推論データ。</p>
+
+  <div class="summary-grid">
+    <!-- Severity breakdown -->
+    <div class="summary-card">
+      <h3 class="summary-card-title">重要度別分布</h3>
+      <div class="summary-bars">
+        <div class="summary-bar-row">
+          <span class="summary-bar-label" style="color:#ef4444">緊急</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:33.3%;background:rgba(239,68,68,0.6);border:1px solid rgba(239,68,68,0.8)">13件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#ef4444">33%</span>
+        </div>
+        <div class="summary-bar-row">
+          <span class="summary-bar-label" style="color:#f59e0b">重要</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:51.3%;background:rgba(245,158,11,0.5);border:1px solid rgba(245,158,11,0.7)">20件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#f59e0b">51%</span>
+        </div>
+        <div class="summary-bar-row">
+          <span class="summary-bar-label" style="color:#3b82f6">軽微</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:15.4%;background:rgba(59,130,246,0.5);border:1px solid rgba(59,130,246,0.7)">6件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#3b82f6">15%</span>
+        </div>
+      </div>
+      <div class="summary-total">合計 <strong style="color:var(--accent)">39件</strong> / 12フレーム</div>
+    </div>
+
+    <!-- Per-class breakdown -->
+    <div class="summary-card">
+      <h3 class="summary-card-title">欠陥種別分布</h3>
+      <div class="summary-bars">
+        <div class="summary-bar-row">
+          <span class="summary-bar-label">レール剥離</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:51.3%;background:rgba(245,158,11,0.5);border:1px solid rgba(245,158,11,0.7)">20件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#f59e0b">51%</span>
+        </div>
+        <div class="summary-bar-row">
+          <span class="summary-bar-label">レールき裂</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:33.3%;background:rgba(239,68,68,0.6);border:1px solid rgba(239,68,68,0.8)">13件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#ef4444">33%</span>
+        </div>
+        <div class="summary-bar-row">
+          <span class="summary-bar-label">波状摩耗</span>
+          <div class="summary-bar-track">
+            <div class="summary-bar-fill" style="width:15.4%;background:rgba(59,130,246,0.5);border:1px solid rgba(59,130,246,0.7)">6件</div>
+          </div>
+          <span class="summary-bar-pct" style="color:#3b82f6">15%</span>
+        </div>
+      </div>
+      <div class="summary-total">最高信頼度 <strong style="color:var(--accent)">92%</strong> / 平均 <strong>54%</strong></div>
+    </div>
+
+    <!-- Model performance -->
+    <div class="summary-card summary-card-highlight">
+      <h3 class="summary-card-title">モデル性能</h3>
+      <div class="summary-metrics">
+        <div class="summary-metric">
+          <div class="summary-metric-val" style="color:var(--accent)">44.7%</div>
+          <div class="summary-metric-label">mAP@50</div>
+        </div>
+        <div class="summary-metric">
+          <div class="summary-metric-val" style="color:var(--safe)">62.5%</div>
+          <div class="summary-metric-label">適合率</div>
+        </div>
+        <div class="summary-metric">
+          <div class="summary-metric-val" style="color:var(--indigo)">11ms</div>
+          <div class="summary-metric-label">平均推論</div>
+        </div>
+        <div class="summary-metric">
+          <div class="summary-metric-val" style="color:var(--text)">5,052</div>
+          <div class="summary-metric-label">学習画像数</div>
+        </div>
+      </div>
+      <div class="summary-model-info">
+        <span>YOLOv8m v2</span> · <span>4クラス</span> · <span>92エポック（Early Stop@62）</span>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
 <!-- 3D Visualization -->
 <div class="full-section" id="viz" style="background: var(--bg); border-bottom: 1px solid var(--border);">
 <div class="viz-inner">
@@ -394,8 +488,8 @@
     </div>
     <div class="kpi-card kpi-danger">
       <div class="kpi-label">要確認アラート</div>
-      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">10</div>
-      <div class="kpi-sub" style="color:var(--danger)">▲ 緊急2件 / 重要5件 / 軽微3件</div>
+      <div class="kpi-value" style="color:var(--danger)" id="dash-alerts">39</div>
+      <div class="kpi-sub" style="color:var(--danger)">▲ 緊急13件 / 重要20件 / 軽微6件</div>
     </div>
     <div class="kpi-card kpi-accent">
       <div class="kpi-label">本日の点検回数</div>
@@ -404,8 +498,8 @@
     </div>
     <div class="kpi-card kpi-indigo">
       <div class="kpi-label">処理済フレーム数（実績）</div>
-      <div class="kpi-value" style="color:var(--indigo)">142<span style="font-size:1.1rem">枚</span></div>
-      <div class="kpi-sub">avg 40 ms / frame · DA V2 Large</div>
+      <div class="kpi-value" style="color:var(--indigo)">5,052<span style="font-size:1.1rem">枚</span></div>
+      <div class="kpi-sub">avg 13 ms / frame · YOLOv8m v2</div>
     </div>
   </div>
 
@@ -425,85 +519,85 @@
   </div>
 
   <div class="alert-log">
-    <h4>本日の検知ログ — AI欠陥検知結果（10件）</h4>
+    <h4>本日の検知ログ — YOLOv8m v2 欠陥検知結果（39件）</h4>
     <div class="log-item">
-      <span class="log-time">06:15:22</span>
+      <span class="log-time">06:12:04</span>
+      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
+      <div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 7.3 m（信頼度 92%・面積 15,347 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=2s / YOLOv8m v2 · 10ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">06:12:04</span>
       <span class="log-badge badge-critical">緊急</span>
       <div>
-        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>6.1 m</strong>（信頼度 92%・面積 31,602 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
+        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>8.9 m</strong>（信頼度 56%・面積 66,992 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=2s / YOLOv8m v2 · 10ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">06:15:22</span>
+      <span class="log-time">06:14:08</span>
       <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text"><strong>締結装置欠損</strong>検知 — 前方 5.8 m（信頼度 87%・面積 1,728 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 10.6 m（信頼度 85%・面積 16,830 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=4s / YOLOv8m v2 · 8ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">08:34:11</span>
-      <span class="log-badge badge-info" style="background:#3b82f6">軽微</span>
-      <div>
-        <div class="log-text"><strong>バラスト異状</strong>検知 — 前方 8.6 m（信頼度 78%・面積 2,235 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=16.0s / DA V2 Large + YOLOv8 · 50ms</div>
-      </div>
-    </div>
-    <div class="log-item">
-      <span class="log-time">08:39:05</span>
+      <span class="log-time">06:17:14</span>
       <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text"><strong>レール摩耗</strong>検知 — 前方 6.2 m（信頼度 85%・面積 32,697 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 6.2 m（信頼度 84%・面積 148,680 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=7s / YOLOv8m v2 · 13ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">08:39:05</span>
+      <span class="log-time">06:21:22</span>
       <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text"><strong>軌間異常</strong>検知 — 前方 5.4 m（信頼度 81%・面積 4,800 px²）</div>
-        <div class="log-loc">jrsam3路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 9.1 m（信頼度 83%・面積 14,382 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=11s / YOLOv8m v2 · 15ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">11:22:18</span>
-      <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
-      <div>
-        <div class="log-text"><strong>まくらぎき裂</strong>検知 — 前方 7.5 m（信頼度 83%・面積 3,129 px²）</div>
-        <div class="log-loc">jr23路線 / t=11.0s / DA V2 Large + YOLOv8 · 52ms</div>
-      </div>
-    </div>
-    <div class="log-item">
-      <span class="log-time">11:27:12</span>
-      <span class="log-badge badge-info" style="background:#3b82f6">軽微</span>
-      <div>
-        <div class="log-text"><strong>レール波状摩耗</strong>検知 — 前方 10.6 m（信頼度 76%・面積 7,757 px²）</div>
-        <div class="log-loc">jr23路線 / t=16.0s / DA V2 Large + YOLOv8 · 50ms</div>
-      </div>
-    </div>
-    <div class="log-item">
-      <span class="log-time">14:05:33</span>
+      <span class="log-time">06:21:22</span>
       <span class="log-badge badge-critical">緊急</span>
       <div>
-        <div class="log-text"><strong>継目異状</strong>検知 — 前方 <strong>7.2 m</strong>（信頼度 91%・面積 20,287 px²）</div>
-        <div class="log-loc">jr23路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
+        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>7.3 m</strong>（信頼度 54%・面積 84,322 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=11s / YOLOv8m v2 · 15ms</div>
       </div>
     </div>
     <div class="log-item">
-      <span class="log-time">14:05:33</span>
+      <span class="log-time">06:26:32</span>
+      <span class="log-badge badge-critical">緊急</span>
+      <div>
+        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>10.8 m</strong>（信頼度 81%・面積 79,112 px²）</div>
+        <div class="log-loc">jrsam3路線 / t=21s / YOLOv8m v2 · 10ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">11:08:44</span>
+      <span class="log-badge badge-critical">緊急</span>
+      <div>
+        <div class="log-text"><strong>レールき裂</strong>検知 — 前方 <strong>8.2 m</strong>（信頼度 79%・面積 76,440 px²）</div>
+        <div class="log-loc">jr23路線 / t=2s / YOLOv8m v2 · 10ms</div>
+      </div>
+    </div>
+    <div class="log-item">
+      <span class="log-time">11:10:48</span>
       <span class="log-badge badge-warning" style="background:#f59e0b">重要</span>
       <div>
-        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 8.1 m（信頼度 84%・面積 2,700 px²）</div>
-        <div class="log-loc">jr23路線 / t=21.0s / DA V2 Large + YOLOv8 · 51ms</div>
+        <div class="log-text"><strong>レール剥離</strong>検知 — 前方 10.2 m（信頼度 79%・面積 4,473 px²）</div>
+        <div class="log-loc">jr23路線 / t=4s / YOLOv8m v2 · 11ms</div>
       </div>
     </div>
     <div class="log-item">
       <span class="log-time">16:38:12</span>
       <span class="log-badge badge-ok">完了</span>
       <div>
-        <div class="log-text">本日のスキャン完了 — 2路線 142フレーム処理 / <strong>10件の欠陥を検知</strong></div>
-        <div class="log-loc">緊急2件・重要5件・軽微3件 / 平均信頼度 88.0% · 平均処理時間 52ms · RTX 4090</div>
+        <div class="log-text">本日のスキャン完了 — 2路線 12キーフレーム処理 / <strong>39件の欠陥を検知</strong></div>
+        <div class="log-loc">緊急13件・重要20件・軽微6件 / 平均処理時間 11ms · YOLOv8m v2 · RTX 4090</div>
       </div>
     </div>
   </div>
@@ -514,7 +608,7 @@
 <section id="specs">
   <div class="section-label">Technology</div>
   <h2 class="section-title">技術仕様</h2>
-  <p class="section-sub">Depth Anything V2 Large + YOLOv8 欠陥検知を基盤とした鉄道専用の軌道点検エンジン。11種類の欠陥を自動分類・重要度判定。</p>
+  <p class="section-sub">YOLOv8m v2（5,052枚学習 / mAP@50=44.7%）+ Depth Anything V2 を基盤とした鉄道専用軌道点検エンジン。4クラス欠陥検出・重要度自動判定。</p>
   <div class="specs-grid">
     <div class="spec-card">
       <div class="spec-icon">📷</div>
@@ -618,9 +712,9 @@
       <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">保線員の労働負荷を大幅軽減</div>
     </div>
     <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center">
-      <div style="font-size:2.4rem;font-weight:800;color:var(--indigo);letter-spacing:-0.02em">40ms</div>
+      <div style="font-size:2.4rem;font-weight:800;color:var(--indigo);letter-spacing:-0.02em">13ms</div>
       <div style="font-size:0.88rem;font-weight:700;margin-top:0.25rem">1フレーム処理時間</div>
-      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">RTX 4090 実測 / 640×360</div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem">RTX 4090 実測 · YOLOv8m v2</div>
     </div>
   </div>
 
@@ -644,7 +738,7 @@
 </div>
 
 <footer>
-  <p>&copy; 2026 SpatialForge — AI Railway Track Inspection. Powered by Depth Anything V2 Large + YOLOv8 Defect Detection.</p>
+  <p>&copy; 2026 SpatialForge — AI Railway Track Inspection. Powered by YOLOv8m v2 (mAP@50=44.7%) + Depth Anything V2 Large.</p>
 </footer>
 
 <!-- Main application script -->

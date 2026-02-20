@@ -587,6 +587,76 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: 
 .wc-anim { animation: wc-flash 0.4s ease; }
 @keyframes wc-flash { 0%{opacity:0.4} 100%{opacity:1} }
 
+/* ── Detection Summary Dashboard ──────────── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 900px) { .summary-grid { grid-template-columns: 1fr; } }
+
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.summary-card-highlight {
+  border-color: rgba(245,158,11,0.3);
+  background: linear-gradient(135deg, rgba(245,158,11,0.04) 0%, var(--surface) 60%);
+}
+.summary-card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.summary-bars { display: flex; flex-direction: column; gap: 0.6rem; }
+.summary-bar-row { display: flex; align-items: center; gap: 0.6rem; }
+.summary-bar-label {
+  font-size: 0.78rem; font-weight: 600; color: var(--muted);
+  width: 72px; text-align: right; flex-shrink: 0;
+}
+.summary-bar-track {
+  flex: 1; height: 28px; background: var(--surface-2);
+  border-radius: 4px; overflow: hidden;
+}
+.summary-bar-fill {
+  height: 100%; border-radius: 4px;
+  display: flex; align-items: center; padding-left: 8px;
+  font-size: 0.72rem; font-weight: 700; color: #fff;
+  white-space: nowrap; min-width: fit-content;
+}
+.summary-bar-pct {
+  font-size: 0.78rem; font-weight: 700; width: 36px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.summary-total {
+  margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted);
+  padding-top: 0.5rem; border-top: 1px solid var(--border);
+}
+.summary-metrics {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.summary-metric { text-align: center; }
+.summary-metric-val {
+  font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1; margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-metric-label {
+  font-size: 0.7rem; color: var(--muted); font-weight: 600;
+}
+.summary-model-info {
+  margin-top: 0.75rem; font-size: 0.72rem; color: var(--muted);
+  padding-top: 0.5rem; border-top: 1px solid var(--border);
+  text-align: center;
+  display: flex; justify-content: center; gap: 0.5rem;
+}
+
 /* ── Onboarding tour ──────────────────────── */
 #tourOverlay {
   position: fixed; inset: 0; z-index: 9999;
