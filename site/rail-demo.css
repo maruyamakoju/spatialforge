@@ -726,6 +726,16 @@ footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: 
   50% { outline-color: rgba(245,158,11,0.3); }
 }
 
+/* ── Bounding Box Canvas Overlay ─────────────────── */
+#bboxCanvas { transition: opacity 0.2s; }
+#bboxCanvas.hidden { opacity: 0; pointer-events: none; }
+.bbox-active-hint {
+  position: absolute; top: 8px; right: 8px; z-index: 5;
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4);
+  color: var(--accent); font-size: 0.7rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+}
+
 /* ── Keyboard nav hint ────────────────────── */
 .kbd-hint {
   display: inline-flex; align-items: center; gap: 6px;

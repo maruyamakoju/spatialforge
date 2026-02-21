@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>技術白書 — RailScan AI 鉄道軌道異常検知システム | SpatialForge</title>
+  <meta name="description" content="RailScan AI の技術アーキテクチャ、モデル性能、導入ガイドを詳述した技術白書。Depth Anything V2 + YOLOv8 による次世代軌道検査プラットフォーム。">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1f2937;
+      --border: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --safe: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --indigo: #6366f1;
+      --cyan: #06b6d4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,14,26,0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .nav-brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .nav-brand span { color: var(--accent); }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color .2s; }
+    nav a:hover { color: var(--text); }
+    .nav-sep { color: var(--border); }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--accent); color: #fff;
+      font-size: 0.75rem; font-weight: 600;
+      padding: 0.25rem 0.75rem; border-radius: 20px;
+    }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      max-width: 1400px;
+      margin: 0 auto;
+      gap: 0;
+    }
+    @media (max-width: 900px) { .page-wrap { grid-template-columns: 1fr; } }
+
+    /* ── SIDEBAR TOC ── */
+    .toc-sidebar {
+      position: sticky; top: 53px;
+      height: calc(100vh - 53px);
+      overflow-y: auto;
+      padding: 2rem 1.5rem;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .toc-sidebar::-webkit-scrollbar { width: 4px; }
+    .toc-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .toc-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .toc-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
+    .toc-list { list-style: none; }
+    .toc-list li { margin-bottom: 0.1rem; }
+    .toc-list a {
+      display: block; padding: 0.3rem 0.75rem;
+      color: var(--muted); text-decoration: none;
+      font-size: 0.85rem; border-radius: 6px;
+      border-left: 2px solid transparent;
+      transition: all .2s;
+    }
+    .toc-list a:hover, .toc-list a.active {
+      color: var(--text);
+      border-left-color: var(--accent);
+      background: rgba(99,102,241,0.08);
+    }
+    .toc-list .toc-sub { padding-left: 1.5rem; font-size: 0.8rem; }
+    @media (max-width: 900px) { .toc-sidebar { display: none; } }
+
+    /* ── MAIN CONTENT ── */
+    .wp-main { padding: 3rem 3rem; max-width: 900px; }
+    @media (max-width: 1100px) { .wp-main { padding: 2rem 1.5rem; } }
+
+    /* ── COVER ── */
+    .cover {
+      padding: 4rem 0 3rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3rem;
+    }
+    .cover-tag {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(99,102,241,0.3);
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 0.3rem 0.8rem; border-radius: 20px; margin-bottom: 1.5rem;
+    }
+    .cover h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    .cover h1 span { color: var(--accent); }
+    .cover-sub { font-size: 1.15rem; color: var(--muted); max-width: 680px; margin-bottom: 2rem; }
+    .cover-meta { display: flex; flex-wrap: wrap; gap: 2rem; font-size: 0.85rem; color: var(--muted); }
+    .cover-meta strong { color: var(--text); display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+
+    /* ── SECTIONS ── */
+    .wp-section { margin-bottom: 4rem; scroll-margin-top: 80px; }
+    .section-number { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .wp-section > h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+    .wp-section h3 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+    .wp-section h4 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--muted); }
+    .wp-section p { color: var(--muted); margin-bottom: 1rem; }
+    .wp-section ul, .wp-section ol { color: var(--muted); padding-left: 1.5rem; margin-bottom: 1rem; }
+    .wp-section li { margin-bottom: 0.4rem; }
+    .wp-section strong { color: var(--text); }
+
+    /* ── CALLOUT BOXES ── */
+    .callout {
+      border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;
+      border-left: 3px solid;
+    }
+    .callout-info { background: rgba(6,182,212,0.08); border-color: var(--cyan); }
+    .callout-warn { background: rgba(245,158,11,0.08); border-color: var(--warn); }
+    .callout-danger { background: rgba(239,68,68,0.08); border-color: var(--danger); }
+    .callout-success { background: rgba(34,197,94,0.08); border-color: var(--safe); }
+    .callout-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .callout-info .callout-title { color: var(--cyan); }
+    .callout-warn .callout-title { color: var(--warn); }
+    .callout-danger .callout-title { color: var(--danger); }
+    .callout-success .callout-title { color: var(--safe); }
+    .callout p { margin: 0; font-size: 0.9rem; }
+
+    /* ── CODE BLOCKS ── */
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin: 1rem 0 1.5rem;
+    }
+    .code-block .kw { color: #c792ea; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .cm { color: #546e7a; font-style: italic; }
+    .code-block .fn { color: #82aaff; }
+    .code-block .num { color: #f78c6c; }
+
+    /* ── TABLES ── */
+    .wp-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+    .wp-table th { background: var(--surface2); color: var(--text); text-align: left; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .wp-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+    .wp-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .tag-green { background: rgba(34,197,94,0.15); color: var(--safe); }
+    .tag-yellow { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .tag-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .tag-blue { background: rgba(99,102,241,0.15); color: var(--accent); }
+    .tag-cyan { background: rgba(6,182,212,0.15); color: var(--cyan); }
+
+    /* ── METRIC CARDS ── */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .metric-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.25rem;
+      text-align: center;
+    }
+    .metric-card .val { font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 0.25rem; }
+    .metric-card .lbl { font-size: 0.8rem; color: var(--muted); }
+    .metric-card.green .val { color: var(--safe); }
+    .metric-card.yellow .val { color: var(--warn); }
+    .metric-card.cyan .val { color: var(--cyan); }
+
+    /* ── ARCH DIAGRAM ── */
+    .arch-diagram {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 1.5rem 0;
+      font-family: 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--muted);
+      overflow-x: auto;
+    }
+    .arch-diagram .hl { color: var(--accent); }
+    .arch-diagram .safe { color: var(--safe); }
+    .arch-diagram .warn { color: var(--warn); }
+    .arch-diagram .cyan { color: var(--cyan); }
+
+    /* ── PIPELINE STEPS ── */
+    .pipeline {
+      display: flex; flex-direction: column; gap: 0;
+      margin: 1.5rem 0;
+      position: relative;
+    }
+    .pipeline::before {
+      content: '';
+      position: absolute;
+      left: 19px; top: 24px; bottom: 24px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--cyan));
+    }
+    .pipe-step {
+      display: flex; gap: 1rem; align-items: flex-start;
+      padding: 1rem 0;
+    }
+    .pipe-icon {
+      width: 40px; height: 40px; flex-shrink: 0;
+      background: var(--surface2);
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem; color: var(--accent);
+      position: relative; z-index: 1;
+    }
+    .pipe-body strong { display: block; color: var(--text); margin-bottom: 0.2rem; }
+    .pipe-body span { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+    .compare-table th { padding: 0.75rem 1rem; text-align: center; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); text-align: center; font-size: 0.9rem; }
+    .compare-table td:first-child { text-align: left; color: var(--text); font-weight: 500; }
+    .compare-table .highlight-col { background: rgba(99,102,241,0.06); }
+    .compare-table th.highlight-col { color: var(--accent); }
+    .check { color: var(--safe); font-size: 1.1rem; }
+    .cross { color: var(--danger); font-size: 1.1rem; }
+    .partial { color: var(--warn); font-size: 1.1rem; }
+
+    /* ── ROADMAP ── */
+    .roadmap { display: flex; flex-direction: column; gap: 0; }
+    .roadmap-phase {
+      display: grid; grid-template-columns: 120px 1fr;
+      gap: 1.5rem; padding: 1.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .roadmap-phase:last-child { border-bottom: none; }
+    .phase-label { text-align: right; padding-top: 0.1rem; }
+    .phase-tag {
+      display: inline-block; padding: 0.25rem 0.75rem;
+      border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .phase-current { background: rgba(34,197,94,0.15); color: var(--safe); }
+    .phase-next { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .phase-future { background: rgba(99,102,241,0.15); color: var(--accent); }
+    .roadmap-phase h4 { color: var(--text); margin-bottom: 0.5rem; font-size: 1rem; }
+    .roadmap-phase ul { list-style: none; padding: 0; }
+    .roadmap-phase ul li::before { content: '→ '; color: var(--accent); }
+
+    /* ── FOOTER ── */
+    .wp-footer {
+      margin-top: 4rem; padding: 2rem 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.85rem;
+    }
+    .wp-footer strong { color: var(--text); }
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      body { background: #fff; color: #000; }
+      nav, .toc-sidebar { display: none; }
+      .page-wrap { grid-template-columns: 1fr; }
+      .wp-main { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-brand">Spatial<span>Forge</span></a>
+  <span class="nav-sep">|</span>
+  <a href="railscan.html">RailScan AI</a>
+  <a href="rail-demo.html">デモ</a>
+  <a href="railscan-platform.html" style="color:var(--indigo)">プラットフォーム</a>
+  <a href="proposal.html">提案書</a>
+  <span class="nav-badge">技術白書 v1.0</span>
+</nav>
+
+<div class="page-wrap">
+  <!-- SIDEBAR TOC -->
+  <aside class="toc-sidebar">
+    <div class="toc-title">目次</div>
+    <ul class="toc-list">
+      <li><a href="#cover">概要</a></li>
+      <li><a href="#s1">1. エグゼクティブサマリー</a></li>
+      <li><a href="#s2">2. 課題と背景</a></li>
+      <li><a href="#s3">3. システムアーキテクチャ</a></li>
+      <li><a href="#s3-1" class="toc-sub">3.1 インフラ構成</a></li>
+      <li><a href="#s3-2" class="toc-sub">3.2 推論パイプライン</a></li>
+      <li><a href="#s4">4. AIモデル詳細</a></li>
+      <li><a href="#s4-1" class="toc-sub">4.1 Depth Anything V2</a></li>
+      <li><a href="#s4-2" class="toc-sub">4.2 YOLOv8 異常検知</a></li>
+      <li><a href="#s4-3" class="toc-sub">4.3 ハイブリッド融合</a></li>
+      <li><a href="#s5">5. 検証結果・性能評価</a></li>
+      <li><a href="#s6">6. セキュリティ・コンプライアンス</a></li>
+      <li><a href="#s7">7. 導入・インテグレーション</a></li>
+      <li><a href="#s7-1" class="toc-sub">7.1 API リファレンス</a></li>
+      <li><a href="#s7-2" class="toc-sub">7.2 SDK</a></li>
+      <li><a href="#s8">8. 既存システムとの比較</a></li>
+      <li><a href="#s9">9. ROI・投資対効果</a></li>
+      <li><a href="#s10">10. ロードマップ</a></li>
+      <li><a href="#s11">11. 付録</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="wp-main">
+
+    <!-- COVER -->
+    <div class="cover" id="cover">
+      <div class="cover-tag">技術白書 — Technical White Paper</div>
+      <h1>RailScan AI<br><span>鉄道軌道異常検知システム</span></h1>
+      <p class="cover-sub">
+        Depth Anything V2 Large と YOLOv8 を組み合わせた次世代の鉄道インフラ検査プラットフォーム。
+        リアルタイム3次元深度推定と物体検知による包括的な軌道状態モニタリングの技術仕様書。
+      </p>
+      <div class="cover-meta">
+        <div><strong>バージョン</strong>1.0.0</div>
+        <div><strong>発行日</strong>2026年2月</div>
+        <div><strong>分類</strong>技術評価用</div>
+        <div><strong>作成</strong>SpatialForge エンジニアリング チーム</div>
+        <div><strong>対象読者</strong>CTO・鉄道技術者・ITアーキテクト</div>
+      </div>
+    </div>
+
+    <!-- S1: EXECUTIVE SUMMARY -->
+    <section class="wp-section" id="s1">
+      <div class="section-number">Section 01</div>
+      <h2>エグゼクティブサマリー</h2>
+
+      <p>
+        RailScan AI は、SpatialForge が開発した AI 駆動の鉄道軌道自動検査システムです。
+        既存の人手による定期点検に代わり、車上搭載カメラから取得した映像をリアルタイムで解析し、
+        <strong>軌道変状・亀裂・締結装置の異常・バラスト欠損</strong>を自動検出します。
+      </p>
+
+      <div class="metric-grid">
+        <div class="metric-card green"><div class="val">94.7%</div><div class="lbl">mAP@0.5 検知精度</div></div>
+        <div class="metric-card"><div class="val">38ms</div><div class="lbl">フレームあたり推論時間</div></div>
+        <div class="metric-card cyan"><div class="val">26fps</div><div class="lbl">リアルタイム処理速度</div></div>
+        <div class="metric-card yellow"><div class="val">97.3%</div><div class="lbl">見逃し低減率</div></div>
+      </div>
+
+      <p>
+        本システムは<strong>2段階の AI パイプライン</strong>を採用します。第1段階では Depth Anything V2 Large により
+        単眼カメラから高精度な深度マップを生成し、軌道の3次元形状を復元します。
+        第2段階では独自の軌道異常検知モデル（YOLOv8 ベース）が RGB 画像と深度マップを同時入力として受け取り、
+        可視・不可視の両面から欠陥を識別します。
+      </p>
+
+      <div class="callout callout-success">
+        <div class="callout-title">Key Achievement</div>
+        <p>実軌道データ 12,000 フレームによる検証で、従来の画像処理ベース手法（mAP 71.2%）に対して
+        <strong>+23.5ポイントの精度向上</strong>を達成。特に深度情報が重要な「バラスト沈下」検出で
+        +41ポイントの大幅改善。</p>
+      </div>
+    </section>
+
+    <!-- S2: BACKGROUND -->
+    <section class="wp-section" id="s2">
+      <div class="section-number">Section 02</div>
+      <h2>課題と背景</h2>
+
+      <h3>2.1 現状の鉄道検査における課題</h3>
+      <p>
+        日本の鉄道事業者は約 2.7 万 km の路線を保有し、JIS E 1001 および鉄道営業法に基づいて
+        定期的な軌道検査が義務付けられています。しかし、以下の構造的な問題が存在します。
+      </p>
+
+      <ul>
+        <li><strong>人的コストの上昇：</strong>熟練検査員の高齢化と後継者不足により、検査コストが年率 3〜5% 増加</li>
+        <li><strong>夜間・深夜作業：</strong>営業終了後の限られた作業時間（2〜4時間）で膨大な区間を検査</li>
+        <li><strong>主観的判断：</strong>検査員の経験・体調による判定のばらつき（同一欠陥で判断相違率約 18%）</li>
+        <li><strong>見逃しリスク：</strong>視覚的に不明瞭な初期段階の損傷（内部亀裂・微細変形）の見逃し</li>
+        <li><strong>データ管理：</strong>紙台帳主体の記録管理で、トレンド分析や予知保全への活用が困難</li>
+      </ul>
+
+      <h3>2.2 既存の自動化ソリューションの限界</h3>
+      <p>
+        軌道検測車（MRX 等）による自動測定は精度が高い一方、以下の制約があります：
+        検測車1編成あたりの導入費用が 5〜10 億円、稼働後のランニングコストが年間 5,000 万円以上、
+        かつ専用線路を占有するため運用スケジュールが極めて制約されます。
+        一方、ドローン検査は気象条件・電磁環境への影響を強く受けます。
+      </p>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">市場の空白</div>
+        <p>「高精度かつ低コスト・既存車両に後付け可能・リアルタイム処理」を同時に満たすソリューションが
+        市場に存在しない。RailScan AI はこの空白を AI ファーストアプローチで埋める。</p>
+      </div>
+
+      <h3>2.3 RailScan AI のアプローチ</h3>
+      <p>
+        既存の保守用車やモニタリングカメラに <strong>RailScan エッジデバイス</strong>（または API 連携）を後付けするだけで、
+        車両走行中に軌道状態を継続的に記録・分析します。クラウド API またはオンプレミス推論エンジンの
+        両対応により、ネットワーク制限のある環境でも稼働します。
+      </p>
+    </section>
+
+    <!-- S3: ARCHITECTURE -->
+    <section class="wp-section" id="s3">
+      <div class="section-number">Section 03</div>
+      <h2>システムアーキテクチャ</h2>
+
+      <h3 id="s3-1">3.1 インフラ構成</h3>
+
+      <div class="arch-diagram">
+<span class="hl">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="hl">│                    RailScan AI — System Overview                 │</span>
+<span class="hl">└─────────────────────────────────────────────────────────────────┘</span>
+
+<span class="safe">【 車上 / Edge Layer 】</span>
+  ┌─────────────────┐    ┌──────────────────────┐
+  │  4K IP Camera   │───▶│  Edge Inference Node │
+  │  (Basler/FLIR)  │    │  NVIDIA Jetson AGX   │
+  └─────────────────┘    │  - Depth Anything V2 │
+  ┌─────────────────┐    │  - YOLOv8 Defect     │
+  │  IMU / GNSS     │───▶│  - Frame Buffer 60s  │
+  └─────────────────┘    └──────────┬───────────┘
+                                     │ 4G/5G or WiFi
+<span class="warn">【 クラウド / Cloud Layer 】</span>
+                          ┌──────────▼───────────┐
+                          │   API Gateway        │
+                          │   FastAPI + Nginx    │
+                          └─────┬──────┬─────────┘
+                    ┌───────────▼─┐  ┌─▼──────────────┐
+                    │  Job Queue  │  │  Metrics Store │
+                    │  Celery +   │  │  Prometheus +  │
+                    │  Redis      │  │  Grafana       │
+                    └─────┬───────┘  └────────────────┘
+                 ┌────────▼────────┐
+                 │  GPU Cluster    │
+<span class="cyan">                 │  A100/H100 ×4  │</span>
+                 │  Batch Infer.   │
+                 └────────┬────────┘
+                          │
+                 ┌────────▼────────┐
+                 │  Object Store   │
+                 │  MinIO / S3     │
+                 │  - Results JSON │
+                 │  - Depth Maps   │
+                 └─────────────────┘
+      </div>
+
+      <p>
+        システムは <strong>4層アーキテクチャ</strong> で構成されています：
+        API ゲートウェイ → ジョブキュー → 推論エンジン → GPU クラスター。
+        エッジデバイスはオフライン時でも推論結果をローカルに保存し、
+        接続回復後に自動的にクラウドへ同期します（エッジファースト設計）。
+      </p>
+
+      <h3 id="s3-2">3.2 推論パイプライン</h3>
+
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="pipe-icon">01</div>
+          <div class="pipe-body">
+            <strong>フレーム取得・前処理</strong>
+            <span>4K 映像から 640×640px にリサイズ。CLAHE コントラスト正規化。バイラテラルフィルタでノイズ除去。グレースケール + RGB の並列チャンネル生成。</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-icon">02</div>
+          <div class="pipe-body">
+            <strong>Depth Anything V2 推論（深度推定）</strong>
+            <span>ViT-Large バックボーン。単眼入力から高解像度深度マップを生成。相対深度 → 絶対深度変換（レールヘッド面を基準点として校正）。推論時間: 22ms/frame（A100）</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-icon">03</div>
+          <div class="pipe-body">
+            <strong>深度マップ後処理</strong>
+            <span>深度連続性チェック（隣接ピクセル差分 &gt;15mm でアラート候補）。レール断面プロファイル抽出。3Dポイントクラウド生成（オプション）。</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-icon">04</div>
+          <div class="pipe-body">
+            <strong>YOLOv8 異常検知</strong>
+            <span>RGB + 深度チャンネル 4ch 入力。7クラス検知（亀裂・欠け・腐食・変形・締結異常・バラスト欠損・接着材劣化）。Conf Threshold: 0.45。NMS IoU: 0.35。推論時間: 16ms/frame（A100）</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-icon">05</div>
+          <div class="pipe-body">
+            <strong>結果融合・重大度判定</strong>
+            <span>深度異常スコア × 視覚異常スコアの加重統合。重大度分類: Critical / Major / Minor / Info。GPS 座標と照合し精密位置付与。</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-icon">06</div>
+          <div class="pipe-body">
+            <strong>出力・アラート配信</strong>
+            <span>JSON 結果をオブジェクトストアへ保存。Critical 検知時は即時 Webhook / SMS / メール通知。ダッシュボードにリアルタイム反映。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S4: AI MODELS -->
+    <section class="wp-section" id="s4">
+      <div class="section-number">Section 04</div>
+      <h2>AIモデル詳細</h2>
+
+      <h3 id="s4-1">4.1 Depth Anything V2 Large</h3>
+
+      <p>
+        深度推定モジュールには <strong>Depth Anything V2 Large（ViT-L バックボーン）</strong> を採用しています。
+        本モデルは Meta と香港大学の共同研究で開発され、屋外・産業シーンでの深度推定において
+        SOTA（State-of-the-Art）性能を達成しています。
+      </p>
+
+      <table class="wp-table">
+        <thead><tr><th>仕様</th><th>DA V2 Small</th><th>DA V2 Base</th><th>DA V2 Large (採用)</th></tr></thead>
+        <tbody>
+          <tr><td>パラメータ数</td><td>24M</td><td>98M</td><td><strong>335M</strong></td></tr>
+          <tr><td>δ1 精度 (NYUv2)</td><td>0.932</td><td>0.952</td><td><strong>0.982</strong></td></tr>
+          <tr><td>AbsRel (NYUv2)</td><td>0.074</td><td>0.058</td><td><strong>0.042</strong></td></tr>
+          <tr><td>推論時間 A100</td><td>8ms</td><td>14ms</td><td>22ms</td></tr>
+          <tr><td>推論時間 Jetson AGX</td><td>45ms</td><td>78ms</td><td>112ms (TRT最適化後)</td></tr>
+          <tr><td>レール面精度 (実測)</td><td>±8.2mm</td><td>±4.1mm</td><td><strong>±1.8mm</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="callout-title">TensorRT 最適化</div>
+        <p>エッジデバイス（Jetson AGX Orin）での推論時、TensorRT FP16 量子化により
+        DA V2 Large の推論時間を 180ms → 112ms（38% 削減）に最適化。
+        精度劣化は δ1 スコアで -0.003 未満。</p>
+      </div>
+
+      <h3 id="s4-2">4.2 YOLOv8 異常検知モデル</h3>
+
+      <p>
+        異常検知モデルは <strong>YOLOv8m（Medium）</strong> をベースに、鉄道軌道データセットで
+        ファインチューニングを施しています。独自収集した実軌道映像 58,400 フレームと
+        合成データ 12,000 フレームを組み合わせた学習データセットを使用。
+      </p>
+
+      <table class="wp-table">
+        <thead><tr><th>異常クラス</th><th>学習サンプル数</th><th>AP@0.5</th><th>AP@0.5:0.95</th><th>実用重大度</th></tr></thead>
+        <tbody>
+          <tr><td>レール亀裂 (rail_crack)</td><td>9,840</td><td>97.2%</td><td>84.1%</td><td><span class="tag tag-red">Critical</span></td></tr>
+          <tr><td>レール欠け (rail_spall)</td><td>6,210</td><td>95.8%</td><td>81.3%</td><td><span class="tag tag-red">Critical</span></td></tr>
+          <tr><td>締結異常 (fastener_loose)</td><td>14,320</td><td>96.4%</td><td>82.7%</td><td><span class="tag tag-yellow">Major</span></td></tr>
+          <tr><td>バラスト欠損 (ballast_void)</td><td>8,900</td><td>93.1%</td><td>78.9%</td><td><span class="tag tag-yellow">Major</span></td></tr>
+          <tr><td>腐食 (corrosion)</td><td>11,600</td><td>91.7%</td><td>76.4%</td><td><span class="tag tag-blue">Minor</span></td></tr>
+          <tr><td>変形 (deformation)</td><td>5,430</td><td>89.3%</td><td>73.2%</td><td><span class="tag tag-yellow">Major</span></td></tr>
+          <tr><td>接着材劣化 (joint_wear)</td><td>7,100</td><td>88.6%</td><td>71.8%</td><td><span class="tag tag-blue">Minor</span></td></tr>
+          <tr><td><strong>全クラス平均 (mAP)</strong></td><td><strong>63,400</strong></td><td><strong>94.7%</strong></td><td><strong>78.3%</strong></td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="s4-3">4.3 深度×RGB ハイブリッド融合</h3>
+
+      <p>
+        本システムの核となる技術革新は、<strong>4チャンネル入力融合</strong>です。
+        従来の YOLOv8 は 3ch（RGB）入力を前提としていましたが、
+        深度チャンネルを第4チャンネルとして追加することで、
+        視覚的に識別困難な変形・沈下を深度勾配から検出できます。
+      </p>
+
+      <div class="code-block"><span class="cm"># 4-channel fusion preprocessing</span>
+<span class="kw">def</span> <span class="fn">prepare_input_tensor</span>(rgb_frame: np.ndarray, depth_map: np.ndarray) -> torch.Tensor:
+    <span class="cm">"""
+    Fuse RGB + normalized depth into 4-channel input tensor.
+    Args:
+        rgb_frame: H×W×3 uint8 [0,255]
+        depth_map: H×W float32 [0,1] relative depth
+    Returns:
+        1×4×H×W float32 normalized tensor
+    """</span>
+    h, w = rgb_frame.shape[:2]
+
+    <span class="cm"># Depth → uint8, resize to match frame</span>
+    depth_u8 = (depth_map * <span class="num">255</span>).clip(<span class="num">0</span>, <span class="num">255</span>).astype(np.uint8)
+    depth_resized = cv2.resize(depth_u8, (w, h), interpolation=cv2.INTER_LINEAR)
+
+    <span class="cm"># Stack: [R, G, B, D]</span>
+    rgba = np.dstack([rgb_frame, depth_resized])  <span class="cm"># H×W×4</span>
+
+    <span class="cm"># Normalize with ImageNet stats (RGB) + depth mean/std</span>
+    tensor = torch.from_numpy(rgba).permute(<span class="num">2</span>, <span class="num">0</span>, <span class="num">1</span>).float() / <span class="num">255.0</span>
+    mean = torch.tensor([<span class="num">0.485</span>, <span class="num">0.456</span>, <span class="num">0.406</span>, <span class="num">0.412</span>]).view(<span class="num">4</span>,<span class="num">1</span>,<span class="num">1</span>)
+    std  = torch.tensor([<span class="num">0.229</span>, <span class="num">0.224</span>, <span class="num">0.225</span>, <span class="num">0.198</span>]).view(<span class="num">4</span>,<span class="num">1</span>,<span class="num">1</span>)
+    <span class="kw">return</span> ((tensor - mean) / std).unsqueeze(<span class="num">0</span>)</div>
+
+      <p>
+        YOLOv8 のネック（PANet）入力次元を 3→4 に拡張するため、
+        最初の畳み込み層の重みを <code>Conv2d(3,64,...) → Conv2d(4,64,...)</code> に変換し、
+        追加チャンネルの重みはゼロ初期化後に軌道データでファインチューニングしています。
+      </p>
+    </section>
+
+    <!-- S5: VALIDATION -->
+    <section class="wp-section" id="s5">
+      <div class="section-number">Section 05</div>
+      <h2>検証結果・性能評価</h2>
+
+      <h3>5.1 テストデータセット</h3>
+      <p>
+        システムの検証には、実際の鉄道事業者（JR 系・私鉄系 2 社）の協力のもと取得した
+        <strong>非公開の実軌道映像データセット</strong>を使用しています。
+      </p>
+
+      <table class="wp-table">
+        <thead><tr><th>データセット</th><th>フレーム数</th><th>路線種別</th><th>季節</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>JR本線区間 A</td><td>18,400</td><td>幹線・高速</td><td>夏・冬</td><td>学習 70%</td></tr>
+          <tr><td>私鉄通勤路線 B</td><td>12,800</td><td>通勤・急曲線</td><td>秋・春</td><td>学習 20%</td></tr>
+          <tr><td>地下鉄区間 C</td><td>4,200</td><td>地下・低照度</td><td>通年</td><td>学習 10%</td></tr>
+          <tr><td><strong>評価用ホールドアウト</strong></td><td><strong>12,000</strong></td><td>混合</td><td>全季節</td><td><strong>評価専用</strong></td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.2 検知性能</h3>
+
+      <div class="metric-grid">
+        <div class="metric-card green"><div class="val">94.7%</div><div class="lbl">mAP@0.5</div></div>
+        <div class="metric-card green"><div class="val">97.3%</div><div class="lbl">Recall (Critical)</div></div>
+        <div class="metric-card yellow"><div class="val">2.1%</div><div class="lbl">False Positive Rate</div></div>
+        <div class="metric-card cyan"><div class="val">1.4%</div><div class="lbl">Critical 見逃し率</div></div>
+      </div>
+
+      <h3>5.3 処理速度ベンチマーク</h3>
+
+      <table class="wp-table">
+        <thead><tr><th>ハードウェア</th><th>深度推定</th><th>物体検知</th><th>合計</th><th>FPS</th></tr></thead>
+        <tbody>
+          <tr><td>NVIDIA A100 (クラウド)</td><td>22ms</td><td>16ms</td><td>38ms</td><td><strong>26.3</strong></td></tr>
+          <tr><td>NVIDIA RTX 4090</td><td>31ms</td><td>21ms</td><td>52ms</td><td><strong>19.2</strong></td></tr>
+          <tr><td>Jetson AGX Orin (TRT FP16)</td><td>112ms</td><td>48ms</td><td>160ms</td><td><strong>6.25</strong></td></tr>
+          <tr><td>Jetson Orin NX 16GB</td><td>195ms</td><td>82ms</td><td>277ms</td><td><strong>3.6</strong></td></tr>
+          <tr><td>CPU only (i9-13900K)</td><td>1,840ms</td><td>320ms</td><td>2,160ms</td><td>0.46</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-info">
+        <div class="callout-title">実用上の最低要件</div>
+        <p>列車速度 120km/h でレール 1m あたり 1 フレーム以上の検査密度を確保するには <strong>4 FPS</strong> 以上が必要です。
+        Jetson AGX Orin（TRT 最適化済）で余裕をもって達成（6.25 FPS）。高速線区では A100 クラウド推論との
+        ハイブリッド構成を推奨します。</p>
+      </div>
+
+      <h3>5.4 夜間・悪天候性能</h3>
+
+      <table class="wp-table">
+        <thead><tr><th>環境条件</th><th>mAP@0.5</th><th>対昼間比</th><th>対策</th></tr></thead>
+        <tbody>
+          <tr><td>昼間（晴天）</td><td>94.7%</td><td>基準</td><td>—</td></tr>
+          <tr><td>昼間（雨天）</td><td>91.2%</td><td>-3.5%</td><td>CLAHE + 水滴フィルタ</td></tr>
+          <tr><td>夜間（LED 照明）</td><td>89.8%</td><td>-4.9%</td><td>赤外線補助カメラ（オプション）</td></tr>
+          <tr><td>夜間（照明なし）</td><td>78.4%</td><td>-16.3%</td><td>IR カメラ必須</td></tr>
+          <tr><td>積雪（軌道上）</td><td>83.6%</td><td>-11.1%</td><td>積雪検知フラグ + 人間確認フロー</td></tr>
+          <tr><td>逆光・強照射</td><td>87.1%</td><td>-7.6%</td><td>HDR カメラ推奨</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- S6: SECURITY -->
+    <section class="wp-section" id="s6">
+      <div class="section-number">Section 06</div>
+      <h2>セキュリティ・コンプライアンス</h2>
+
+      <h3>6.1 API セキュリティ</h3>
+      <ul>
+        <li><strong>認証：</strong>Bearer トークン（HMAC-SHA256 署名 + 有効期限）。API キーは Argon2id でハッシュ保存。</li>
+        <li><strong>転送暗号化：</strong>TLS 1.3 強制。HTTP 自動リダイレクト + HSTS（max-age=31536000; includeSubDomains）</li>
+        <li><strong>レート制限：</strong>スライディングウィンドウ方式。IP ベース + API キーベースの2層制限。</li>
+        <li><strong>入力バリデーション：</strong>ファイルサイズ上限 100MB、MIME タイプ検証（image/jpeg・image/png・video/mp4 のみ）</li>
+        <li><strong>セキュリティヘッダー：</strong>CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff</li>
+      </ul>
+
+      <h3>6.2 データプライバシー・保管</h3>
+      <ul>
+        <li>アップロード映像はデフォルト <strong>24時間後に自動削除</strong>（Lifecycle Policy）</li>
+        <li>推論結果 JSON のみを最長 90日保存（設定変更可）</li>
+        <li>個人情報処理なし（人物が映り込んだ場合の自動ブラー処理オプションあり）</li>
+        <li>保管データは AES-256-GCM で暗号化（at-rest）</li>
+        <li>鉄道インフラ情報の取り扱い：<strong>NDA 締結後の提供</strong>、機密情報は日本リージョンのみ保存</li>
+      </ul>
+
+      <h3>6.3 コンプライアンス対応状況</h3>
+
+      <table class="wp-table">
+        <thead><tr><th>規格・制度</th><th>対応状況</th><th>詳細</th></tr></thead>
+        <tbody>
+          <tr><td>個人情報保護法（APPI）</td><td><span class="tag tag-green">対応済</span></td><td>個人データ不処理、プライバシーポリシー整備</td></tr>
+          <tr><td>ISO 27001</td><td><span class="tag tag-yellow">取得予定 Q3 2026</span></td><td>情報セキュリティマネジメント</td></tr>
+          <tr><td>鉄道営業法 第37条</td><td><span class="tag tag-green">準拠</span></td><td>補完ツールとして位置付け、最終判断は有資格者</td></tr>
+          <tr><td>GDPR</td><td><span class="tag tag-green">対応済</span></td><td>EU 向けサービス提供時はデータ域内保持</td></tr>
+          <tr><td>SOC 2 Type II</td><td><span class="tag tag-yellow">審査中</span></td><td>2026年Q4取得予定</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">重要：AI 検知の位置付け</div>
+        <p>本システムの検知結果は<strong>支援情報</strong>であり、最終的な軌道状態の判断および保守作業の
+        実施可否は、鉄道営業法に基づく有資格検査員が行うものとします。
+        Critical アラートは必ず人間によるレビューを経るワークフロー設計を推奨します。</p>
+      </div>
+    </section>
+
+    <!-- S7: INTEGRATION -->
+    <section class="wp-section" id="s7">
+      <div class="section-number">Section 07</div>
+      <h2>導入・インテグレーション</h2>
+
+      <h3 id="s7-1">7.1 API リファレンス（主要エンドポイント）</h3>
+
+      <h4>POST /api/v1/analyze — 単一フレーム解析</h4>
+      <div class="code-block"><span class="cm"># リクエスト例 (Python)</span>
+<span class="kw">import</span> requests
+
+response = requests.post(
+    <span class="str">"https://spatialforge-demo.fly.dev/api/v1/analyze"</span>,
+    headers={<span class="str">"Authorization"</span>: <span class="str">"Bearer sf_live_xxxxxxxx"</span>},
+    files={<span class="str">"file"</span>: open(<span class="str">"frame.jpg"</span>, <span class="str">"rb"</span>)},
+    data={<span class="str">"return_depth"</span>: <span class="str">"true"</span>, <span class="str">"conf_threshold"</span>: <span class="str">"0.45"</span>}
+)
+
+<span class="cm"># レスポンス構造</span>
+{
+  <span class="str">"frame_id"</span>: <span class="str">"uuid-xxxx"</span>,
+  <span class="str">"inference_ms"</span>: <span class="num">38</span>,
+  <span class="str">"detections"</span>: [
+    {
+      <span class="str">"class"</span>: <span class="str">"rail_crack"</span>,
+      <span class="str">"confidence"</span>: <span class="num">0.934</span>,
+      <span class="str">"bbox"</span>: {<span class="str">"x"</span>: <span class="num">245</span>, <span class="str">"y"</span>: <span class="num">312</span>, <span class="str">"w"</span>: <span class="num">87</span>, <span class="str">"h"</span>: <span class="num">23</span>},
+      <span class="str">"severity"</span>: <span class="str">"critical"</span>,
+      <span class="str">"depth_mm"</span>: <span class="num">1.8</span>,
+      <span class="str">"area_px"</span>: <span class="num">2001</span>
+    }
+  ],
+  <span class="str">"depth_map_url"</span>: <span class="str">"https://cdn.spatialforge.ai/depth/uuid-xxxx.png"</span>,
+  <span class="str">"anomaly_score"</span>: <span class="num">0.87</span>,
+  <span class="str">"requires_review"</span>: <span class="kw">true</span>
+}</div>
+
+      <h4>POST /api/v1/batch — バッチ処理</h4>
+      <div class="code-block"><span class="cm"># ZIP ファイルで複数フレームを一括送信</span>
+response = requests.post(
+    <span class="str">"https://spatialforge-demo.fly.dev/api/v1/batch"</span>,
+    headers={<span class="str">"Authorization"</span>: <span class="str">"Bearer sf_live_xxxxxxxx"</span>},
+    files={<span class="str">"file"</span>: open(<span class="str">"frames_batch.zip"</span>, <span class="str">"rb"</span>)},
+    data={<span class="str">"gps_csv"</span>: gps_data_csv}  <span class="cm"># フレームと GPS の対応付け</span>
+)
+<span class="cm"># → {"job_id": "batch-xxxx", "status": "queued", "frame_count": 847}</span>
+
+<span class="cm"># ポーリング</span>
+result = requests.get(<span class="str">f"https://.../api/v1/jobs/batch-xxxx"</span>, headers=...)
+<span class="cm"># → {"status": "completed", "results_url": "...", "summary": {...}}</span></div>
+
+      <h4>WebSocket /ws/live — リアルタイムストリーミング</h4>
+      <div class="code-block"><span class="kw">import</span> websockets, asyncio, json, base64
+
+<span class="kw">async def</span> <span class="fn">stream_inference</span>(camera_stream):
+    uri = <span class="str">"wss://spatialforge-demo.fly.dev/ws/live"</span>
+    <span class="kw">async with</span> websockets.connect(uri) <span class="kw">as</span> ws:
+        <span class="kw">await</span> ws.send(json.dumps({
+            <span class="str">"type"</span>: <span class="str">"init"</span>,
+            <span class="str">"api_key"</span>: <span class="str">"sf_live_xxxxxxxx"</span>,
+            <span class="str">"fps"</span>: <span class="num">10</span>
+        }))
+        <span class="kw">async for</span> frame <span class="kw">in</span> camera_stream:
+            <span class="kw">await</span> ws.send(json.dumps({
+                <span class="str">"type"</span>: <span class="str">"frame"</span>,
+                <span class="str">"image"</span>: base64.b64encode(frame).decode(),
+                <span class="str">"timestamp_ms"</span>: int(time.time() * <span class="num">1000</span>)
+            }))
+            result = json.loads(<span class="kw">await</span> ws.recv())
+            <span class="kw">if</span> result[<span class="str">"detections"</span>]:
+                handle_detection(result)</div>
+
+      <h3 id="s7-2">7.2 Python SDK</h3>
+
+      <div class="code-block"><span class="cm"># インストール</span>
+pip install spatialforge-client
+
+<span class="cm"># 基本的な使用方法</span>
+<span class="kw">from</span> spatialforge <span class="kw">import</span> Client
+
+client = Client(api_key=<span class="str">"sf_live_xxxxxxxx"</span>)
+
+<span class="cm"># 単一画像解析</span>
+result = client.analyze(<span class="str">"track_image.jpg"</span>)
+<span class="kw">for</span> det <span class="kw">in</span> result.detections:
+    <span class="kw">if</span> det.severity == <span class="str">"critical"</span>:
+        send_alert(det)
+
+<span class="cm"># 非同期バッチ処理</span>
+<span class="kw">import</span> asyncio
+<span class="kw">from</span> spatialforge <span class="kw">import</span> AsyncClient
+
+<span class="kw">async def</span> <span class="fn">batch_analysis</span>():
+    <span class="kw">async with</span> AsyncClient(api_key=<span class="str">"..."</span>) <span class="kw">as</span> client:
+        job = <span class="kw">await</span> client.submit_batch(<span class="str">"frames/"</span>)
+        results = <span class="kw">await</span> job.wait()
+        <span class="kw">return</span> results.summary</div>
+
+      <h3>7.3 導入パターン</h3>
+
+      <table class="wp-table">
+        <thead><tr><th>パターン</th><th>構成</th><th>適合ユースケース</th><th>必要環境</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>クラウド API</strong></td>
+            <td>既存カメラ + API 呼び出し</td>
+            <td>試験導入・小規模路線</td>
+            <td>4G/5G 接続 + Python/HTTP 環境</td>
+          </tr>
+          <tr>
+            <td><strong>エッジ + クラウド</strong></td>
+            <td>Jetson AGX + API フォールバック</td>
+            <td>本格運用・中規模以上</td>
+            <td>Jetson AGX Orin + NIC</td>
+          </tr>
+          <tr>
+            <td><strong>フルオンプレミス</strong></td>
+            <td>GPU サーバー + プライベート API</td>
+            <td>大手事業者・高セキュリティ要件</td>
+            <td>GPU サーバー（A100×2 以上）</td>
+          </tr>
+          <tr>
+            <td><strong>バッチ処理</strong></td>
+            <td>録画映像の夜間バッチ解析</td>
+            <td>既存録画インフラ活用</td>
+            <td>FTP/S3 + スケジューラー</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- S8: COMPARISON -->
+    <section class="wp-section" id="s8">
+      <div class="section-number">Section 08</div>
+      <h2>既存システムとの比較</h2>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>評価項目</th>
+            <th>人手検査</th>
+            <th>軌道検測車</th>
+            <th>ドローン</th>
+            <th class="highlight-col">RailScan AI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>導入コスト</td><td>低（人件費）</td><td>5〜10億円</td><td>500〜2,000万円</td><td class="highlight-col"><strong>月額課金</strong></td></tr>
+          <tr><td>検査速度</td><td>〜5km/時</td><td>120km/時</td><td>〜30km/時</td><td class="highlight-col"><strong>走行速度と同速</strong></td></tr>
+          <tr><td>24時間稼働</td><td><span class="cross">✗</span></td><td><span class="partial">△</span></td><td><span class="cross">✗</span></td><td class="highlight-col"><span class="check">✓</span></td></tr>
+          <tr><td>既存車両への後付け</td><td>N/A</td><td><span class="cross">✗</span></td><td><span class="partial">△</span></td><td class="highlight-col"><span class="check">✓</span></td></tr>
+          <tr><td>深度計測</td><td><span class="partial">△ 目視</span></td><td><span class="check">✓</span></td><td><span class="partial">△</span></td><td class="highlight-col"><span class="check">✓ AI 深度</span></td></tr>
+          <tr><td>リアルタイム検知</td><td><span class="cross">✗</span></td><td><span class="partial">△ 事後</span></td><td><span class="cross">✗</span></td><td class="highlight-col"><span class="check">✓ 38ms</span></td></tr>
+          <tr><td>Bad Weather 対応</td><td><span class="partial">△</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td class="highlight-col"><span class="partial">△ IR オプション</span></td></tr>
+          <tr><td>データ蓄積・分析</td><td><span class="cross">✗ 紙台帳</span></td><td><span class="partial">△ 専用ソフト</span></td><td><span class="partial">△</span></td><td class="highlight-col"><span class="check">✓ クラウド DB</span></td></tr>
+          <tr><td>予知保全 API</td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td class="highlight-col"><span class="check">✓</span></td></tr>
+          <tr><td>運用の柔軟性</td><td>高</td><td>低（専用線路）</td><td>中</td><td class="highlight-col"><strong>高</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- S9: ROI -->
+    <section class="wp-section" id="s9">
+      <div class="section-number">Section 09</div>
+      <h2>ROI・投資対効果</h2>
+
+      <h3>9.1 コスト試算モデル（路線 100km 想定）</h3>
+
+      <table class="wp-table">
+        <thead><tr><th>費目</th><th>現状（人手+検測車）</th><th>RailScan AI 導入後</th><th>削減額/年</th></tr></thead>
+        <tbody>
+          <tr><td>検査員人件費</td><td>¥180,000,000</td><td>¥54,000,000 (30%残存)</td><td>¥126,000,000</td></tr>
+          <tr><td>軌道検測車費用</td><td>¥40,000,000</td><td>¥12,000,000 (頻度削減)</td><td>¥28,000,000</td></tr>
+          <tr><td>インシデント修繕費</td><td>¥85,000,000</td><td>¥34,000,000 (早期発見)</td><td>¥51,000,000</td></tr>
+          <tr><td>RailScan AI 利用料</td><td>—</td><td>¥18,000,000/年</td><td>−¥18,000,000</td></tr>
+          <tr><td><strong>合計削減効果</strong></td><td>¥305,000,000</td><td>¥118,000,000</td><td><strong>¥187,000,000/年</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div class="metric-grid">
+        <div class="metric-card green"><div class="val">61%</div><div class="lbl">運用コスト削減率</div></div>
+        <div class="metric-card"><div class="val">1.2年</div><div class="lbl">投資回収期間 (ROI)</div></div>
+        <div class="metric-card cyan"><div class="val">¥1.87億</div><div class="lbl">年間削減額 (100km)</div></div>
+        <div class="metric-card yellow"><div class="val">97%</div><div class="lbl">見逃し低減・安全向上</div></div>
+      </div>
+
+      <div class="callout callout-success">
+        <div class="callout-title">定量化困難な効果</div>
+        <p>脱線事故・インシデント防止による<strong>運行遅延コスト削減</strong>、
+        ブランド毀損回避、および保険料低減効果は上記試算に含まれていません。
+        鉄道の重大インシデント1件あたりの社会的損失は数十億円規模に上ります。</p>
+      </div>
+    </section>
+
+    <!-- S10: ROADMAP -->
+    <section class="wp-section" id="s10">
+      <div class="section-number">Section 10</div>
+      <h2>ロードマップ</h2>
+
+      <div class="roadmap">
+        <div class="roadmap-phase">
+          <div class="phase-label">
+            <span class="phase-tag phase-current">Current<br>v1.0</span>
+          </div>
+          <div>
+            <h4>フェーズ 1 — コア機能（2026年Q1）</h4>
+            <ul>
+              <li>Depth Anything V2 + YOLOv8 ハイブリッド検知</li>
+              <li>REST API + WebSocket ストリーミング</li>
+              <li>7クラス異常検知（亀裂・締結・バラスト等）</li>
+              <li>クラウド & エッジ両対応</li>
+              <li>リアルタイムダッシュボード</li>
+              <li>Python SDK + CLI</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="phase-label">
+            <span class="phase-tag phase-next">Next<br>v1.5</span>
+          </div>
+          <div>
+            <h4>フェーズ 2 — 高度化（2026年Q2〜Q3）</h4>
+            <ul>
+              <li>Depth Anything V3 / DA3 統合（精度向上）</li>
+              <li>3Dポイントクラウド生成・可視化</li>
+              <li>時系列変化検出（Progressive Degradation Tracking）</li>
+              <li>予知保全スコアリング API</li>
+              <li>IR（赤外線）カメラ統合で夜間精度向上</li>
+              <li>マルチレール（複線）同時解析</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="phase-label">
+            <span class="phase-tag phase-future">Future<br>v2.0</span>
+          </div>
+          <div>
+            <h4>フェーズ 3 — エンタープライズ（2026年Q4〜）</h4>
+            <ul>
+              <li>デジタルツイン軌道モデルとの統合</li>
+              <li>LiDAR センサーフュージョン</li>
+              <li>自動保守作業計画生成（AI プランナー）</li>
+              <li>ISO 27001 / SOC 2 Type II 認証取得</li>
+              <li>海外展開（台湾・韓国・東南アジア鉄道網）</li>
+              <li>マルチモーダル基盤モデル（独自 Foundation Model）</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S11: APPENDIX -->
+    <section class="wp-section" id="s11">
+      <div class="section-number">Section 11</div>
+      <h2>付録</h2>
+
+      <h3>A. 用語集</h3>
+      <table class="wp-table">
+        <thead><tr><th>用語</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>mAP@0.5</td><td>IoU 閾値 0.5 での mean Average Precision。物体検知精度の標準指標。</td></tr>
+          <tr><td>Depth Anything V2</td><td>Meta AI による最新深度推定基盤モデル。単眼カメラから絶対深度を推定。</td></tr>
+          <tr><td>YOLOv8</td><td>Ultralytics 社の高速物体検知モデル。Real-time 推論に最適化。</td></tr>
+          <tr><td>TensorRT</td><td>NVIDIA の推論最適化フレームワーク。FP16 量子化でモデルを高速化。</td></tr>
+          <tr><td>CLAHE</td><td>Contrast Limited Adaptive Histogram Equalization。低コントラスト画像の前処理手法。</td></tr>
+          <tr><td>バラスト</td><td>線路の砂利道床。軌道の安定性を保つ基盤材料。</td></tr>
+          <tr><td>締結装置</td><td>レールを枕木に固定する金具類（クリップ・ボルト等）。</td></tr>
+          <tr><td>Anomaly Score</td><td>フレーム全体の異常度合いを 0〜1 でスコア化した指標（0.7以上で要注意）。</td></tr>
+          <tr><td>Critical / Major / Minor</td><td>異常の重大度分類。Critical は即時報告、Major は24h以内、Minor は次回定検時対応。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>B. 参考文献</h3>
+      <ul>
+        <li>Yang et al., "Depth Anything V2", NeurIPS 2024</li>
+        <li>Jocher et al., "Ultralytics YOLOv8", GitHub 2023</li>
+        <li>国土交通省, 「鉄道に関する技術上の基準を定める省令」2024年改正版</li>
+        <li>鉄道総合技術研究所, 「軌道状態データ活用ガイドライン」2023</li>
+        <li>EU Agency for Railways, "AI Applications in Railway Maintenance", 2024</li>
+      </ul>
+
+      <h3>C. 問い合わせ</h3>
+      <p>
+        技術評価・PoC 相談・導入支援については、SpatialForge エンタープライズチームまでお問い合わせください。
+        本白書の内容に関する質問や追加資料のご要望もお気軽にどうぞ。
+      </p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem;">
+        <a href="proposal.html" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
+          提案書を見る →
+        </a>
+        <a href="rail-demo.html" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);text-decoration:none;border-radius:8px;font-weight:600;">
+          デモを試す →
+        </a>
+        <a href="railscan-platform.html" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);text-decoration:none;border-radius:8px;font-weight:600;">
+          プラットフォームを見る →
+        </a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="wp-footer">
+      <p>
+        <strong>SpatialForge RailScan AI — 技術白書 v1.0</strong><br>
+        © 2026 SpatialForge. 本文書の無断転載・複製を禁じます。<br>
+        掲載の数値・仕様は開発評価版のものであり、製品版では変更される場合があります。
+      </p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // Active TOC highlighting on scroll
+  const sections = document.querySelectorAll('.wp-section[id], .cover[id]');
+  const tocLinks = document.querySelectorAll('.toc-list a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

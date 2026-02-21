@@ -31,6 +31,8 @@
     <a href="#specs">技術仕様</a>
     <a href="#roi">ROI比較</a>
     <a href="proposal.html">提案書</a>
+    <a href="railscan-platform.html" style="color:var(--indigo)">プラットフォーム</a>
+    <a href="whitepaper.html" style="color:var(--safe)">白書</a>
     <a href="#cta" class="nav-cta">資料請求</a>
   </div>
 </nav>
@@ -83,7 +85,7 @@
   </h2>
   <p class="section-sub">
     実際のJR路線映像（2路線 / 12キーフレーム）を YOLOv8m v2 欠陥検知モデル（5,052枚学習 / RTX 4090 / 平均13ms/フレーム）でリアルタイム処理した結果です。
-    フレームを選択して深度マップと欠陥検知結果を確認できます。
+    フレームを選択すると深度マップと共に<strong style="color:var(--accent)">欠陥バウンディングボックスがアニメーション表示</strong>されます。自動再生でフレームをシーケンシャルに確認できます。
   </p>
 
   <!-- Real data proof bar -->
@@ -118,14 +120,15 @@
     </button>
   </div>
 
-  <!-- Keyboard hint -->
-  <div style="margin-bottom:0.75rem">
+  <!-- Keyboard hint + auto-play -->
+  <div style="margin-bottom:0.75rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
     <span class="kbd-hint">
       <kbd class="kbd">1</kbd>–<kbd class="kbd">5</kbd> タブ切替 &nbsp;
       <kbd class="kbd">←</kbd><kbd class="kbd">→</kbd> フレーム &nbsp;
       <kbd class="kbd">Space</kbd> 再生/停止 &nbsp;
       <kbd class="kbd">N</kbd>/<kbd class="kbd">P</kbd> 次/前の異常
     </span>
+    <button id="autoPlayBtn" onclick="toggleKeyframeAutoPlay()" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:var(--safe);font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:5px;cursor:pointer;white-space:nowrap">▶ 自動再生</button>
   </div>
 
   <!-- Frame selector strip -->
@@ -270,11 +273,13 @@
 
   <!-- Main image panels -->
   <div class="demo-grid" id="mainDisplay">
-    <div class="img-panel-wrap">
+    <div class="img-panel-wrap" style="position:relative">
       <span class="panel-label live">● カメラ映像 / Camera</span>
       <img id="cameraImg" src="rail-assets/jrsam3_11s_camera.jpg" alt="Camera feed">
+      <canvas id="bboxCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:auto"></canvas>
       <div class="proc-flash" id="procFlash"></div>
       <div class="frame-info-badge" id="frameLabel">jrsam3 — 11s</div>
+      <button id="bboxToggleBtn" onclick="toggleBboxOverlay()" title="バウンディングボックス表示切替" style="position:absolute;bottom:8px;right:8px;z-index:15;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.72rem;padding:3px 8px;border-radius:5px;cursor:pointer">BBox ON</button>
     </div>
     <div class="img-panel-wrap">
       <span class="panel-label">深度 + 欠陥検知 / Depth+Defect</span>
@@ -291,13 +296,19 @@
   <!-- Alert + Metric panels -->
   <div class="info-grid" id="infoPanels">
     <div class="alert-panel">
-      <h3>⚠ 欠陥検知アラート / Defect Detection</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <h3 style="margin:0">⚠ 欠陥検知アラート / Defect Detection</h3>
+        <button onclick="printKeyframeReport()" title="このフレームの点検レポートを出力" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--accent);font-size:0.72rem;padding:3px 9px;border-radius:5px;cursor:pointer;font-weight:700;white-space:nowrap">📋 レポート</button>
+      </div>
       <div id="alertList">
         <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center">読み込み中...</div>
       </div>
     </div>
     <div class="metric-panel">
-      <h3>📐 計測データ / Measurements</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <h3 style="margin:0">📐 計測データ / Measurements</h3>
+        <button onclick="shareCurrentFrame()" title="このフレームのURLをコピー" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.72rem;padding:3px 8px;border-radius:5px;cursor:pointer" id="shareBtn">🔗 シェア</button>
+      </div>
       <div class="metric-row"><span class="metric-key">前方距離（最短）</span><span class="metric-val" id="m-near">—</span></div>
       <div class="metric-row"><span class="metric-key">前方距離（最遠）</span><span class="metric-val" id="m-far">—</span></div>
       <div class="metric-row"><span class="metric-key">建築限界余裕</span><span class="metric-val" id="m-clearance">—</span></div>
@@ -401,6 +412,16 @@
         <span>YOLOv8m v2</span> · <span>4クラス</span> · <span>92エポック（Early Stop@62）</span>
       </div>
     </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">
+    <button onclick="printAllFramesReport()" style="background:var(--accent);color:#000;border:none;padding:0.6rem 1.4rem;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer">
+      📋 全フレーム一括レポート出力
+    </button>
+    <button onclick="exportDetectionJson()" style="background:transparent;color:var(--indigo);border:1px solid var(--indigo);padding:0.6rem 1.4rem;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer">
+      ⬇ 検出データ JSON エクスポート
+    </button>
   </div>
 </section>
 </div>
@@ -515,6 +536,14 @@
       <div class="chart-container">
         <canvas id="typeChart"></canvas>
       </div>
+    </div>
+  </div>
+
+  <!-- Per-frame real data bar chart -->
+  <div class="chart-card" style="margin-top:1rem">
+    <h4>実測データ — フレーム別検知数 / 重要度別（12キーフレーム・YOLOv8m v2 実推論）</h4>
+    <div class="chart-container" style="height:180px">
+      <canvas id="frameChart"></canvas>
     </div>
   </div>
 
@@ -725,6 +754,31 @@
 </section>
 </div>
 
+<!-- Platform + Whitepaper promo strip -->
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:2.5rem 2rem">
+  <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem">
+
+    <a href="railscan-platform.html" style="display:block;text-decoration:none;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(99,102,241,0.02));border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius);padding:1.5rem;transition:all 0.2s" onmouseover="this.style.borderColor='rgba(99,102,241,0.6)'" onmouseout="this.style.borderColor='rgba(99,102,241,0.3)'">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:0.7rem;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:0.05em">PLATFORM</span>
+      </div>
+      <h3 style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem">エンタープライズ管理ダッシュボード</h3>
+      <p style="font-size:0.83rem;color:var(--muted);line-height:1.6;margin-bottom:0.75rem">8路線 / 2,847km を一元管理。リアルタイムアラート、点検スケジュール、トレンド分析まで全て揃ったエンタープライズUI。</p>
+      <span style="font-size:0.82rem;color:#818cf8;font-weight:700">プラットフォームを見る →</span>
+    </a>
+
+    <a href="whitepaper.html" style="display:block;text-decoration:none;background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(34,197,94,0.01));border:1px solid rgba(34,197,94,0.25);border-radius:var(--radius);padding:1.5rem;transition:all 0.2s" onmouseover="this.style.borderColor='rgba(34,197,94,0.5)'" onmouseout="this.style.borderColor='rgba(34,197,94,0.25)'">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+        <span style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80;font-size:0.7rem;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:0.05em">WHITEPAPER</span>
+      </div>
+      <h3 style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem">技術白書 — システム設計と性能評価</h3>
+      <p style="font-size:0.83rem;color:var(--muted);line-height:1.6;margin-bottom:0.75rem">Depth Anything V2 + YOLOv8の詳細アーキテクチャ、モデル比較、統合ガイド。技術担当者向けの詳細ドキュメント。</p>
+      <span style="font-size:0.82rem;color:#4ade80;font-weight:700">技術白書を読む →</span>
+    </a>
+
+  </div>
+</div>
+
 <!-- CTA -->
 <div id="cta" class="cta-section">
   <div class="section-label">Contact</div>
@@ -732,7 +786,8 @@
   <p class="section-sub" style="margin:0 auto 2rem">まずは1路線・1編成からの試験導入が可能です。<br>デモンストレーションや技術資料のご提供はお気軽にどうぞ。</p>
   <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
     <a href="mailto:contact@spatialforge.ai?subject=RailScan AI 導入相談" class="btn-primary">メールで相談する</a>
-    <a href="docs.html" class="btn-secondary">技術資料を見る</a>
+    <a href="railscan-platform.html" class="btn-secondary">プラットフォームを見る</a>
+    <a href="whitepaper.html" class="btn-secondary">技術白書を読む</a>
     <a href="proposal.html" class="btn-secondary">提案書を見る</a>
   </div>
 </div>

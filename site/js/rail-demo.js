@@ -54,6 +54,233 @@ const SEV_COLORS = {
   info:     '#6b7280',
 };
 
+// ══════════════════════════════════════════════════════════════
+// 0. BBOX CANVAS OVERLAY — animated bounding box drawing
+// ══════════════════════════════════════════════════════════════
+let bboxOverlayEnabled = true;
+let _bboxAnomTimers    = [];
+const IMG_SRC_W        = 640; // source image width in pixels
+const IMG_SRC_H        = 640; // source image height in pixels
+
+function toggleBboxOverlay() {
+  bboxOverlayEnabled = !bboxOverlayEnabled;
+  const canvas = document.getElementById('bboxCanvas');
+  const btn    = document.getElementById('bboxToggleBtn');
+  if (!bboxOverlayEnabled) {
+    canvas.classList.add('hidden');
+    if (btn) btn.textContent = 'BBox OFF';
+  } else {
+    canvas.classList.remove('hidden');
+    if (btn) btn.textContent = 'BBox ON';
+    if (currentFrame) drawBboxOverlay(currentFrame);
+  }
+}
+
+function clearBboxCanvas() {
+  const canvas = document.getElementById('bboxCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  _bboxAnomTimers.forEach(t => clearTimeout(t));
+  _bboxAnomTimers = [];
+}
+
+function drawBboxOverlay(frame) {
+  if (!bboxOverlayEnabled) return;
+  const canvas = document.getElementById('bboxCanvas');
+  if (!canvas) return;
+
+  // Cancel any running timers
+  _bboxAnomTimers.forEach(t => clearTimeout(t));
+  _bboxAnomTimers = [];
+
+  // Sync canvas buffer size to actual rendered image element size
+  const img  = document.getElementById('cameraImg');
+  const rect = img.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width        = rect.width  * dpr;
+  canvas.height       = rect.height * dpr;
+  canvas.style.width  = rect.width  + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Scale factors: source image → rendered size
+  const scaleX = rect.width  / IMG_SRC_W;
+  const scaleY = rect.height / IMG_SRC_H;
+
+  if (frame.anoms.length === 0) {
+    // No anomalies: draw a subtle green "all clear" outline
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.strokeStyle = 'rgba(34,197,94,0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, rect.width - 8, rect.height - 8);
+    return;
+  }
+
+  // Draw scan line animation first (green sweep across)
+  let scanFrames    = 0;
+  const maxScanFrames = 20; // ~0.33s at 60fps
+  function drawScanLine() {
+    if (!bboxOverlayEnabled) return;
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    const scanY = (scanFrames / maxScanFrames) * rect.height;
+    // Gradient scan line
+    const grad = ctx.createLinearGradient(0, scanY - 20, 0, scanY + 4);
+    grad.addColorStop(0, 'rgba(34, 197, 94, 0)');
+    grad.addColorStop(0.7, 'rgba(34, 197, 94, 0.35)');
+    grad.addColorStop(1, 'rgba(34, 197, 94, 0.6)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, scanY - 20, rect.width, 24);
+    scanFrames++;
+    if (scanFrames < maxScanFrames) {
+      requestAnimationFrame(drawScanLine);
+    } else {
+      // Scan done: draw bboxes sequentially
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      frame.anoms.forEach((a, i) => {
+        const t = setTimeout(
+          () => drawSingleBbox(ctx, a, scaleX, scaleY, rect.width, rect.height),
+          i * 100
+        );
+        _bboxAnomTimers.push(t);
+      });
+    }
+  }
+  drawScanLine();
+}
+
+function drawSingleBbox(ctx, a, scaleX, scaleY, canvasW, canvasH) {
+  if (!bboxOverlayEnabled) return;
+  const color  = SEV_COLORS[a.sev] || '#f59e0b';
+  const clsJa  = DEFECT_LABELS_JA[a.cls] || a.cls;
+  const conf   = a.clsConf != null ? (a.clsConf * 100).toFixed(0) + '%' : '—';
+
+  const x = a.x * scaleX;
+  const y = a.y * scaleY;
+  const w = a.w * scaleX;
+  const h = a.h * scaleY;
+
+  // Clamp to canvas
+  const cx = Math.max(1, x);
+  const cy = Math.max(1, y);
+  const cw = Math.min(w, canvasW - cx - 1);
+  const ch = Math.min(h, canvasH - cy - 1);
+  if (cw < 4 || ch < 4) return;
+
+  const cornerLen = Math.min(18, cw * 0.3, ch * 0.3);
+
+  // Parse color components once
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+
+  // Flash effect: start bright, settle to normal
+  let flash      = 1.0;
+  function animStep() {
+    if (!bboxOverlayEnabled) return;
+    const alpha = 0.75 + flash * 0.25;
+    const lineW = 2 + flash * 1;
+    ctx.globalAlpha = alpha;
+
+    // Subtle background fill
+    ctx.fillStyle = `rgba(${r},${g},${b},${0.08 + flash * 0.05})`;
+    ctx.fillRect(cx, cy, cw, ch);
+
+    // Corner markers (L-shaped)
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lineW;
+    ctx.lineCap     = 'square';
+    // TL
+    ctx.beginPath(); ctx.moveTo(cx, cy + cornerLen); ctx.lineTo(cx, cy); ctx.lineTo(cx + cornerLen, cy); ctx.stroke();
+    // TR
+    ctx.beginPath(); ctx.moveTo(cx + cw - cornerLen, cy); ctx.lineTo(cx + cw, cy); ctx.lineTo(cx + cw, cy + cornerLen); ctx.stroke();
+    // BL
+    ctx.beginPath(); ctx.moveTo(cx, cy + ch - cornerLen); ctx.lineTo(cx, cy + ch); ctx.lineTo(cx + cornerLen, cy + ch); ctx.stroke();
+    // BR
+    ctx.beginPath(); ctx.moveTo(cx + cw - cornerLen, cy + ch); ctx.lineTo(cx + cw, cy + ch); ctx.lineTo(cx + cw, cy + ch - cornerLen); ctx.stroke();
+
+    // Label badge
+    const labelY    = cy > 22 ? cy - 4 : cy + 18;
+    const labelText = `${clsJa}  ${conf}`;
+    const fontSize  = Math.max(9, Math.min(12, cw * 0.14));
+    ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+    const textW  = ctx.measureText(labelText).width;
+    const padX   = 5, padY = 3;
+    const badgeX = Math.min(cx, canvasW - textW - padX * 2 - 2);
+    const badgeH = 16;
+    const badgeY = labelY - badgeH + 2;
+
+    // Badge background
+    ctx.globalAlpha = 0.85 + flash * 0.1;
+    ctx.fillStyle   = `rgba(${r},${g},${b},0.9)`;
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, textW + padX * 2, badgeH, 3);
+      ctx.fill();
+    } else {
+      ctx.fillRect(badgeX, badgeY, textW + padX * 2, badgeH);
+    }
+
+    // Badge text
+    ctx.globalAlpha = 1;
+    ctx.fillStyle   = a.sev === 'minor' ? '#ffffff' : '#000000';
+    ctx.fillText(labelText, badgeX + padX, badgeY + badgeH - padY - 1);
+
+    ctx.globalAlpha = 1;
+
+    // Flash decay
+    flash = Math.max(0, flash - 0.15);
+    if (flash > 0) requestAnimationFrame(animStep);
+  }
+  animStep();
+}
+
+// Canvas mouse interaction: hover highlighting + click to scroll alert
+function initBboxCanvasInteraction() {
+  const canvas = document.getElementById('bboxCanvas');
+  if (!canvas) return;
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (!bboxOverlayEnabled || !currentFrame) return;
+    const rect   = canvas.getBoundingClientRect();
+    const mx     = e.clientX - rect.left;
+    const my     = e.clientY - rect.top;
+    const scaleX = rect.width  / IMG_SRC_W;
+    const scaleY = rect.height / IMG_SRC_H;
+    const hit    = currentFrame.anoms.findIndex(a => {
+      const ax = a.x * scaleX, ay = a.y * scaleY;
+      const aw = a.w * scaleX, ah = a.h * scaleY;
+      return mx >= ax && mx <= ax + aw && my >= ay && my <= ay + ah;
+    });
+    canvas.style.cursor = hit >= 0 ? 'pointer' : 'default';
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (!bboxOverlayEnabled || !currentFrame) return;
+    const rect   = canvas.getBoundingClientRect();
+    const mx     = e.clientX - rect.left;
+    const my     = e.clientY - rect.top;
+    const scaleX = rect.width  / IMG_SRC_W;
+    const scaleY = rect.height / IMG_SRC_H;
+    const hit    = currentFrame.anoms.findIndex(a => {
+      const ax = a.x * scaleX, ay = a.y * scaleY;
+      const aw = a.w * scaleX, ah = a.h * scaleY;
+      return mx >= ax && mx <= ax + aw && my >= ay && my <= ay + ah;
+    });
+    if (hit >= 0) {
+      const alertItems = document.querySelectorAll('#alertList .alert-item');
+      const alertEl    = alertItems[hit];
+      if (alertEl) {
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        alertEl.style.outline = '2px solid ' + (SEV_COLORS[currentFrame.anoms[hit].sev] || '#f59e0b');
+        setTimeout(() => { alertEl.style.outline = ''; }, 1500);
+      }
+    }
+  });
+}
+
 const FRAMES = [
   { name:'jrsam3_02s', ts:2,  video:'jrsam3', label:'jrsam3 02s', min:2.55, max:159.1, conf:0.875, ms:10.2,
     anoms:[
@@ -158,6 +385,14 @@ function selectVideo(vid) {
   // Stop webcam when leaving webcam tab
   if (!isWebcam && webcamRunning) stopWebcam();
 
+  // Stop keyframe auto-play when switching away
+  if (_autoPlayInterval) {
+    clearInterval(_autoPlayInterval);
+    _autoPlayInterval = null;
+    const btn = document.getElementById('autoPlayBtn');
+    if (btn) { btn.textContent = '▶ 自動再生'; btn.style.background = 'rgba(34,197,94,0.12)'; btn.style.borderColor = 'rgba(34,197,94,0.3)'; btn.style.color = 'var(--safe)'; }
+  }
+
   // Stop player playback when leaving player tab
   if (!isPlayer && playerInterval) {
     clearInterval(playerInterval);
@@ -219,10 +454,16 @@ function selectFrame(name) {
   const oImg = document.getElementById('overlayImg');
   cImg.style.opacity = '0.5';
   oImg.style.opacity = '0.5';
+  clearBboxCanvas();
   cImg.src = `rail-assets/${name}_camera.jpg`;
   oImg.src = `rail-assets/${name}_overlay.jpg`;
-  cImg.onload = () => { cImg.style.opacity = '1'; };
+  cImg.onload = () => { cImg.style.opacity = '1'; drawBboxOverlay(frame); };
   oImg.onload = () => { oImg.style.opacity = '1'; };
+  // Fallback: if image is already cached, onload may not fire
+  if (cImg.complete && cImg.naturalWidth > 0) {
+    cImg.style.opacity = '1';
+    setTimeout(() => drawBboxOverlay(frame), 30);
+  }
 
   // Update badge
   document.getElementById('frameLabel').textContent =
@@ -479,6 +720,314 @@ function printReport() {
 </div>
 <br>
 <button onclick="window.print()" style="padding:8px 20px;background:#f59e0b;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:11pt">🖨 印刷 / PDF保存</button>
+</body></html>`);
+  w.document.close();
+}
+
+// ── Share current frame via URL param ────────────────────────
+function shareCurrentFrame() {
+  if (!currentFrame) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('frame', currentFrame.name);
+  const shareUrl = url.toString();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      const btn = document.getElementById('shareBtn');
+      if (btn) { btn.textContent = '✓ コピー済'; setTimeout(() => { btn.textContent = '🔗 シェア'; }, 2000); }
+    });
+  } else {
+    window.prompt('このフレームのURL:', shareUrl);
+  }
+  // Update browser URL without reload
+  history.replaceState(null, '', `?frame=${currentFrame.name}`);
+}
+
+// ── Keyframe Auto-Play Slideshow ───────────────────────────────
+let _autoPlayInterval = null;
+let _autoPlayAllFrames = false; // if true cycles ALL frames, else only anomaly frames
+
+function toggleKeyframeAutoPlay() {
+  const btn = document.getElementById('autoPlayBtn');
+  if (_autoPlayInterval) {
+    clearInterval(_autoPlayInterval);
+    _autoPlayInterval = null;
+    if (btn) { btn.textContent = '▶ 自動再生'; btn.style.background = 'rgba(34,197,94,0.12)'; btn.style.borderColor = 'rgba(34,197,94,0.3)'; btn.style.color = 'var(--safe)'; }
+  } else {
+    const vid    = currentVideo === 'upload' || currentVideo === 'player' || currentVideo === 'webcam' ? 'jrsam3' : currentVideo;
+    const frames = FRAMES.filter(f => f.video === vid && f.anoms.length > 0); // only anomaly frames
+    if (frames.length === 0) return;
+    let idx = 0;
+    selectFrame(frames[idx].name);
+    _autoPlayInterval = setInterval(() => {
+      idx = (idx + 1) % frames.length;
+      selectFrame(frames[idx].name);
+    }, 2500);
+    if (btn) { btn.textContent = '⏹ 停止'; btn.style.background = 'rgba(239,68,68,0.12)'; btn.style.borderColor = 'rgba(239,68,68,0.3)'; btn.style.color = 'var(--danger)'; }
+  }
+}
+
+// ── All-Frames Comprehensive Report ──────────────────────────
+function printAllFramesReport() {
+  const today   = new Date().toLocaleString('ja-JP', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  const allAnoms = FRAMES.flatMap(f => f.anoms.map(a => ({...a, frame: f})));
+  const total   = allAnoms.length;
+  const sevCount = { critical: 0, major: 0, minor: 0 };
+  const clsCount = {};
+  allAnoms.forEach(a => {
+    if (sevCount[a.sev] !== undefined) sevCount[a.sev]++;
+    clsCount[a.cls] = (clsCount[a.cls] || 0) + 1;
+  });
+
+  const frameRows = FRAMES.map((f, i) => {
+    const crit = f.anoms.filter(a => a.sev === 'critical').length;
+    const maj  = f.anoms.filter(a => a.sev === 'major').length;
+    const min  = f.anoms.filter(a => a.sev === 'minor').length;
+    const status = crit > 0 ? '要緊急対応' : maj > 0 ? '要確認' : f.anoms.length > 0 ? '経過観察' : '正常';
+    const statusCol = crit > 0 ? '#dc2626' : maj > 0 ? '#d97706' : f.anoms.length > 0 ? '#2563eb' : '#16a34a';
+    const route = f.video === 'jrsam3' ? 'jrsam3路線' : 'jr23路線';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${route}</td>
+      <td>${f.ts}s</td>
+      <td>${f.anoms.length} 件</td>
+      <td style="color:#dc2626">${crit}</td>
+      <td style="color:#d97706">${maj}</td>
+      <td style="color:#2563eb">${min}</td>
+      <td>${f.ms.toFixed(1)} ms</td>
+      <td style="color:${statusCol};font-weight:700">${status}</td>
+    </tr>`;
+  }).join('');
+
+  const anomRows = allAnoms.map((a, i) => {
+    const clsJa = DEFECT_LABELS_JA[a.cls] || a.cls;
+    const sevJa = SEV_LABELS_JA[a.sev] || a.sev;
+    const col   = SEV_COLORS[a.sev] || '#888';
+    const route = a.frame.video === 'jrsam3' ? 'jrsam3' : 'jr23';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${route} ${a.frame.ts}s</td>
+      <td>${clsJa}</td>
+      <td><span style="color:${col};font-weight:700">${sevJa}</span></td>
+      <td>${a.dist.toFixed(1)} m</td>
+      <td>${a.clsConf != null ? (a.clsConf*100).toFixed(0)+'%' : '—'}</td>
+      <td>${a.depth != null ? a.depth.toFixed(1)+' m' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const clsRows = Object.entries(clsCount).sort((a,b) => b[1]-a[1]).map(([cls, cnt]) => {
+    const clsJa = DEFECT_LABELS_JA[cls] || cls;
+    const pct   = (cnt / total * 100).toFixed(1);
+    return `<tr><td>${clsJa}</td><td>${cls}</td><td>${cnt} 件</td><td>${pct}%</td></tr>`;
+  }).join('');
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>RailScan AI 全路線点検報告書 — ${today}</title>
+<style>
+  body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; margin: 0; padding: 2cm; color: #111; font-size: 10.5pt; }
+  .header-bar { display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid #f59e0b; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+  .logo { font-size: 14pt; font-weight: 800; } .logo span { color: #f59e0b; }
+  .badge { background:#f59e0b; color:#000; font-size:8pt; font-weight:800; padding:2px 8px; border-radius:4px; }
+  h1 { font-size: 19pt; margin: 4px 0 2px; }
+  .subtitle { color:#555; font-size:9.5pt; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; margin-bottom:1.5rem; }
+  .kpi-box { text-align:center; border:1px solid #ddd; border-radius:6px; padding:0.75rem; }
+  .kpi-num { font-size:22pt; font-weight:800; margin-bottom:2px; }
+  .kpi-label { font-size:8.5pt; color:#555; }
+  h2 { font-size:12pt; border-left:3px solid #f59e0b; padding-left:0.5rem; margin:1.5rem 0 0.75rem; page-break-after:avoid; }
+  table { width:100%; border-collapse:collapse; font-size:9pt; margin-bottom:1.5rem; }
+  th { background:#f5f5f5; text-align:left; padding:5px 7px; border:1px solid #ddd; font-size:8.5pt; }
+  td { padding:5px 7px; border:1px solid #ddd; }
+  tr:nth-child(even) { background:#fafafa; }
+  .footer { margin-top:2rem; font-size:8.5pt; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:0.75rem; }
+  @media print { button{display:none!important} body{padding:1cm 1.5cm} }
+</style></head><body>
+<div class="header-bar">
+  <div>
+    <div class="logo">Spatial<span>Forge</span> <span class="badge">RAIL</span></div>
+    <h1>AI軌道点検 全路線報告書</h1>
+    <div class="subtitle">RailScan AI v2 — 2路線 12キーフレーム 全検出結果</div>
+  </div>
+  <div style="text-align:right;font-size:9pt;color:#555">
+    <div>出力日時: ${today}</div>
+    <div>対象: jrsam3路線 + jr23路線</div>
+    <div>フレーム数: 12 / 総検出: ${total}件</div>
+  </div>
+</div>
+<div class="kpi-grid">
+  <div class="kpi-box"><div class="kpi-num" style="color:#111">12</div><div class="kpi-label">解析フレーム数</div></div>
+  <div class="kpi-box"><div class="kpi-num" style="color:#dc2626">${sevCount.critical}</div><div class="kpi-label">緊急 (critical)</div></div>
+  <div class="kpi-box"><div class="kpi-num" style="color:#d97706">${sevCount.major}</div><div class="kpi-label">重要 (major)</div></div>
+  <div class="kpi-box"><div class="kpi-num" style="color:#2563eb">${sevCount.minor}</div><div class="kpi-label">軽微 (minor)</div></div>
+</div>
+<h2>フレーム別サマリー</h2>
+<table>
+  <thead><tr><th>#</th><th>路線</th><th>時刻</th><th>検出数</th><th>緊急</th><th>重要</th><th>軽微</th><th>処理時間</th><th>ステータス</th></tr></thead>
+  <tbody>${frameRows}</tbody>
+</table>
+<h2>欠陥種別集計</h2>
+<table>
+  <thead><tr><th>欠陥種別（日本語）</th><th>Class ID</th><th>検出数</th><th>割合</th></tr></thead>
+  <tbody>${clsRows}</tbody>
+</table>
+<h2>全検出一覧（${total}件）</h2>
+<table>
+  <thead><tr><th>#</th><th>フレーム</th><th>欠陥種別</th><th>重症度</th><th>推定距離</th><th>信頼度</th><th>深度推定</th></tr></thead>
+  <tbody>${anomRows}</tbody>
+</table>
+<div class="footer">
+  本レポートは SpatialForge RailScan AI が自動生成した暫定報告書です。最終判断は保線担当者が現地確認の上で行ってください。<br>
+  モデル: YOLOv8m v2 (mAP@50=44.7%) + Depth Anything V2 Large | SpatialForge — ${today}
+</div>
+<br>
+<button onclick="window.print()" style="padding:8px 20px;background:#f59e0b;border:none;border-radius:6px;font-weight:700;cursor:pointer">🖨 印刷 / PDF保存</button>
+</body></html>`);
+  w.document.close();
+}
+
+// ── Export all detection data as JSON ──────────────────────────
+function exportDetectionJson() {
+  const ts   = new Date().toISOString();
+  const data = {
+    exported_at: ts,
+    model: 'YOLOv8m v2 + Depth Anything V2 Large',
+    total_frames: FRAMES.length,
+    total_detections: FRAMES.reduce((s, f) => s + f.anoms.length, 0),
+    frames: FRAMES.map(f => ({
+      name:       f.name,
+      timestamp:  f.ts,
+      video:      f.video,
+      depth_conf: f.conf,
+      ms:         f.ms,
+      detections: f.anoms.map(a => ({
+        class_en:  a.cls,
+        class_ja:  DEFECT_LABELS_JA[a.cls] || a.cls,
+        severity:  a.sev,
+        x: a.x, y: a.y, w: a.w, h: a.h,
+        area_px:   a.area ?? a.w * a.h,
+        dist_m:    a.dist,
+        depth_m:   a.depth,
+        confidence: a.clsConf,
+      })),
+    })),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `railscan_detections_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Keyframe Report (called from keyframe alert panel button) ──
+function printKeyframeReport() {
+  const frame = currentFrame;
+  if (!frame) return;
+  const today = new Date().toLocaleString('ja-JP', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  const routeName = frame.video === 'jrsam3' ? 'jrsam3路線' : 'jr23路線';
+  const sevCount = { critical:0, major:0, minor:0 };
+  frame.anoms.forEach(a => { if (sevCount[a.sev] !== undefined) sevCount[a.sev]++; });
+
+  const anomRows = frame.anoms.map((a, i) => {
+    const clsJa = DEFECT_LABELS_JA[a.cls] || a.cls;
+    const sevJa = SEV_LABELS_JA[a.sev] || a.sev;
+    const col   = SEV_COLORS[a.sev] || '#888';
+    const conf  = a.clsConf != null ? (a.clsConf * 100).toFixed(0) + '%' : '—';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${clsJa}</td>
+      <td><span style="color:${col};font-weight:700">${sevJa}</span></td>
+      <td>${a.dist.toFixed(1)} m</td>
+      <td>${conf}</td>
+      <td>${a.depth != null ? a.depth.toFixed(1) + ' m' : '—'}</td>
+      <td>${a.w}×${a.h} px (${(a.area ?? a.w * a.h).toLocaleString()} px²)</td>
+      <td>(${a.x}, ${a.y})</td>
+    </tr>`;
+  }).join('');
+
+  const noAnom = frame.anoms.length === 0
+    ? `<tr><td colspan="8" style="text-align:center;color:#166534;font-weight:700">異常なし — このフレームは正常です</td></tr>` : '';
+
+  const statusColor = sevCount.critical > 0 ? '#dc2626' : sevCount.major > 0 ? '#d97706' : '#16a34a';
+  const statusText  = sevCount.critical > 0 ? '要緊急対応' : sevCount.major > 0 ? '要確認' : '正常';
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>RailScan AI フレーム点検レポート — ${routeName} ${frame.ts}s</title>
+<style>
+  body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; margin: 0; padding: 2cm; color: #111; font-size: 11pt; }
+  .header-bar { display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 2px solid #f59e0b; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
+  .logo { font-size: 13pt; font-weight: 800; } .logo span { color: #f59e0b; }
+  .badge { background:#f59e0b; color:#000; font-size:8pt; font-weight:800; padding:2px 7px; border-radius:4px; }
+  h1 { font-size: 17pt; margin: 4px 0 2px; }
+  .subtitle { color: #555; font-size: 9.5pt; }
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem 2rem; margin-bottom:1.25rem; }
+  .meta-row { display:flex; justify-content:space-between; border-bottom:1px solid #e5e5e5; padding:3px 0; font-size:10pt; }
+  .meta-key { color:#555; } .meta-val { font-weight:700; }
+  .status-box { border-radius:6px; padding:0.6rem 1rem; margin-bottom:1.25rem; font-size:10.5pt; }
+  h2 { font-size:12pt; border-left:3px solid #f59e0b; padding-left:0.5rem; margin:1.25rem 0 0.6rem; }
+  table { width:100%; border-collapse:collapse; font-size:9.5pt; }
+  th { background:#f5f5f5; text-align:left; padding:5px 7px; border:1px solid #ddd; font-size:8.5pt; }
+  td { padding:5px 7px; border:1px solid #ddd; }
+  tr:nth-child(even) { background:#fafafa; }
+  .sev-summary { display:flex; gap:1rem; margin-bottom:1rem; }
+  .sev-chip { padding:4px 12px; border-radius:20px; font-size:9.5pt; font-weight:700; }
+  .footer { margin-top:1.5rem; font-size:8.5pt; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:0.6rem; }
+  @media print { button { display:none !important; } body { padding: 1cm 1.5cm; } }
+</style></head><body>
+<div class="header-bar">
+  <div>
+    <div class="logo">Spatial<span>Forge</span> <span class="badge">RAIL</span></div>
+    <h1>AI軌道点検 フレームレポート</h1>
+    <div class="subtitle">RailScan AI v2 — Depth Anything V2 Large + YOLOv8m</div>
+  </div>
+  <div style="text-align:right;font-size:9pt;color:#555">
+    <div>出力日時: ${today}</div>
+    <div>対象路線: ${routeName}</div>
+    <div>フレーム: ${frame.ts}s</div>
+  </div>
+</div>
+<div class="meta-grid">
+  <div>
+    <div class="meta-row"><span class="meta-key">対象路線</span><span class="meta-val">${routeName}</span></div>
+    <div class="meta-row"><span class="meta-key">フレームタイムスタンプ</span><span class="meta-val">${frame.ts}s</span></div>
+    <div class="meta-row"><span class="meta-key">前方距離（最短）</span><span class="meta-val">${frame.min.toFixed(2)} m</span></div>
+    <div class="meta-row"><span class="meta-key">前方距離（最遠）</span><span class="meta-val">${frame.max >= 200 ? '200+ m' : frame.max.toFixed(1) + ' m'}</span></div>
+  </div>
+  <div>
+    <div class="meta-row"><span class="meta-key">使用モデル</span><span class="meta-val">DA V2 Large + YOLOv8m v2</span></div>
+    <div class="meta-row"><span class="meta-key">推論デバイス</span><span class="meta-val">RTX 4090 (CUDA)</span></div>
+    <div class="meta-row"><span class="meta-key">処理時間</span><span class="meta-val">${frame.ms.toFixed(1)} ms</span></div>
+    <div class="meta-row"><span class="meta-key">深度信頼度</span><span class="meta-val">${(frame.conf*100).toFixed(1)}%</span></div>
+  </div>
+</div>
+<div class="status-box" style="background:${sevCount.critical>0?'#fff5f5':sevCount.major>0?'#fffbeb':'#f0fff4'};border:1px solid ${statusColor}30">
+  <strong style="color:${statusColor}">${statusText}</strong> —
+  ${frame.anoms.length === 0
+    ? '本フレームに欠陥は検知されませんでした。軌道状態は良好です。'
+    : `${frame.anoms.length} 件の欠陥を検知（緊急${sevCount.critical}件・重要${sevCount.major}件・軽微${sevCount.minor}件）。保線担当者による確認を推奨します。`}
+</div>
+<div class="sev-summary">
+  <span class="sev-chip" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca">緊急: ${sevCount.critical} 件</span>
+  <span class="sev-chip" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a">重要: ${sevCount.major} 件</span>
+  <span class="sev-chip" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">軽微: ${sevCount.minor} 件</span>
+</div>
+<h2>欠陥検知一覧</h2>
+<table>
+  <thead>
+    <tr><th>#</th><th>欠陥種別</th><th>重症度</th><th>推定距離</th><th>分類信頼度</th><th>深度推定</th><th>検出サイズ</th><th>座標</th></tr>
+  </thead>
+  <tbody>${anomRows}${noAnom}</tbody>
+</table>
+<div class="footer">
+  本レポートは SpatialForge RailScan AI が自動生成した暫定レポートです。最終判断は保線担当者が現地確認の上で行ってください。<br>
+  SpatialForge RailScan AI v2 — ${today}
+</div>
+<br>
+<button onclick="window.print()" style="padding:7px 18px;background:#f59e0b;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:10.5pt">🖨 印刷 / PDF保存</button>
 </body></html>`);
   w.document.close();
 }
@@ -1421,15 +1970,54 @@ function initDashboard() {
         y:{ticks:{color:'#8888a0',font:{size:10}},grid:{color:'#1e1e2e'},min:0,suggestedMax:12}}}
   });
 
+  // Compute class counts from real FRAMES data
+  const allDetections = FRAMES.flatMap(f => f.anoms);
+  const clsMap = {};
+  allDetections.forEach(a => { clsMap[a.cls] = (clsMap[a.cls] || 0) + 1; });
+  const typeLabels = Object.keys(clsMap).map(k => DEFECT_LABELS_JA[k] || k);
+  const typeCounts = Object.values(clsMap);
+  const typeColors = Object.keys(clsMap).map(k => SEV_COLORS[
+    ({rail_crack:'critical',rail_spalling:'major',rail_corrugation:'minor',rail_wear:'major'})[k] || 'info'
+  ] || '#8888a0');
+
   new Chart(document.getElementById('typeChart'),{
     type:'doughnut',
     data:{
-      labels:['レールき裂','レール摩耗','レール波状摩耗','締結装置欠損','まくらぎき裂','バラスト異状','継目異状','軌間異常','その他'],
-      datasets:[{data:[28,18,12,15,8,10,5,3,1],
-        backgroundColor:['#ef4444','#f59e0b','#fb923c','#dc2626','#8b5cf6','#6366f1','#f97316','#3b82f6','#8888a0'], borderWidth:0}]},
+      labels: typeLabels,
+      datasets:[{data: typeCounts, backgroundColor: typeColors, borderWidth:0}]},
     options:{responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:10},padding:8,boxWidth:10}}},
+      plugins:{legend:{position:'bottom',labels:{color:'#8888a0',font:{size:10},padding:8,boxWidth:10}},
+               tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}件`}}},
       cutout:'65%'}
+  });
+
+  // Per-frame bar chart using REAL FRAMES data
+  const frameLabels   = FRAMES.map(f => `${f.video==='jrsam3'?'sam3':'jr23'} ${f.ts}s`);
+  const frameCritical = FRAMES.map(f => f.anoms.filter(a => a.sev==='critical').length);
+  const frameMajor    = FRAMES.map(f => f.anoms.filter(a => a.sev==='major').length);
+  const frameMinor    = FRAMES.map(f => f.anoms.filter(a => a.sev==='minor').length);
+
+  new Chart(document.getElementById('frameChart'), {
+    type: 'bar',
+    data: {
+      labels: frameLabels,
+      datasets: [
+        {label:'緊急',  data:frameCritical, backgroundColor:'rgba(239,68,68,0.75)',  borderColor:'#ef4444', borderWidth:1},
+        {label:'重要',  data:frameMajor,    backgroundColor:'rgba(245,158,11,0.65)', borderColor:'#f59e0b', borderWidth:1},
+        {label:'軽微',  data:frameMinor,    backgroundColor:'rgba(59,130,246,0.6)',  borderColor:'#3b82f6', borderWidth:1},
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {position:'top', labels:{color:'#8888a0', font:{size:10}, boxWidth:10}},
+        tooltip: {callbacks:{title:ctx=>`フレーム: ${ctx[0].label}`, label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}件`}},
+      },
+      scales: {
+        x: {stacked:true, ticks:{color:'#8888a0',font:{size:9}}, grid:{color:'#1e1e2e'}},
+        y: {stacked:true, ticks:{color:'#8888a0',font:{size:10},stepSize:1}, grid:{color:'#1e1e2e'}, min:0},
+      }
+    }
   });
 }
 
@@ -1532,8 +2120,8 @@ const TOUR_STEPS = [
     target: null,
   },
   {
-    title: 'キーフレームギャラリー',
-    body:  '上部のタブで <strong>jrsam3路線 / jr23路線</strong> を切り替え、<br>フレームカードをクリックすると深度オーバーレイと異常詳細が表示されます。<br><span style="color:#ef4444">⚠</span> マークが付いたフレームに異常が検知されています。',
+    title: 'キーフレーム & AI検知ボックス',
+    body:  '上部のタブで <strong>jrsam3路線 / jr23路線</strong> を切り替え、フレームをクリックすると深度マップと欠陥検知が表示されます。<br><span style="color:#ef4444">⚠</span> フレームには AI が検知した欠陥の<strong>バウンディングボックスが直接アニメーション表示</strong>されます。右下の「BBox ON/OFF」で切り替え可能。',
     target: 'frameStrip',
   },
   {
@@ -1547,8 +2135,8 @@ const TOUR_STEPS = [
     target: 'uploadZone',
   },
   {
-    title: 'KM マップとウェブカム',
-    body:  '<strong>KM マップ</strong>では異常発生地点を km ポスト換算で路線図表示。<br><strong>ウェブカム</strong>タブではリアルタイム映像をフレームごとに推論し、<br>前方障害物を即時検知します。',
+    title: 'KM マップ · レポート · プラットフォーム',
+    body:  '<strong>KM マップ</strong>では異常を km ポスト換算で路線図表示。<br><strong>サマリーセクション</strong>の「全フレーム一括レポート」で全39件を PDF 出力できます。<br>また、<a href="railscan-platform.html" style="color:#818cf8">エンタープライズプラットフォーム</a>と<a href="whitepaper.html" style="color:#4ade80">技術白書</a>もご覧ください。',
     target: 'kmmap',
   },
 ];
@@ -1629,9 +2217,19 @@ function _closeTour() {
 // 14. INITIALISATION
 // ══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // Parse URL params to support direct frame linking (e.g. ?frame=jrsam3_11s)
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramFrame = urlParams.get('frame');
+  const defaultFrame = (paramFrame && FRAMES.find(f => f.name === paramFrame))
+    ? paramFrame : 'jrsam3_11s';
+  const defaultVid = FRAMES.find(f => f.name === defaultFrame)?.video || 'jrsam3';
+
   // Render initial frame strip and select default anomaly frame
-  renderFrameStrip('jrsam3');
-  selectFrame('jrsam3_11s');
+  currentVideo = defaultVid;
+  document.querySelectorAll('.video-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.vid === defaultVid));
+  renderFrameStrip(defaultVid);
+  selectFrame(defaultFrame);
 
   // Onboarding tour (first visit only)
   setTimeout(initTour, 600);
@@ -1655,6 +2253,9 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     initDashboard();
   }
+
+  // BBox canvas interaction
+  initBboxCanvasInteraction();
 
   // Keyboard navigation
   initKeyboardNav();
@@ -1682,13 +2283,23 @@ window.addEventListener('DOMContentLoaded', () => {
     handleUpload(e.dataTransfer.files[0]);
   });
 
-  // Canvas resize
+  // Canvas resize (Three.js + bbox overlay)
+  let _resizeTimer = null;
   window.addEventListener('resize', () => {
-    if (!threeRenderer || !_threeCanvas) return;
-    const c = _threeCanvas;
-    threeRenderer.setSize(c.clientWidth, c.clientHeight);
-    threeCamera.aspect = c.clientWidth / c.clientHeight;
-    threeCamera.updateProjectionMatrix();
+    if (threeRenderer && _threeCanvas) {
+      const c = _threeCanvas;
+      threeRenderer.setSize(c.clientWidth, c.clientHeight);
+      threeCamera.aspect = c.clientWidth / c.clientHeight;
+      threeCamera.updateProjectionMatrix();
+    }
+    // Debounce bbox canvas redraw on resize
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+      if (bboxOverlayEnabled && currentFrame &&
+          document.getElementById('mainDisplay')?.style.display !== 'none') {
+        drawBboxOverlay(currentFrame);
+      }
+    }, 200);
   });
 
   // Live dashboard counter (simulates incoming runs)

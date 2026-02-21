@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan Enterprise — 軌道点検管理プラットフォーム | SpatialForge</title>
+  <meta name="description" content="RailScan AI エンタープライズプラットフォーム — 鉄道事業者向け軌道点検管理・アラート管理・分析ダッシュボード">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── CSS Variables ──────────────────────────────────── */
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a28;
+      --surface-3: #1f1f30;
+      --border: #1e1e2e;
+      --border-2: #2a2a3e;
+      --text: #e4e4ef;
+      --muted: #8888a0;
+      --muted-2: #5a5a72;
+      --accent: #f59e0b;
+      --accent-bright: #fbbf24;
+      --accent-glow: rgba(245,158,11,0.15);
+      --danger: #ef4444;
+      --danger-bg: rgba(239,68,68,0.1);
+      --danger-border: rgba(239,68,68,0.3);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245,158,11,0.1);
+      --warning-border: rgba(245,158,11,0.3);
+      --safe: #22c55e;
+      --safe-bg: rgba(34,197,94,0.1);
+      --safe-border: rgba(34,197,94,0.3);
+      --indigo: #6366f1;
+      --indigo-bg: rgba(99,102,241,0.1);
+      --indigo-border: rgba(99,102,241,0.3);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-lg: 16px;
+    }
+
+    /* ── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 14px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+    table { border-collapse: collapse; width: 100%; }
+
+    /* ── Demo Watermark ─────────────────────────────────── */
+    .demo-watermark {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.4);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      padding: 6px 14px;
+      border-radius: 20px;
+      z-index: 9999;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    /* ── Navigation ─────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; width: 100%; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.5rem;
+      background: rgba(10,10,15,0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 500;
+    }
+    .nav-left { display: flex; align-items: center; gap: 1rem; }
+    .logo {
+      font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em;
+      color: var(--text); display: flex; align-items: center; gap: 0.5rem;
+    }
+    .logo-badge {
+      background: var(--accent); color: #000;
+      font-size: 0.6rem; font-weight: 900; padding: 2px 7px;
+      border-radius: 4px; letter-spacing: 0.06em;
+    }
+    .nav-divider { width: 1px; height: 24px; background: var(--border); }
+    .nav-links { display: flex; align-items: center; gap: 0.1rem; }
+    nav a {
+      color: var(--muted); font-size: 0.82rem; padding: 0.35rem 0.7rem;
+      border-radius: var(--radius-sm); transition: all 0.15s;
+    }
+    nav a:hover, nav a.active { color: var(--text); background: rgba(255,255,255,0.06); }
+    .nav-right { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-alert-badge {
+      display: flex; align-items: center; gap: 0.4rem;
+      background: var(--danger-bg); border: 1px solid var(--danger-border);
+      color: var(--danger); font-size: 0.75rem; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .nav-alert-count { font-size: 0.85rem; font-weight: 800; }
+    .nav-user {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--muted);
+    }
+    .nav-user-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--safe); box-shadow: 0 0 6px var(--safe);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .main-content {
+      margin-top: 60px;
+      padding: 1.5rem;
+      max-width: 1440px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── Section Titles ─────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: 0.95rem; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-title .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .section-action {
+      font-size: 0.78rem; color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+      padding: 4px 12px; border-radius: 20px; background: var(--indigo-bg);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .section-action:hover { background: rgba(99,102,241,0.2); }
+
+    /* ── KPI Cards ──────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .kpi-card:hover { border-color: var(--border-2); transform: translateY(-1px); }
+    .kpi-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .kpi-card.indigo::before { background: var(--indigo); }
+    .kpi-card.danger::before { background: var(--danger); }
+    .kpi-card.safe::before { background: var(--safe); }
+    .kpi-card.accent::before { background: var(--accent); }
+    .kpi-label {
+      font-size: 0.75rem; color: var(--muted); font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem;
+    }
+    .kpi-value {
+      font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .kpi-card.indigo .kpi-value { color: #818cf8; }
+    .kpi-card.danger .kpi-value { color: var(--danger); }
+    .kpi-card.safe .kpi-value { color: var(--safe); }
+    .kpi-card.accent .kpi-value { color: var(--accent); }
+    .kpi-sub { font-size: 0.78rem; color: var(--muted); }
+    .kpi-sub strong { font-weight: 700; }
+    .kpi-badges { display: flex; gap: 0.4rem; margin-top: 0.75rem; }
+    .kpi-badge {
+      font-size: 0.68rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .kpi-badge.critical { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+    .kpi-badge.major { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+    .kpi-icon {
+      position: absolute; right: 1.25rem; top: 1.25rem;
+      font-size: 1.75rem; opacity: 0.15;
+    }
+
+    /* ── Two-column layout ──────────────────────────────── */
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .grid-7-5 { display: grid; grid-template-columns: 7fr 5fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .grid-5-7 { display: grid; grid-template-columns: 5fr 7fr; gap: 1rem; margin-bottom: 1.5rem; }
+
+    /* ── Card Base ──────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .card-body { padding: 1.25rem; }
+
+    /* ── Track Health Map ───────────────────────────────── */
+    .track-health-table { width: 100%; }
+    .track-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 100px 70px 100px;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid rgba(30,30,46,0.6);
+    }
+    .track-row:last-child { border-bottom: none; }
+    .track-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .track-bar-wrap { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+    .track-bar-segments { display: flex; height: 100%; gap: 1px; }
+    .track-seg {
+      flex: 1; border-radius: 2px;
+      transition: all 0.8s ease;
+    }
+    .track-seg.ok { background: var(--safe); }
+    .track-seg.warn { background: var(--warning); }
+    .track-seg.crit { background: var(--danger); }
+    .track-seg.pending { background: var(--surface-3); }
+    .track-last { font-size: 0.72rem; color: var(--muted); text-align: center; }
+    .track-alerts { font-size: 0.8rem; font-weight: 700; text-align: center; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 10px;
+      letter-spacing: 0.04em;
+    }
+    .badge-ok { background: var(--safe-bg); color: var(--safe); border: 1px solid var(--safe-border); }
+    .badge-warn { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+    .badge-crit { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+    .badge-indigo { background: var(--indigo-bg); color: var(--indigo); border: 1px solid var(--indigo-border); }
+    .badge-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+    }
+    .badge-ok .badge-dot { background: var(--safe); }
+    .badge-warn .badge-dot { background: var(--warning); }
+    .badge-crit .badge-dot { background: var(--danger); animation: blink-red 1s infinite; }
+    @keyframes blink-red { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Inspections Table ──────────────────────────────── */
+    .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .filter-btn {
+      font-size: 0.75rem; font-weight: 600; padding: 5px 14px;
+      border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--muted);
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { border-color: var(--border-2); color: var(--text); }
+    .filter-btn.active { background: var(--indigo-bg); color: var(--indigo); border-color: var(--indigo-border); }
+    .inspection-table { overflow-x: auto; margin-top: 0.75rem; }
+    .inspection-table table { min-width: 900px; }
+    .inspection-table th {
+      text-align: left; padding: 0.65rem 0.75rem;
+      font-size: 0.7rem; color: var(--muted); font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .inspection-table td {
+      padding: 0.6rem 0.75rem; font-size: 0.8rem; color: var(--text);
+      border-bottom: 1px solid rgba(30,30,46,0.5);
+      white-space: nowrap;
+    }
+    .inspection-table tr:last-child td { border-bottom: none; }
+    .inspection-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .insp-id { font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.72rem; color: var(--muted); }
+    .severity-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      margin-right: 4px;
+    }
+    .sev-critical { background: var(--danger); }
+    .sev-major { background: var(--warning); }
+    .sev-minor { background: var(--safe); }
+
+    /* ── Alert Cards ────────────────────────────────────── */
+    .alert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .alert-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .alert-card.processed {
+      opacity: 0.45;
+      border-style: dashed;
+    }
+    .alert-card.processed::after {
+      content: '処理済み';
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-size: 0.8rem; font-weight: 800; color: var(--safe);
+      background: var(--safe-bg); border: 1px solid var(--safe-border);
+      padding: 4px 14px; border-radius: 20px; letter-spacing: 0.05em;
+    }
+    .alert-card.crit-card { border-left: 3px solid var(--danger); }
+    .alert-card.major-card { border-left: 3px solid var(--warning); }
+    .alert-card.minor-card { border-left: 3px solid var(--safe); }
+    .alert-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .alert-severity-badge {
+      font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 8px;
+      letter-spacing: 0.06em; white-space: nowrap;
+    }
+    .alert-type { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .alert-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.8; }
+    .alert-meta span { color: var(--text); font-weight: 600; }
+    .alert-actions { display: flex; gap: 0.4rem; margin-top: 0.75rem; }
+    .alert-btn {
+      flex: 1; font-size: 0.72rem; font-weight: 700; padding: 5px 8px;
+      border-radius: var(--radius-sm); border: 1px solid;
+      transition: all 0.15s; text-align: center;
+    }
+    .alert-btn-confirm {
+      background: var(--indigo-bg); color: var(--indigo); border-color: var(--indigo-border);
+    }
+    .alert-btn-confirm:hover { background: rgba(99,102,241,0.2); }
+    .alert-btn-approve {
+      background: var(--safe-bg); color: var(--safe); border-color: var(--safe-border);
+    }
+    .alert-btn-approve:hover { background: rgba(34,197,94,0.2); }
+    .alert-btn-dismiss {
+      background: var(--surface); color: var(--muted); border-color: var(--border);
+    }
+    .alert-btn-dismiss:hover { background: var(--surface-3); color: var(--danger); border-color: var(--danger-border); }
+    .alert-assign {
+      font-size: 0.68rem; color: var(--muted);
+      display: flex; align-items: center; gap: 0.3rem; margin-top: 0.4rem;
+    }
+    .alert-assign .assign-name { color: var(--indigo); font-weight: 600; }
+
+    /* ── Charts ─────────────────────────────────────────── */
+    .chart-wrap { position: relative; height: 200px; }
+    .chart-wrap.tall { height: 260px; }
+
+    /* ── System Status ──────────────────────────────────── */
+    .sys-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .sys-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .sys-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
+    .sys-value { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+    .sys-value.green { color: var(--safe); }
+    .sys-value.blue { color: var(--indigo); }
+    .sys-value.amber { color: var(--accent); }
+    .sys-sub { font-size: 0.72rem; color: var(--muted); }
+    .sys-indicator { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--safe); box-shadow: 0 0 8px var(--safe);
+      animation: pulse-dot 1.5s infinite;
+    }
+    .live-text { font-size: 0.68rem; color: var(--safe); font-weight: 700; letter-spacing: 0.06em; }
+
+    /* ── Maintenance Calendar ───────────────────────────── */
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+      margin-bottom: 0.75rem;
+    }
+    .cal-header-cell {
+      text-align: center; font-size: 0.65rem; font-weight: 700;
+      color: var(--muted); padding: 4px 0; letter-spacing: 0.04em;
+    }
+    .cal-cell {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; min-height: 68px; padding: 4px;
+      position: relative;
+    }
+    .cal-cell.today { border-color: var(--accent); }
+    .cal-cell.outside { opacity: 0.35; }
+    .cal-day {
+      font-size: 0.68rem; font-weight: 700; color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .cal-cell.today .cal-day { color: var(--accent); }
+    .cal-event {
+      font-size: 0.6rem; font-weight: 600; padding: 1px 4px;
+      border-radius: 3px; margin-bottom: 2px; line-height: 1.4;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .cal-event.routine { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+    .cal-event.emergency { background: var(--danger-bg); color: #fca5a5; }
+    .cal-event.preventive { background: var(--safe-bg); color: #86efac; }
+    .schedule-list { list-style: none; }
+    .schedule-item {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.65rem 0; border-bottom: 1px solid rgba(30,30,46,0.6);
+    }
+    .schedule-item:last-child { border-bottom: none; }
+    .schedule-type-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;
+    }
+    .sched-routine { background: var(--indigo); }
+    .sched-emergency { background: var(--danger); }
+    .sched-preventive { background: var(--safe); }
+    .schedule-info { flex: 1; }
+    .schedule-name { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 0.1rem; }
+    .schedule-detail { font-size: 0.7rem; color: var(--muted); }
+
+    /* ── Scrollbar ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.75rem; color: var(--muted);
+      margin-top: 1.5rem;
+    }
+    .footer-left { display: flex; align-items: center; gap: 1rem; }
+    .footer-links { display: flex; gap: 1rem; }
+    .footer-links a { color: var(--muted); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-brand { font-weight: 700; color: var(--text); }
+    .footer-version {
+      font-size: 0.68rem; background: var(--surface-2);
+      border: 1px solid var(--border); color: var(--muted);
+      padding: 2px 8px; border-radius: 10px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 1200px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2col, .grid-7-5, .grid-5-7 { grid-template-columns: 1fr; }
+      .grid-3col { grid-template-columns: 1fr 1fr; }
+      .alert-grid { grid-template-columns: 1fr; }
+      .sys-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .grid-3col { grid-template-columns: 1fr; }
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .main-content { padding: 1rem; }
+      .sys-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Utilities ──────────────────────────────────────── */
+    .mb-1 { margin-bottom: 1rem; }
+    .mb-15 { margin-bottom: 1.5rem; }
+    .text-muted { color: var(--muted); }
+    .text-danger { color: var(--danger); }
+    .text-safe { color: var(--safe); }
+    .text-indigo { color: var(--indigo); }
+    .text-accent { color: var(--accent); }
+    .fw-700 { font-weight: 700; }
+    .font-mono { font-family: 'SF Mono', 'Consolas', monospace; }
+
+    /* ── Loading shimmer ────────────────────────────────── */
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .spinner {
+      display: inline-block; width: 10px; height: 10px;
+      border: 2px solid var(--indigo-border);
+      border-top-color: var(--indigo);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Demo watermark -->
+<div class="demo-watermark">DEMO ENVIRONMENT</div>
+
+<!-- ── Navigation ──────────────────────────────────────── -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="logo">
+      Spatial<span style="color:var(--accent)">Forge</span>
+      <span class="logo-badge">RAIL</span>
+    </a>
+    <div class="nav-divider"></div>
+    <div class="nav-links">
+      <a href="#kpi" class="active">プラットフォーム</a>
+      <a href="#alerts">アラート</a>
+      <a href="#analytics">レポート</a>
+      <a href="#maintenance">保守計画</a>
+      <a href="#system">設定</a>
+      <a href="whitepaper.html" style="color:var(--safe)">技術白書</a>
+      <a href="rail-demo.html" style="color:var(--accent)">← デモへ戻る</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-alert-badge">
+      <span style="font-size:0.75rem">⚠</span>
+      <span>未解決アラート</span>
+      <span class="nav-alert-count" id="navAlertCount">23</span>
+    </div>
+    <div class="nav-user">
+      <div class="nav-user-dot"></div>
+      管理者：田中 太郎
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main Content ─────────────────────────────────────── -->
+<div class="main-content">
+
+  <!-- ── Section 1: KPI Dashboard ───────────────────────── -->
+  <div id="kpi" style="margin-bottom:1.5rem">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot" style="background:var(--indigo)"></div>
+        エグゼクティブダッシュボード
+        <span style="font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:0.25rem">— 2026年2月21日 リアルタイム</span>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <div class="live-dot"></div>
+        <span style="font-size:0.72rem;color:var(--safe);font-weight:700">LIVE</span>
+        <span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem" id="lastUpdate">最終更新: 08:47:32</span>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card indigo">
+        <div class="kpi-icon">🛤</div>
+        <div class="kpi-label">監視路線</div>
+        <div class="kpi-value">8路線</div>
+        <div class="kpi-sub"><strong style="color:#818cf8">2,847 km</strong> 総監視距離</div>
+        <div class="kpi-badges">
+          <span class="kpi-badge" style="background:var(--indigo-bg);color:var(--indigo);border:1px solid var(--indigo-border)">幹線 3路線</span>
+          <span class="kpi-badge" style="background:var(--surface-3);color:var(--muted);border:1px solid var(--border)">支線 5路線</span>
+        </div>
+      </div>
+
+      <div class="kpi-card danger">
+        <div class="kpi-icon">⚠</div>
+        <div class="kpi-label">未解決アラート</div>
+        <div class="kpi-value" id="kpiAlertCount">23件</div>
+        <div class="kpi-sub">要対応のアラート総数</div>
+        <div class="kpi-badges">
+          <span class="kpi-badge critical">緊急 7件</span>
+          <span class="kpi-badge major">重要 16件</span>
+        </div>
+      </div>
+
+      <div class="kpi-card safe">
+        <div class="kpi-icon">✓</div>
+        <div class="kpi-label">本日の点検</div>
+        <div class="kpi-value" id="kpiInspCount">47件</div>
+        <div class="kpi-sub">運行完了 / 今日</div>
+        <div class="kpi-badges">
+          <span class="kpi-badge" style="background:var(--safe-bg);color:var(--safe);border:1px solid var(--safe-border)">正常 39件</span>
+          <span class="kpi-badge major">要確認 8件</span>
+        </div>
+      </div>
+
+      <div class="kpi-card accent">
+        <div class="kpi-icon">◎</div>
+        <div class="kpi-label">システム稼働率</div>
+        <div class="kpi-value">99.7%</div>
+        <div class="kpi-sub">過去30日間の稼働実績</div>
+        <div class="kpi-badges">
+          <span class="kpi-badge" style="background:var(--safe-bg);color:var(--safe);border:1px solid var(--safe-border)">SLA 達成</span>
+          <span class="kpi-badge" style="background:var(--surface-3);color:var(--muted);border:1px solid var(--border)">停止 2.2時間</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 2: Track Health Map ────────────────────── -->
+  <div id="trackhealth" class="mb-15">
+    <div class="card">
+      <div class="card-header">
+        <div class="section-title">
+          <div class="dot" style="background:var(--safe)"></div>
+          路線健全度マップ
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:center;font-size:0.72rem;color:var(--muted)">
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:var(--safe);border-radius:2px"></span>正常</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:var(--warning);border-radius:2px"></span>注意</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px"></span>緊急</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:var(--surface-3);border-radius:2px"></span>未点検</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:140px 1fr 100px 70px 100px;gap:0.75rem;padding:0 0 0.5rem;margin-bottom:0.5rem;border-bottom:1px solid var(--border)">
+          <span style="font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase">路線名</span>
+          <span style="font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase">健全度バー（区間別）</span>
+          <span style="font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;text-align:center">最終点検</span>
+          <span style="font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;text-align:center">アラート</span>
+          <span style="font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;text-align:center">状態</span>
+        </div>
+        <div id="trackHealthRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 3: Inspections Table ───────────────────── -->
+  <div id="inspections" class="mb-15">
+    <div class="card">
+      <div class="card-header">
+        <div class="section-title">
+          <div class="dot" style="background:var(--indigo)"></div>
+          点検実施履歴
+        </div>
+        <div class="filter-bar" id="tableFilters">
+          <button class="filter-btn active" data-filter="all">すべて</button>
+          <button class="filter-btn" data-filter="完了">完了</button>
+          <button class="filter-btn" data-filter="処理中">処理中</button>
+          <button class="filter-btn" data-filter="レビュー待ち">レビュー待ち</button>
+          <button class="filter-btn" data-sev="critical">緊急</button>
+          <button class="filter-btn" data-sev="major">重要</button>
+          <button class="filter-btn" data-sev="minor">軽微</button>
+        </div>
+      </div>
+      <div class="inspection-table">
+        <table id="inspTable">
+          <thead>
+            <tr>
+              <th>点検ID</th>
+              <th>路線</th>
+              <th>日時</th>
+              <th>区間</th>
+              <th>フレーム数</th>
+              <th>検出数</th>
+              <th>重症度</th>
+              <th>処理時間</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody id="inspTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 4: Alert Management ───────────────────── -->
+  <div id="alerts" class="mb-15">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot" style="background:var(--danger)"></div>
+        アクティブアラート管理キュー
+        <span class="status-badge badge-crit" style="margin-left:0.5rem" id="alertCountBadge">
+          <span class="badge-dot"></span> 緊急 7件
+        </span>
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted)">クリックで処理 — 処理済みアラートは自動的に除外されます</div>
+    </div>
+    <div class="alert-grid" id="alertGrid"></div>
+  </div>
+
+  <!-- ── Section 5: Analytics Charts ───────────────────── -->
+  <div id="analytics" class="mb-15">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot" style="background:var(--accent)"></div>
+        分析・レポート
+      </div>
+      <span class="section-action">全レポートを見る →</span>
+    </div>
+    <div class="grid-3col">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">週次欠陥検出トレンド</div>
+          <span style="font-size:0.72rem;color:var(--muted)">過去8週</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap tall"><canvas id="chartTrend"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">欠陥種別分布</div>
+          <span style="font-size:0.72rem;color:var(--muted)">全路線合計</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap tall"><canvas id="chartDoughnut"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">路線別リスクスコア</div>
+          <span style="font-size:0.72rem;color:var(--muted)">現時点</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap tall"><canvas id="chartRisk"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 6: Maintenance Schedule ───────────────── -->
+  <div id="maintenance" class="mb-15">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot" style="background:var(--indigo)"></div>
+        保守スケジュール
+        <span style="font-size:0.78rem;color:var(--muted);font-weight:400">— 2026年2月〜3月</span>
+      </div>
+      <span class="section-action">スケジュール編集</span>
+    </div>
+    <div class="grid-7-5">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">月間カレンダービュー</div>
+          <div style="display:flex;gap:0.75rem;font-size:0.7rem;color:var(--muted)">
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:8px;height:8px;background:var(--indigo);border-radius:50%"></span>通常点検</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:8px;height:8px;background:var(--danger);border-radius:50%"></span>緊急対応</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:8px;height:8px;background:var(--safe);border-radius:50%"></span>予防保全</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">直近の予定作業</div>
+          <span style="font-size:0.72rem;color:var(--muted)">5件</span>
+        </div>
+        <div class="card-body">
+          <ul class="schedule-list" id="scheduleList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 7: System Status ───────────────────────── -->
+  <div id="system" class="mb-15">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot" style="background:var(--safe)"></div>
+        システムステータス
+      </div>
+      <div class="sys-indicator">
+        <div class="live-dot"></div>
+        <span class="live-text">OPERATIONAL</span>
+      </div>
+    </div>
+    <div class="sys-grid">
+      <div class="sys-card">
+        <div class="sys-label">GPU クラスター稼働</div>
+        <div class="sys-value green">4 / 4</div>
+        <div class="sys-sub">GPU</div>
+        <div class="sys-indicator" style="margin-top:0.25rem">
+          <div class="live-dot"></div>
+          <span class="live-text">ALL ONLINE</span>
+        </div>
+      </div>
+      <div class="sys-card">
+        <div class="sys-label">処理キュー</div>
+        <div class="sys-value green">0件</div>
+        <div class="sys-sub">待機ジョブ</div>
+        <div class="sys-indicator" style="margin-top:0.25rem">
+          <div class="live-dot"></div>
+          <span class="live-text">QUEUE CLEAR</span>
+        </div>
+      </div>
+      <div class="sys-card">
+        <div class="sys-label">本日の処理フレーム数</div>
+        <div class="sys-value blue" id="frameCounter">287,432</div>
+        <div class="sys-sub">フレーム / 今日</div>
+        <div class="sys-indicator" style="margin-top:0.25rem">
+          <div class="live-dot"></div>
+          <span class="live-text">ACCUMULATING</span>
+        </div>
+      </div>
+      <div class="sys-card">
+        <div class="sys-label">API レイテンシ</div>
+        <div class="sys-value amber">13 ms</div>
+        <div class="sys-sub">平均応答時間</div>
+        <div class="sys-indicator" style="margin-top:0.25rem">
+          <div class="live-dot"></div>
+          <span class="live-text">NOMINAL</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+
+<!-- ── Footer ──────────────────────────────────────────── -->
+<footer>
+  <div class="footer-left">
+    <span class="footer-brand">SpatialForge</span>
+    <span class="footer-version">RailScan Enterprise v2.0</span>
+  </div>
+  <div class="footer-links">
+    <a href="#">サポート</a>
+    <a href="#">プライバシーポリシー</a>
+    <a href="#">利用規約</a>
+    <a href="proposal.html">提案書</a>
+    <a href="rail-demo.html">AIデモ</a>
+    <a href="index.html">トップ</a>
+  </div>
+  <div style="font-size:0.72rem;color:var(--muted-2)">
+    © 2026 SpatialForge, Inc. — エンタープライズ点検プラットフォーム
+  </div>
+</footer>
+
+<!-- ── JavaScript ───────────────────────────────────────── -->
+<script>
+'use strict';
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function fmt(n) { return n.toLocaleString('ja-JP'); }
+
+const LINES = ['東海道本線','山手線','中央本線','京浜東北線','横須賀線','総武本線','常磐線','東北本線'];
+const ENGINEERS = ['田中 太郎','鈴木 一郎','佐藤 健','伊藤 誠','渡辺 雅志','中村 浩二','小林 裕','加藤 正一'];
+
+/* ── Track Health Map ────────────────────────────────────── */
+(function buildTrackHealth() {
+  const lineData = [
+    { name:'東海道本線', km:589, segs:30, crits:1, warns:3, lastInsp:'06:32',   alerts:4 },
+    { name:'山手線',     km:34,  segs:20, crits:0, warns:1, lastInsp:'07:15',   alerts:1 },
+    { name:'中央本線',   km:424, segs:25, crits:2, warns:4, lastInsp:'05:48',   alerts:7 },
+    { name:'京浜東北線', km:79,  segs:20, crits:0, warns:2, lastInsp:'07:02',   alerts:2 },
+    { name:'横須賀線',   km:64,  segs:18, crits:0, warns:1, lastInsp:'06:55',   alerts:1 },
+    { name:'総武本線',   km:164, segs:22, crits:1, warns:3, lastInsp:'05:20',   alerts:4 },
+    { name:'常磐線',     km:343, segs:24, crits:2, warns:5, lastInsp:'04:40',   alerts:3 },
+    { name:'東北本線',   km:1150,segs:28, crits:1, warns:2, lastInsp:'03:15',   alerts:1 },
+  ];
+
+  const container = document.getElementById('trackHealthRows');
+  lineData.forEach(line => {
+    // Build segment data
+    const segments = [];
+    let remaining = line.segs;
+    const critSegs = line.crits;
+    const warnSegs = line.warns;
+    const pendingSegs = Math.max(0, Math.floor(remaining * 0.05));
+    const okSegs = remaining - critSegs - warnSegs - pendingSegs;
+    for(let i=0; i<okSegs; i++) segments.push('ok');
+    for(let i=0; i<warnSegs; i++) segments.push('warn');
+    for(let i=0; i<critSegs; i++) segments.push('crit');
+    for(let i=0; i<pendingSegs; i++) segments.push('pending');
+    // Shuffle
+    for(let i=segments.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [segments[i],segments[j]]=[segments[j],segments[i]];
+    }
+
+    const statusClass = line.crits > 0 ? 'badge-crit' : line.warns > 0 ? 'badge-warn' : 'badge-ok';
+    const statusText  = line.crits > 0 ? '緊急対応中' : line.warns > 0 ? '要注意' : '正常';
+    const alertColor  = line.alerts > 3 ? 'var(--danger)' : line.alerts > 0 ? 'var(--warning)' : 'var(--safe)';
+
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    row.innerHTML = `
+      <div>
+        <div class="track-name">${line.name}</div>
+        <div style="font-size:0.65rem;color:var(--muted)">${line.km.toLocaleString()} km</div>
+      </div>
+      <div class="track-bar-wrap">
+        <div class="track-bar-segments">
+          ${segments.map(s=>`<div class="track-seg ${s}" style="opacity:0;transition:opacity 0.6s"></div>`).join('')}
+        </div>
+      </div>
+      <div class="track-last">本日 ${line.lastInsp}</div>
+      <div class="track-alerts" style="color:${alertColor}">${line.alerts}件</div>
+      <div style="text-align:center">
+        <span class="status-badge ${statusClass}">
+          <span class="badge-dot"></span> ${statusText}
+        </span>
+      </div>`;
+    container.appendChild(row);
+  });
+
+  // Animate bars in
+  setTimeout(() => {
+    document.querySelectorAll('.track-seg').forEach((seg, i) => {
+      setTimeout(() => { seg.style.opacity = '1'; }, i * 8);
+    });
+  }, 200);
+})();
+
+/* ── Inspections Table Data ──────────────────────────────── */
+const inspections = [
+  { id:'RS-2026-0221-001', line:'東海道本線', time:'2026-02-21 06:32', section:'東京→品川 6.8km', frames:'4,082', detections:8,  sev:'major',    proc:'54.7s', status:'完了' },
+  { id:'RS-2026-0221-002', line:'山手線',     time:'2026-02-21 07:15', section:'渋谷→新宿 3.1km', frames:'1,862', detections:1,  sev:'minor',    proc:'24.1s', status:'完了' },
+  { id:'RS-2026-0221-003', line:'中央本線',   time:'2026-02-21 05:48', section:'新宿→高尾 45.2km',frames:'27,192',detections:14, sev:'critical', proc:'362.4s',status:'レビュー待ち' },
+  { id:'RS-2026-0221-004', line:'京浜東北線', time:'2026-02-21 07:02', section:'大宮→川口 14.7km', frames:'8,842', detections:3,  sev:'minor',    proc:'117.3s',status:'完了' },
+  { id:'RS-2026-0221-005', line:'横須賀線',   time:'2026-02-21 06:55', section:'横浜→大船 11.8km', frames:'7,092', detections:2,  sev:'major',    proc:'94.2s', status:'完了' },
+  { id:'RS-2026-0221-006', line:'総武本線',   time:'2026-02-21 05:20', section:'錦糸町→千葉 39.4km',frames:'23,641',detections:11, sev:'critical', proc:'314.7s',status:'レビュー待ち' },
+  { id:'RS-2026-0221-007', line:'常磐線',     time:'2026-02-21 04:40', section:'上野→取手 40.8km', frames:'24,492', detections:9,  sev:'major',    proc:'326.1s',status:'処理中' },
+  { id:'RS-2026-0221-008', line:'東北本線',   time:'2026-02-21 03:15', section:'大宮→古河 57.2km', frames:'34,372', detections:5,  sev:'minor',    proc:'457.8s',status:'完了' },
+  { id:'RS-2026-0221-009', line:'東海道本線', time:'2026-02-20 22:47', section:'品川→川崎 8.4km',  frames:'5,042', detections:6,  sev:'major',    proc:'67.2s', status:'完了' },
+  { id:'RS-2026-0221-010', line:'中央本線',   time:'2026-02-20 21:30', section:'高尾→八王子 5.4km',frames:'3,242', detections:12, sev:'critical', proc:'43.1s', status:'完了' },
+  { id:'RS-2026-0221-011', line:'山手線',     time:'2026-02-20 21:15', section:'新宿→池袋 3.6km',  frames:'2,162', detections:0,  sev:'minor',    proc:'28.8s', status:'完了' },
+  { id:'RS-2026-0221-012', line:'京浜東北線', time:'2026-02-20 20:58', section:'川口→浦和 3.4km',  frames:'2,042', detections:2,  sev:'minor',    proc:'27.2s', status:'完了' },
+  { id:'RS-2026-0221-013', line:'常磐線',     time:'2026-02-20 19:22', section:'取手→藤代 4.1km',  frames:'2,462', detections:7,  sev:'major',    proc:'32.8s', status:'処理中' },
+  { id:'RS-2026-0221-014', line:'総武本線',   time:'2026-02-20 18:44', section:'千葉→蘇我 4.6km',  frames:'2,762', detections:3,  sev:'minor',    proc:'36.8s', status:'完了' },
+  { id:'RS-2026-0221-015', line:'東北本線',   time:'2026-02-20 17:05', section:'古河→小山 17.3km', frames:'10,382',detections:4,  sev:'major',    proc:'138.4s',status:'完了' },
+];
+
+function buildStatusBadge(status) {
+  if (status === '完了') return `<span class="status-badge badge-ok"><span class="badge-dot"></span>${status}</span>`;
+  if (status === '処理中') return `<span class="status-badge badge-indigo"><span class="spinner"></span>${status}</span>`;
+  return `<span class="status-badge badge-warn"><span class="badge-dot"></span>${status}</span>`;
+}
+
+function buildSevCell(sev) {
+  const cls = sev === 'critical' ? 'sev-critical' : sev === 'major' ? 'sev-major' : 'sev-minor';
+  const label = sev === 'critical' ? '緊急' : sev === 'major' ? '重要' : '軽微';
+  return `<span class="severity-dot ${cls}"></span>${label}`;
+}
+
+function renderTable(filterStatus, filterSev) {
+  const tbody = document.getElementById('inspTableBody');
+  tbody.innerHTML = '';
+  inspections.forEach(row => {
+    if (filterStatus && filterStatus !== 'all' && row.status !== filterStatus) return;
+    if (filterSev && row.sev !== filterSev) return;
+    const tr = document.createElement('tr');
+    tr.dataset.status = row.status;
+    tr.dataset.sev = row.sev;
+    tr.innerHTML = `
+      <td class="insp-id">${row.id}</td>
+      <td class="fw-700">${row.line}</td>
+      <td class="text-muted font-mono" style="font-size:0.72rem">${row.time}</td>
+      <td>${row.section}</td>
+      <td class="text-muted" style="text-align:right">${row.frames}</td>
+      <td style="text-align:center;font-weight:700;color:${row.detections>8?'var(--danger)':row.detections>3?'var(--warning)':'var(--text)'}">${row.detections}件</td>
+      <td>${buildSevCell(row.sev)}</td>
+      <td class="text-muted font-mono" style="font-size:0.72rem;text-align:right">${row.proc}</td>
+      <td>${buildStatusBadge(row.status)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable('all', null);
+
+// Filter button logic
+let activeFilter = 'all';
+let activeSev = null;
+document.getElementById('tableFilters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (btn.dataset.filter !== undefined) { activeFilter = btn.dataset.filter; activeSev = null; }
+  else if (btn.dataset.sev !== undefined) { activeSev = btn.dataset.sev; activeFilter = null; }
+  renderTable(activeFilter, activeSev);
+});
+
+/* ── Alert Cards ─────────────────────────────────────────── */
+const alertData = [
+  { id:1, sev:'critical', sevJa:'緊急', type:'レールき裂',      line:'中央本線',   km:'K+204.7', time:'06:48', station:'高尾駅 3.2km', assigned:'田中 太郎', cardClass:'crit-card' },
+  { id:2, sev:'critical', sevJa:'緊急', type:'レールき裂',      line:'総武本線',   km:'K+89.3',  time:'05:22', station:'千葉駅 1.8km', assigned:'',          cardClass:'crit-card' },
+  { id:3, sev:'critical', sevJa:'緊急', type:'締結装置欠損',     line:'常磐線',     km:'K+158.4', time:'04:55', station:'取手駅 4.1km', assigned:'鈴木 一郎', cardClass:'crit-card' },
+  { id:4, sev:'critical', sevJa:'緊急', type:'レールき裂',      line:'東海道本線', km:'K+45.2',  time:'03:30', station:'川崎駅 2.7km', assigned:'',          cardClass:'crit-card' },
+  { id:5, sev:'major',    sevJa:'重要', type:'レール剥離',       line:'中央本線',   km:'K+312.6', time:'05:48', station:'八王子駅 5.3km',assigned:'佐藤 健',   cardClass:'major-card' },
+  { id:6, sev:'major',    sevJa:'重要', type:'レール摩耗',       line:'東海道本線', km:'K+72.9',  time:'06:32', station:'品川駅 0.8km', assigned:'伊藤 誠',   cardClass:'major-card' },
+  { id:7, sev:'major',    sevJa:'重要', type:'まくらぎ損傷',     line:'総武本線',   km:'K+124.1', time:'05:20', station:'津田沼駅 2.1km',assigned:'',          cardClass:'major-card' },
+  { id:8, sev:'major',    sevJa:'重要', type:'レール剥離',       line:'常磐線',     km:'K+201.8', time:'04:40', station:'松戸駅 1.5km', assigned:'渡辺 雅志', cardClass:'major-card' },
+  { id:9, sev:'minor',    sevJa:'軽微', type:'レール波状摩耗',   line:'山手線',     km:'K+18.3',  time:'07:15', station:'渋谷駅 1.2km', assigned:'',          cardClass:'minor-card' },
+  { id:10,sev:'minor',    sevJa:'軽微', type:'レール波状摩耗',   line:'京浜東北線', km:'K+52.7',  time:'07:02', station:'浦和駅 3.4km', assigned:'中村 浩二', cardClass:'minor-card' },
+];
+
+let alertCount = 23;
+let critCount = 7;
+
+function buildAlertGrid() {
+  const grid = document.getElementById('alertGrid');
+  grid.innerHTML = '';
+  alertData.forEach(alert => {
+    const sevBgColor = alert.sev==='critical'?'var(--danger-bg)':alert.sev==='major'?'var(--warning-bg)':'var(--safe-bg)';
+    const sevColor   = alert.sev==='critical'?'var(--danger)':alert.sev==='major'?'var(--warning)':'var(--safe)';
+    const sevBorder  = alert.sev==='critical'?'var(--danger-border)':alert.sev==='major'?'var(--warning-border)':'var(--safe-border)';
+    const assignHtml = alert.assigned
+      ? `<div class="alert-assign">担当: <span class="assign-name">${alert.assigned}</span></div>`
+      : `<div class="alert-assign" style="color:var(--muted-2)">未割当 — クリックして担当者を設定</div>`;
+    const card = document.createElement('div');
+    card.className = `alert-card ${alert.cardClass}`;
+    card.id = `alert-card-${alert.id}`;
+    card.innerHTML = `
+      <div class="alert-header">
+        <div>
+          <div class="alert-type">${alert.type}</div>
+          <span style="font-size:0.68rem;color:var(--muted)">${alert.km} — ${alert.line}</span>
+        </div>
+        <span class="alert-severity-badge" style="background:${sevBgColor};color:${sevColor};border:1px solid ${sevBorder}">${alert.sevJa}</span>
+      </div>
+      <div class="alert-meta">
+        路線: <span>${alert.line}</span><br>
+        キロ程: <span>${alert.km}</span><br>
+        最寄り駅まで: <span>${alert.station}</span><br>
+        検出時刻: <span>${alert.time}</span>
+      </div>
+      ${assignHtml}
+      <div class="alert-actions">
+        <button class="alert-btn alert-btn-confirm" onclick="handleAlert(${alert.id},'confirm')">確認</button>
+        <button class="alert-btn alert-btn-approve" onclick="handleAlert(${alert.id},'approve')">承認</button>
+        <button class="alert-btn alert-btn-dismiss" onclick="handleAlert(${alert.id},'dismiss')">却下</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+buildAlertGrid();
+
+function handleAlert(id, action) {
+  const card = document.getElementById(`alert-card-${id}`);
+  if (!card || card.classList.contains('processed')) return;
+  card.classList.add('processed');
+  // Decrement count
+  alertCount = Math.max(0, alertCount - 1);
+  const alertObj = alertData.find(a => a.id === id);
+  if (alertObj && alertObj.sev === 'critical') critCount = Math.max(0, critCount - 1);
+  document.getElementById('navAlertCount').textContent = alertCount;
+  document.getElementById('kpiAlertCount').textContent = alertCount + '件';
+  document.getElementById('alertCountBadge').innerHTML =
+    `<span class="badge-dot"></span> 緊急 ${critCount}件`;
+}
+
+/* ── Chart.js Charts ─────────────────────────────────────── */
+const chartDefaults = {
+  plugins: { legend: { labels: { color:'#8888a0', font:{ size:11 }, boxWidth:12 } } },
+  scales: {
+    x: { ticks:{ color:'#8888a0', font:{size:11} }, grid:{ color:'rgba(30,30,46,0.8)' } },
+    y: { ticks:{ color:'#8888a0', font:{size:11} }, grid:{ color:'rgba(30,30,46,0.8)' } },
+  }
+};
+
+// Chart 1: Weekly trend
+const weeksLabels = ['12/30','1/6','1/13','1/20','1/27','2/3','2/10','2/17'];
+new Chart(document.getElementById('chartTrend'), {
+  type: 'line',
+  data: {
+    labels: weeksLabels,
+    datasets: [
+      { label:'緊急', data:[5,8,6,11,9,7,12,7], borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.1)', tension:0.4, fill:true, pointRadius:3 },
+      { label:'重要', data:[18,22,19,27,24,21,28,16], borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)', tension:0.4, fill:true, pointRadius:3 },
+      { label:'軽微', data:[31,28,35,29,33,38,32,24], borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.05)', tension:0.4, fill:false, pointRadius:3 },
+    ]
+  },
+  options: {
+    ...chartDefaults,
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      ...chartDefaults.plugins,
+      tooltip: { mode:'index', intersect:false }
+    }
+  }
+});
+
+// Chart 2: Defect type doughnut
+new Chart(document.getElementById('chartDoughnut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['レールき裂','レール剥離','レール摩耗','レール波状摩耗'],
+    datasets: [{
+      data: [23, 31, 28, 18],
+      backgroundColor: ['rgba(239,68,68,0.8)','rgba(245,158,11,0.8)','rgba(99,102,241,0.8)','rgba(34,197,94,0.8)'],
+      borderColor: ['#ef4444','#f59e0b','#6366f1','#22c55e'],
+      borderWidth: 1,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position:'bottom', labels:{ color:'#8888a0', font:{size:11}, boxWidth:12, padding:12 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}件 (${Math.round(ctx.parsed/100*100)}%)` } }
+    },
+    cutout: '68%',
+  }
+});
+
+// Chart 3: Line risk score bar
+new Chart(document.getElementById('chartRisk'), {
+  type: 'bar',
+  data: {
+    labels: ['中央本線','総武本線','常磐線','東海道本線','東北本線','横須賀線','京浜東北線','山手線'],
+    datasets: [{
+      label: 'リスクスコア',
+      data: [87, 74, 68, 61, 52, 38, 29, 18],
+      backgroundColor: [
+        'rgba(239,68,68,0.7)','rgba(239,68,68,0.6)','rgba(245,158,11,0.7)',
+        'rgba(245,158,11,0.6)','rgba(99,102,241,0.6)','rgba(34,197,94,0.5)',
+        'rgba(34,197,94,0.6)','rgba(34,197,94,0.7)',
+      ],
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend:{ display:false } },
+    scales: {
+      x: { ticks:{color:'#8888a0',font:{size:10}}, grid:{color:'rgba(30,30,46,0.8)'}, max:100 },
+      y: { ticks:{color:'#e4e4ef',font:{size:11},fontWeight:'bold'}, grid:{display:false} }
+    }
+  }
+});
+
+/* ── Maintenance Calendar ────────────────────────────────── */
+(function buildCalendar() {
+  const grid = document.getElementById('calGrid');
+  const days = ['日','月','火','水','木','金','土'];
+  days.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'cal-header-cell';
+    cell.textContent = d;
+    grid.appendChild(cell);
+  });
+
+  // Feb 2026: starts on Sunday (day 0)
+  const year = 2026, month = 1; // 0-indexed
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month+1, 0).getDate(); // 28
+  const totalCells = 35;
+  const today = 21;
+
+  const events = {
+    3:  [{ label:'通常点検', type:'routine' }],
+    5:  [{ label:'緊急対応 中央本線', type:'emergency' }],
+    7:  [{ label:'予防保全 東海道', type:'preventive' }],
+    10: [{ label:'通常点検', type:'routine' }],
+    12: [{ label:'予防保全 常磐線', type:'preventive' }],
+    14: [{ label:'緊急対応 総武本線', type:'emergency' }],
+    17: [{ label:'通常点検', type:'routine' }],
+    19: [{ label:'予防保全 東北本線', type:'preventive' }],
+    21: [{ label:'本日 通常点検', type:'routine' }, { label:'緊急対応 中央本線', type:'emergency' }],
+    24: [{ label:'予防保全 山手線', type:'preventive' }],
+    26: [{ label:'通常点検', type:'routine' }],
+    28: [{ label:'予防保全 横須賀線', type:'preventive' }],
+  };
+
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum = i - firstDay + 1;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    if (dayNum < 1 || dayNum > daysInMonth) {
+      cell.classList.add('outside');
+      cell.innerHTML = `<div class="cal-day">${dayNum < 1 ? '' : dayNum - daysInMonth}</div>`;
+    } else {
+      if (dayNum === today) cell.classList.add('today');
+      cell.innerHTML = `<div class="cal-day">${dayNum}</div>`;
+      if (events[dayNum]) {
+        events[dayNum].forEach(ev => {
+          const e = document.createElement('div');
+          e.className = `cal-event ${ev.type}`;
+          e.textContent = ev.label;
+          cell.appendChild(e);
+        });
+      }
+    }
+    grid.appendChild(cell);
+  }
+})();
+
+// Schedule list
+const scheduleItems = [
+  { type:'emergency', color:'sched-emergency', name:'緊急対応 — 中央本線 K+204.7', detail:'2026-02-21 本日 / 担当: 田中 太郎' },
+  { type:'routine',   color:'sched-routine',   name:'通常点検 — 東海道本線 全線',   detail:'2026-02-24 / 担当: 鈴木 一郎' },
+  { type:'preventive',color:'sched-preventive',name:'予防保全 — 山手線 渋谷→池袋',  detail:'2026-02-24 / 担当: 佐藤 健' },
+  { type:'routine',   color:'sched-routine',   name:'通常点検 — 常磐線 全線',       detail:'2026-02-26 / 担当: 伊藤 誠' },
+  { type:'preventive',color:'sched-preventive',name:'予防保全 — 横須賀線 全線',     detail:'2026-02-28 / 担当: 渡辺 雅志' },
+];
+
+const schedList = document.getElementById('scheduleList');
+scheduleItems.forEach(item => {
+  const li = document.createElement('li');
+  li.className = 'schedule-item';
+  li.innerHTML = `
+    <div class="schedule-type-dot ${item.color}"></div>
+    <div class="schedule-info">
+      <div class="schedule-name">${item.name}</div>
+      <div class="schedule-detail">${item.detail}</div>
+    </div>`;
+  schedList.appendChild(li);
+});
+
+/* ── Live Counter: inspection count increments every 12s ─── */
+let inspCount = 47;
+setInterval(() => {
+  inspCount++;
+  document.getElementById('kpiInspCount').textContent = inspCount + '件';
+}, 12000);
+
+/* ── Frame counter ticks up ──────────────────────────────── */
+let frames = 287432;
+setInterval(() => {
+  frames += rnd(120, 320);
+  document.getElementById('frameCounter').textContent = frames.toLocaleString('ja-JP');
+}, 3000);
+
+/* ── Clock update ────────────────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  const el = document.getElementById('lastUpdate');
+  if (el) el.textContent = `最終更新: ${hh}:${mm}:${ss}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── Chart.js global defaults ────────────────────────────── */
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = '#8888a0';
+  Chart.defaults.borderColor = 'rgba(30,30,46,0.8)';
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif";
+}
+</script>
+</body>
+</html>
