@@ -35,39 +35,48 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Default training hyperparameters optimized for rail defect detection.
-# These are tuned for small defects on high-resolution track images.
+# These are tuned for small defects on high-resolution forward-facing track cameras.
+#
+# Key design choices:
+#   lr0=0.005   : Gentler fine-tuning LR (previous 0.01 caused instability at epoch 1)
+#   cos_lr=True : Cosine annealing for smoother convergence
+#   flipud=0.0  : MUST be 0 for forward-facing cameras (track never appears upside-down)
+#   imgsz=1280  : Higher res detects small cracks/fastener defects missed at 640
+#   close_mosaic=20 : Disable mosaic in final 20 epochs for stable convergence
 DEFAULT_HYPERPARAMS = {
-    "lr0": 0.01,           # Initial learning rate
-    "lrf": 0.01,           # Final learning rate (lr0 * lrf)
+    "lr0": 0.005,          # Initial learning rate (halved for stable fine-tuning)
+    "lrf": 0.01,           # Final LR = lr0 × lrf = 5e-5
     "momentum": 0.937,
     "weight_decay": 0.0005,
-    "warmup_epochs": 3.0,
+    "warmup_epochs": 5.0,  # Longer warmup for stability
     "warmup_momentum": 0.8,
     "box": 7.5,            # Box loss gain
     "cls": 0.5,            # Classification loss gain
     "dfl": 1.5,            # Distribution focal loss gain
     "hsv_h": 0.015,        # HSV hue augmentation
     "hsv_s": 0.7,          # HSV saturation augmentation
-    "hsv_v": 0.4,          # HSV value augmentation
-    "degrees": 5.0,        # Rotation augmentation (small for tracks)
+    "hsv_v": 0.4,          # HSV value augmentation (night/day variation)
+    "degrees": 3.0,        # Small rotation (track is mostly level)
     "translate": 0.1,
     "scale": 0.5,
-    "shear": 2.0,
+    "shear": 1.0,
     "perspective": 0.0,
-    "flipud": 0.5,         # Vertical flip (tracks can be upside down in camera)
-    "fliplr": 0.5,         # Horizontal flip
-    "mosaic": 1.0,         # Mosaic augmentation
-    "mixup": 0.1,          # Mixup augmentation
+    "flipud": 0.0,         # MUST be 0: forward cameras never see tracks upside-down
+    "fliplr": 0.5,         # Horizontal flip OK (symmetrical track)
+    "mosaic": 1.0,         # Mosaic augmentation (disabled near end via close_mosaic)
+    "close_mosaic": 20,    # Disable mosaic in last 20 epochs for stable convergence
+    "mixup": 0.15,         # Slightly higher mixup for robustness
     "copy_paste": 0.1,     # Copy-paste augmentation
+    "cos_lr": True,        # Cosine LR schedule (better than linear decay)
 }
 
 
 def train(
     data_yaml: Path,
-    model_name: str = "yolov8m.pt",
-    epochs: int = 100,
+    model_name: str = "yolov8l.pt",  # Large > Medium for railway safety-critical detection
+    epochs: int = 150,               # More epochs (model was still improving at e43 of 100)
     batch_size: int = 16,
-    imgsz: int = 640,
+    imgsz: int = 1280,               # Higher resolution for small crack/fastener detection
     device: str = "0",
     project: str = "runs/detect",
     name: str = "railscan",
@@ -113,7 +122,7 @@ def train(
     model = YOLO(model_name)
 
     # Train
-    results = model.train(
+    model.train(
         data=str(data_yaml),
         epochs=epochs,
         batch=batch_size,
@@ -123,7 +132,7 @@ def train(
         name=name,
         exist_ok=True,
         resume=resume,
-        patience=20,          # Early stopping patience
+        patience=30,          # More patient stopping (model improved slowly after e43)
         save_period=10,       # Save checkpoint every N epochs
         plots=True,           # Generate training plots
         verbose=True,
@@ -136,7 +145,7 @@ def train(
         logger.info("Best model saved to: %s", best_weights)
 
         # Copy to models/ directory for easy deployment
-        deploy_path = Path("models") / "railscan-yolov8m.pt"
+        deploy_path = Path("models") / "railscan-yolov8l.pt"
         deploy_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(best_weights, deploy_path)
         logger.info("Deployed model copied to: %s", deploy_path)
