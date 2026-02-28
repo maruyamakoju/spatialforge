@@ -225,7 +225,7 @@
     <div class="ci-row">
       <div class="ci-icon">✉</div>
       <div class="ci-text">
-        メール：<a href="mailto:railscan@spatialforge.dev">railscan@spatialforge.dev</a><br>
+        メール：<a href="mailto:founder@spatialforge.dev">founder@spatialforge.dev</a><br>
         （通常 1〜2 営業日以内にご返信いたします）
       </div>
     </div>
@@ -254,13 +254,15 @@
   form.addEventListener('submit', async (e) => {
     const action = form.action;
     if (action.includes('YOUR_FORM_ID')) {
-      // Formspree 未設定時はモック送信
+      // Formspree 未設定時は mailto fallback（実際にメールが届く）
       e.preventDefault();
       btn.disabled = true;
       btn.textContent = '送信中...';
-      await new Promise(r => setTimeout(r, 800));
-      form.style.display = 'none';
-      msg.style.display  = 'block';
+      const data = new FormData(form);
+      const lines = Array.from(data.entries()).map(([k, v]) => `${k}: ${v}`).join('\n');
+      const subject = encodeURIComponent('【RailScan お問い合わせ】' + (data.get('company') || ''));
+      const body = encodeURIComponent(lines);
+      window.location.href = `mailto:founder@spatialforge.dev?subject=${subject}&body=${body}`;
       return;
     }
     // Formspree が設定済みの場合は AJAX 送信
