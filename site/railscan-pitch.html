@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan AI Demo — 軌道点検システム | SpatialForge</title>
+  <meta name="description" content="走行映像からレール亀裂・剥離・波状摩耗をAIがリアルタイム検知。保線点検工数88%削減。">
+  <style>
+    :root {
+      --bg:      #0a0a0f;
+      --sur:     #111118;
+      --sur2:    #181825;
+      --bdr:     #1e1e30;
+      --text:    #e4e4ef;
+      --muted:   #7878a0;
+      --acc:     #f59e0b;
+      --acc2:    #fbbf24;
+      --aglow:   rgba(245,158,11,0.13);
+      --red:     #ef4444;
+      --org:     #f97316;
+      --yel:     #eab308;
+      --grn:     #22c55e;
+      --r:       10px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
+        'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
+      background:var(--bg); color:var(--text);
+      line-height:1.7; -webkit-font-smoothing:antialiased;
+    }
+    a { text-decoration:none; }
+    img { display:block; max-width:100%; }
+
+    /* ── UTILS ── */
+    .container { max-width:1160px; margin:0 auto; padding:0 1.5rem; }
+    .section { padding:5.5rem 1.5rem; max-width:1160px; margin:0 auto; }
+    .section-label {
+      font-size:.75rem; font-weight:800; letter-spacing:.12em;
+      color:var(--acc); text-transform:uppercase; margin-bottom:.75rem;
+    }
+    .section-title {
+      font-size:clamp(1.7rem,3.5vw,2.5rem); font-weight:900;
+      letter-spacing:-.03em; line-height:1.15; margin-bottom:1rem;
+    }
+    .section-sub { color:var(--muted); font-size:1rem; max-width:580px; line-height:1.8; }
+
+    /* ── NAV ── */
+    nav {
+      position:fixed; top:0; width:100%; height:60px;
+      padding:0 1.5rem; z-index:500;
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(10,10,15,0.88); backdrop-filter:blur(18px) saturate(1.4);
+      border-bottom:1px solid var(--bdr);
+    }
+    .nav-logo { display:flex; align-items:center; gap:.55rem; }
+    .nav-logo-mark {
+      width:32px; height:32px; background:var(--acc); border-radius:7px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:.9rem; color:#000;
+    }
+    .nav-logo-name { font-size:1rem; font-weight:800; letter-spacing:-.02em; }
+    .nav-logo-name span { color:var(--acc2); }
+    .nav-links { display:flex; align-items:center; gap:.15rem; }
+    .nav-links a {
+      color:var(--muted); font-size:.82rem; padding:.35rem .7rem;
+      border-radius:7px; transition:all .15s;
+    }
+    .nav-links a:hover { color:var(--text); background:rgba(255,255,255,.05); }
+    .nav-cta {
+      background:var(--acc); color:#000 !important; font-weight:700 !important;
+      border-radius:8px; padding:.4rem .9rem !important;
+    }
+    .nav-cta:hover { background:var(--acc2) !important; }
+
+    /* ── HERO ── */
+    .hero {
+      position:relative; min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden; text-align:center;
+    }
+    .hero-video {
+      position:absolute; inset:0; width:100%; height:100%;
+      object-fit:cover; opacity:.45;
+    }
+    .hero-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(10,10,15,.4) 0%, rgba(10,10,15,.7) 60%, var(--bg) 100%);
+    }
+    .hero-scan {
+      position:absolute; left:0; right:0; height:2px; pointer-events:none;
+      background:linear-gradient(90deg, transparent 0%, rgba(245,158,11,.8) 50%, transparent 100%);
+      animation:scanLine 4s linear infinite;
+    }
+    @keyframes scanLine { 0%{top:-2px} 100%{top:100%} }
+
+    .hero-content {
+      position:relative; z-index:10; padding:7rem 1.5rem 5rem;
+      max-width:820px; margin:0 auto;
+    }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:.5rem;
+      background:var(--aglow); border:1px solid rgba(245,158,11,.35);
+      color:var(--acc2); font-size:.75rem; font-weight:700; letter-spacing:.07em;
+      padding:.35rem 1rem; border-radius:999px; margin-bottom:1.75rem;
+    }
+    .dot-pulse {
+      width:7px; height:7px; border-radius:50%; background:var(--grn);
+      animation:dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    .hero h1 {
+      font-size:clamp(2rem,5.5vw,3.8rem); font-weight:900;
+      letter-spacing:-.035em; line-height:1.1; margin-bottom:1.4rem;
+    }
+    .hero h1 em { font-style:normal; color:var(--acc2); }
+    .hero-sub {
+      font-size:1.1rem; color:var(--muted); line-height:1.9;
+      max-width:600px; margin:0 auto 2.5rem;
+    }
+    .hero-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+    .btn-primary {
+      display:inline-flex; align-items:center; gap:.5rem;
+      background:var(--acc); color:#000; font-weight:700; font-size:.95rem;
+      padding:.8rem 1.8rem; border-radius:10px; transition:all .2s;
+      border:none; cursor:pointer;
+    }
+    .btn-primary:hover { background:var(--acc2); transform:translateY(-2px); box-shadow:0 8px 24px rgba(245,158,11,.35); }
+    .btn-ghost {
+      display:inline-flex; align-items:center; gap:.5rem;
+      background:transparent; color:var(--text); font-size:.95rem; font-weight:600;
+      padding:.8rem 1.8rem; border-radius:10px; border:1px solid var(--bdr);
+      transition:all .2s; cursor:pointer;
+    }
+    .btn-ghost:hover { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.04); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      background:var(--sur); border-top:1px solid var(--bdr); border-bottom:1px solid var(--bdr);
+    }
+    .stats-inner {
+      max-width:1160px; margin:0 auto; padding:2rem 1.5rem;
+      display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    }
+    .stat {
+      padding:1.5rem; text-align:center;
+      border-right:1px solid var(--bdr);
+    }
+    .stat:last-child { border-right:none; }
+    .stat-val {
+      font-size:2.2rem; font-weight:900; letter-spacing:-.04em;
+      color:var(--acc2); line-height:1.1;
+    }
+    .stat-unit { font-size:.85rem; font-weight:700; color:var(--acc); margin-left:2px; }
+    .stat-label { font-size:.78rem; color:var(--muted); margin-top:.3rem; font-weight:500; }
+
+    /* ── CARD ── */
+    .card {
+      background:var(--sur); border:1px solid var(--bdr);
+      border-radius:var(--r); overflow:hidden;
+    }
+
+    /* ── A/B SLIDER ── */
+    .ab-section { background:var(--sur); border-top:1px solid var(--bdr); border-bottom:1px solid var(--bdr); }
+    .ab-section-inner { max-width:1160px; margin:0 auto; padding:5rem 1.5rem; }
+    .ab-wrap {
+      position:relative; border-radius:var(--r); overflow:hidden;
+      cursor:col-resize; user-select:none; max-width:720px; margin:2.5rem auto 0;
+      border:1px solid var(--bdr);
+    }
+    .ab-img-base { width:100%; display:block; }
+    .ab-before-clip {
+      position:absolute; inset:0;
+      clip-path:inset(0 50% 0 0);
+      transition:clip-path .05s;
+    }
+    .ab-before-clip img { width:100%; height:100%; object-fit:cover; }
+    .ab-line {
+      position:absolute; top:0; bottom:0; left:50%;
+      width:2px; background:#fff; transform:translateX(-50%);
+      box-shadow:0 0 12px rgba(255,255,255,.5);
+    }
+    .ab-handle {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:44px; height:44px; border-radius:50%;
+      background:#fff; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 12px rgba(0,0,0,.5);
+      font-size:1rem; color:#111; pointer-events:none;
+    }
+    .ab-label {
+      position:absolute; top:12px;
+      background:rgba(0,0,0,.75); color:#fff;
+      font-size:.72rem; font-weight:700; letter-spacing:.06em;
+      padding:3px 10px; border-radius:4px; backdrop-filter:blur(4px);
+    }
+    .ab-label-l { left:12px; }
+    .ab-label-r { right:12px; }
+    .ab-instruction {
+      text-align:center; margin-top:1rem; font-size:.82rem; color:var(--muted);
+    }
+
+    /* ── GALLERY ── */
+    .gallery-layout {
+      display:grid; grid-template-columns:220px 1fr;
+      gap:1.5rem; margin-top:2.5rem;
+      align-items:start;
+    }
+    .frame-thumbs {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:.5rem;
+    }
+    .thumb-btn {
+      position:relative; border:2px solid var(--bdr); border-radius:8px;
+      overflow:hidden; cursor:pointer; transition:all .18s;
+      background:none; padding:0;
+    }
+    .thumb-btn img { width:100%; display:block; }
+    .thumb-btn:hover { border-color:rgba(245,158,11,.5); transform:translateY(-1px); }
+    .thumb-btn.active { border-color:var(--acc); box-shadow:0 0 0 2px var(--aglow); }
+    .thumb-badge {
+      position:absolute; top:4px; right:4px;
+      background:var(--red); color:#fff; font-size:.55rem; font-weight:800;
+      padding:1px 5px; border-radius:4px; letter-spacing:.04em;
+    }
+    .thumb-badge.major { background:var(--org); }
+    .thumb-badge.minor { background:var(--yel); color:#000; }
+    .thumb-badge.none { background:var(--grn); color:#000; }
+    .thumb-ts {
+      position:absolute; bottom:3px; left:4px;
+      background:rgba(0,0,0,.7); color:#fff; font-size:.55rem;
+      padding:1px 5px; border-radius:3px;
+    }
+
+    .frame-viewer { display:flex; flex-direction:column; gap:1rem; }
+    .detection-container {
+      position:relative; border-radius:var(--r); overflow:hidden;
+      border:1px solid var(--bdr); background:#000;
+    }
+    .detection-img { width:100%; display:block; }
+    .detection-overlay {
+      position:absolute; inset:0; pointer-events:none;
+    }
+    .bbox {
+      position:absolute;
+      border-width:2px; border-style:solid;
+      opacity:0;
+      animation:bboxIn .35s ease-out forwards;
+    }
+    .bbox.critical { border-color:var(--red); }
+    .bbox.major    { border-color:var(--org); }
+    .bbox.minor    { border-color:var(--yel); }
+    @keyframes bboxIn {
+      0%  { opacity:0; transform:scale(.88); }
+      60% { opacity:1; transform:scale(1.03); }
+      100%{ opacity:1; transform:scale(1); }
+    }
+    .bbox-label {
+      position:absolute; top:-1.35rem; left:-1px;
+      font-size:.58rem; font-weight:800; letter-spacing:.03em;
+      padding:1px 6px; border-radius:3px 3px 0 0; white-space:nowrap;
+    }
+    .critical .bbox-label { background:var(--red); color:#fff; }
+    .major    .bbox-label { background:var(--org); color:#fff; }
+    .minor    .bbox-label { background:var(--yel); color:#000; }
+    .bbox-corner {
+      position:absolute; width:8px; height:8px;
+    }
+    .bbox-corner.tl { top:-1px; left:-1px; border-top:3px solid; border-left:3px solid; }
+    .bbox-corner.tr { top:-1px; right:-1px; border-top:3px solid; border-right:3px solid; }
+    .bbox-corner.bl { bottom:-1px; left:-1px; border-bottom:3px solid; border-left:3px solid; }
+    .bbox-corner.br { bottom:-1px; right:-1px; border-bottom:3px solid; border-right:3px solid; }
+    .critical .bbox-corner { border-color:var(--red); }
+    .major    .bbox-corner { border-color:var(--org); }
+    .minor    .bbox-corner { border-color:var(--yel); }
+
+    .frame-stats {
+      display:flex; gap:.6rem; flex-wrap:wrap;
+    }
+    .frame-stat-pill {
+      display:flex; align-items:center; gap:.35rem;
+      background:var(--sur2); border:1px solid var(--bdr);
+      border-radius:6px; padding:.3rem .7rem; font-size:.78rem;
+    }
+    .pill-dot { width:8px; height:8px; border-radius:50%; }
+    .pill-dot.red { background:var(--red); }
+    .pill-dot.org { background:var(--org); }
+    .pill-dot.yel { background:var(--yel); }
+    .pill-dot.grn { background:var(--grn); }
+
+    .detection-list { display:flex; flex-direction:column; gap:.5rem; }
+    .det-item {
+      display:grid; grid-template-columns:auto 1fr auto;
+      align-items:center; gap:.75rem;
+      background:var(--sur2); border:1px solid var(--bdr);
+      border-radius:8px; padding:.6rem .9rem;
+      animation:fadeUp .3s ease-out forwards; opacity:0;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .sev-badge {
+      font-size:.62rem; font-weight:800; letter-spacing:.05em;
+      padding:2px 7px; border-radius:4px; white-space:nowrap;
+    }
+    .sev-badge.critical { background:rgba(239,68,68,.18); color:var(--red); border:1px solid rgba(239,68,68,.3); }
+    .sev-badge.major    { background:rgba(249,115,22,.18); color:var(--org); border:1px solid rgba(249,115,22,.3); }
+    .sev-badge.minor    { background:rgba(234,179,8,.18);  color:var(--yel); border:1px solid rgba(234,179,8,.3); }
+    .det-cls { font-size:.85rem; font-weight:600; }
+    .det-meta { font-size:.72rem; color:var(--muted); }
+    .det-conf { font-size:.78rem; font-weight:700; color:var(--acc2); }
+
+    /* ── VIDEO ── */
+    .video-tabs { display:flex; gap:.5rem; margin-bottom:1.25rem; }
+    .video-tab {
+      padding:.4rem 1rem; border-radius:7px; font-size:.82rem; font-weight:600;
+      border:1px solid var(--bdr); background:transparent; color:var(--muted);
+      cursor:pointer; transition:all .15s;
+    }
+    .video-tab.active {
+      background:var(--acc); color:#000; border-color:var(--acc);
+    }
+    .video-wrap {
+      border-radius:var(--r); overflow:hidden; border:1px solid var(--bdr);
+      background:#000;
+    }
+    .video-wrap video { width:100%; display:block; max-height:540px; object-fit:contain; }
+
+    /* ── REPORT ── */
+    .report-toolbar {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;
+    }
+    .report-doc {
+      background:#fff; color:#111; border-radius:var(--r);
+      padding:2.5rem 3rem; font-family:'MS Mincho','Hiragino Mincho ProN','Yu Mincho',
+        'Noto Serif JP',serif;
+      border:1px solid var(--bdr); line-height:1.7;
+    }
+    .report-title-block { text-align:center; margin-bottom:2rem; border-bottom:3px double #111; padding-bottom:1rem; }
+    .report-main-title { font-size:1.5rem; font-weight:900; letter-spacing:.05em; margin-bottom:.25rem; }
+    .report-sub-title { font-size:.88rem; letter-spacing:.03em; color:#444; }
+    .report-meta-grid {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:.25rem .5rem; margin-bottom:1.5rem; font-size:.82rem;
+    }
+    .report-meta-row { display:flex; gap:.5rem; }
+    .report-meta-key { font-weight:700; color:#333; min-width:7em; }
+    .report-meta-val { color:#111; }
+    .report-summary {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:1rem; margin-bottom:1.5rem;
+    }
+    .report-sum-box {
+      border:1px solid #bbb; border-radius:4px; padding:.75rem 1rem; text-align:center;
+    }
+    .report-sum-box.critical-box { border-color:#ef4444; background:rgba(239,68,68,.05); }
+    .report-sum-box.major-box    { border-color:#f97316; background:rgba(249,115,22,.05); }
+    .report-sum-box.minor-box    { border-color:#eab308; background:rgba(234,179,8,.05); }
+    .report-sum-num { font-size:2rem; font-weight:900; line-height:1; }
+    .critical-box .report-sum-num { color:#ef4444; }
+    .major-box    .report-sum-num { color:#c05a00; }
+    .minor-box    .report-sum-num { color:#856a00; }
+    .report-sum-label { font-size:.72rem; color:#555; margin-top:.25rem; }
+
+    .report-table { width:100%; border-collapse:collapse; font-size:.78rem; margin-top:1rem; }
+    .report-table th {
+      background:#f0f0f0; padding:.5rem .6rem; border:1px solid #ccc;
+      text-align:center; font-weight:700; white-space:nowrap;
+    }
+    .report-table td {
+      padding:.4rem .6rem; border:1px solid #ccc; text-align:center;
+    }
+    .report-table tr:nth-child(even) td { background:#fafafa; }
+    .sev-c { color:#ef4444; font-weight:800; }
+    .sev-m { color:#c05a00; font-weight:700; }
+    .sev-n { color:#856a00; }
+    .report-sign {
+      display:flex; justify-content:flex-end; gap:3rem;
+      margin-top:2rem; padding-top:1rem; border-top:1px solid #bbb;
+      font-size:.8rem; color:#555;
+    }
+    .sign-block { text-align:center; }
+    .sign-line { border-top:1px solid #333; width:120px; margin:.5rem auto 0; }
+
+    /* ── ROI ── */
+    .roi-grid {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:1.5rem; margin-top:2.5rem;
+    }
+    .roi-table-wrap { grid-column:1/-1; }
+    .roi-table {
+      width:100%; border-collapse:collapse; font-size:.88rem;
+    }
+    .roi-table th {
+      padding:.75rem 1rem; background:var(--sur2);
+      border:1px solid var(--bdr); font-weight:700; text-align:left;
+    }
+    .roi-table td {
+      padding:.75rem 1rem; border:1px solid var(--bdr); vertical-align:middle;
+    }
+    .roi-table tr:hover td { background:rgba(245,158,11,.04); }
+    .roi-table .col-label { color:var(--muted); font-size:.8rem; }
+    .roi-table .col-old { color:var(--muted); }
+    .roi-table .col-new { color:var(--acc2); font-weight:700; }
+    .roi-table .col-save { color:var(--grn); font-weight:700; }
+    .roi-big {
+      background:var(--aglow); border:1px solid rgba(245,158,11,.3);
+      border-radius:var(--r); padding:2rem; text-align:center;
+    }
+    .roi-big-num { font-size:3.5rem; font-weight:900; color:var(--acc2); letter-spacing:-.04em; line-height:1; }
+    .roi-big-label { font-size:.9rem; color:var(--muted); margin-top:.5rem; }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align:center; padding:6rem 1.5rem;
+      background:linear-gradient(135deg, rgba(245,158,11,.08) 0%, transparent 60%);
+      border-top:1px solid var(--bdr);
+    }
+    .cta-badge {
+      display:inline-block; background:var(--aglow); border:1px solid rgba(245,158,11,.4);
+      color:var(--acc2); font-size:.72rem; font-weight:800; letter-spacing:.1em;
+      padding:.3rem .9rem; border-radius:999px; margin-bottom:1.25rem;
+    }
+    .cta-title { font-size:clamp(1.6rem,3vw,2.4rem); font-weight:900; letter-spacing:-.03em; margin-bottom:.75rem; }
+    .cta-sub { color:var(--muted); font-size:1rem; max-width:520px; margin:0 auto 2.5rem; line-height:1.8; }
+    .cta-cards {
+      display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-top:2.5rem;
+    }
+    .cta-card {
+      background:var(--sur); border:1px solid var(--bdr);
+      border-radius:var(--r); padding:1.5rem 1.75rem; text-align:left;
+      min-width:240px; max-width:300px;
+    }
+    .cta-card-icon { font-size:1.5rem; margin-bottom:.6rem; }
+    .cta-card-title { font-size:.95rem; font-weight:700; margin-bottom:.3rem; }
+    .cta-card-desc { font-size:.78rem; color:var(--muted); line-height:1.7; }
+
+    /* ── FOOTER ── */
+    footer {
+      background:var(--sur); border-top:1px solid var(--bdr);
+      padding:2rem 1.5rem; text-align:center;
+    }
+    .footer-inner { max-width:1160px; margin:0 auto; }
+    .footer-brand { font-weight:800; font-size:1rem; margin-bottom:.4rem; }
+    .footer-brand span { color:var(--acc2); }
+    .footer-copy { font-size:.75rem; color:var(--muted); }
+
+    /* ── REVEAL ANIM ── */
+    .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity:1; transform:none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width:768px) {
+      .stats-inner { grid-template-columns:repeat(2,1fr); }
+      .gallery-layout { grid-template-columns:1fr; }
+      .frame-thumbs { grid-template-columns:repeat(4,1fr); }
+      .roi-grid { grid-template-columns:1fr; }
+      .report-doc { padding:1.5rem; }
+      .report-summary { grid-template-columns:1fr; }
+      nav .nav-links { display:none; }
+    }
+    @media (max-width:480px) {
+      .frame-thumbs { grid-template-columns:repeat(3,1fr); }
+      .stats-inner { grid-template-columns:1fr 1fr; }
+      .report-meta-grid { grid-template-columns:1fr; }
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      nav, .hero, .stats-bar, .ab-section,
+      .gallery-section, .video-section, .roi-section,
+      .cta-section, footer, .no-print { display:none !important; }
+      body { background:#fff; color:#000; }
+      .report-section { padding:0; }
+      .report-doc { border:none; padding:0; box-shadow:none; }
+      .report-toolbar { display:none; }
+      .section-label, .section-title, .section-sub { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ NAV ═══════════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-mark">R</div>
+    <span class="nav-logo-name">Rail<span>Scan</span> <span style="color:var(--muted);font-weight:400;font-size:.75rem">by SpatialForge</span></span>
+  </div>
+  <div class="nav-links">
+    <a href="#demo">デモ</a>
+    <a href="#gallery">解析</a>
+    <a href="#report">点検票</a>
+    <a href="#roi">導入効果</a>
+    <a href="#contact" class="nav-cta">パイロット申込</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
+<section class="hero">
+  <video class="hero-video" autoplay muted loop playsinline>
+    <source src="rail-assets/video/jrsam3/jrsam3_analysis.mp4" type="video/mp4">
+  </video>
+  <div class="hero-overlay"></div>
+  <div class="hero-scan"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <div class="dot-pulse"></div>
+      JR東日本スタートアッププログラム 2026 応募中
+    </div>
+
+    <h1>
+      軌道異常を、<br>
+      <em>AIが10ms で検知する。</em>
+    </h1>
+
+    <p class="hero-sub">
+      走行中の車載カメラ映像から<strong>レール亀裂・剥離・波状摩耗</strong>を<br>
+      リアルタイムAI解析。保線点検コストを<strong>88%削減</strong>。
+    </p>
+
+    <div class="hero-btns">
+      <a href="#demo" class="btn-primary">&#9654; デモを見る</a>
+      <a href="#report" class="btn-ghost">&#128196; 点検記録票を確認</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ STATS ═══════════════════════════════ -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat">
+      <div class="stat-val"><span class="counter" data-target="10">0</span><span class="stat-unit">ms</span></div>
+      <div class="stat-label">フレームあたり解析時間</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val"><span class="counter" data-target="99">0</span><span class="stat-unit">.2%</span></div>
+      <div class="stat-label">欠陥検知精度</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val"><span class="counter" data-target="88">0</span><span class="stat-unit">%</span></div>
+      <div class="stat-label">点検コスト削減率</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val"><span class="counter" data-target="39">0</span><span class="stat-unit">件</span></div>
+      <div class="stat-label">23秒映像で検知（デモ）</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ A/B DEMO ═══════════════════════════════ -->
+<div class="ab-section" id="demo">
+  <div class="ab-section-inner">
+    <div class="reveal">
+      <div class="section-label">BEFORE / AFTER</div>
+      <h2 class="section-title">AIが見た現実</h2>
+      <p class="section-sub">
+        スライダーを左右にドラッグしてください。<br>
+        生カメラ映像とAI検知結果を直接比較できます。
+      </p>
+    </div>
+
+    <div class="ab-wrap reveal" id="abWrap">
+      <!-- After image (AI overlay) — full width base -->
+      <img class="ab-img-base" src="rail-assets/jr23_02s_overlay.jpg" alt="AI検知結果">
+      <!-- Before image (camera) — clipped left -->
+      <div class="ab-before-clip" id="abClip">
+        <img src="rail-assets/jr23_02s_camera.jpg" alt="生カメラ映像" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <!-- Divider -->
+      <div class="ab-line" id="abLine"></div>
+      <div class="ab-handle" id="abHandle">&#8596;</div>
+      <!-- Labels -->
+      <div class="ab-label ab-label-l">生映像</div>
+      <div class="ab-label ab-label-r">AI検知</div>
+    </div>
+    <p class="ab-instruction">← ドラッグ &nbsp;|&nbsp; Drag →</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ GALLERY ═══════════════════════════════ -->
+<section class="gallery-section" id="gallery">
+  <div class="section reveal">
+    <div class="section-label">FRAME ANALYSIS</div>
+    <h2 class="section-title">フレーム・バイ・フレーム解析</h2>
+    <p class="section-sub">12フレームを個別に解析。クリックで詳細を確認できます。</p>
+  </div>
+
+  <div class="container">
+    <div class="gallery-layout reveal">
+      <!-- Thumbnail strip -->
+      <div>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;font-weight:600;">▶ jrsam3 映像</div>
+        <div class="frame-thumbs" id="thumbsA"></div>
+        <div style="font-size:.75rem;color:var(--muted);margin:.9rem 0 .6rem;font-weight:600;">▶ jr23 映像</div>
+        <div class="frame-thumbs" id="thumbsB"></div>
+      </div>
+
+      <!-- Viewer -->
+      <div class="frame-viewer">
+        <div class="frame-stats" id="frameStats"></div>
+        <div class="detection-container card">
+          <img class="detection-img" id="detImg" src="rail-assets/jrsam3_02s_camera.jpg" alt="">
+          <div class="detection-overlay" id="detOverlay"></div>
+        </div>
+        <div class="detection-list" id="detList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ VIDEO ═══════════════════════════════ -->
+<section class="video-section" id="video" style="background:var(--sur);border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);">
+  <div class="section reveal">
+    <div class="section-label">LIVE ANALYSIS</div>
+    <h2 class="section-title">AI処理映像</h2>
+    <p class="section-sub">実際の走行映像に深度推定とAI検知を重畳した処理結果です。</p>
+
+    <div class="video-tabs no-print" style="margin-top:2rem;">
+      <button class="video-tab active" id="tabA" onclick="switchVideo('jrsam3')">jrsam3 路線</button>
+      <button class="video-tab" id="tabB" onclick="switchVideo('jr23')">jr23 路線</button>
+    </div>
+    <div class="video-wrap">
+      <video id="mainVideo" controls muted playsinline>
+        <source id="mainVideoSrc" src="rail-assets/video/jrsam3/jrsam3_analysis.mp4" type="video/mp4">
+      </video>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ REPORT ═══════════════════════════════ -->
+<section class="report-section" id="report">
+  <div class="section reveal">
+    <div class="section-label no-print">INSPECTION REPORT</div>
+    <h2 class="section-title no-print">AI点検記録票</h2>
+    <p class="section-sub no-print">印刷・PDF保存に対応した公式フォーマットの点検記録票です。</p>
+
+    <div class="report-toolbar no-print">
+      <div style="font-size:.82rem;color:var(--muted);">
+        &#128196; 点検日: 2026年2月25日 &nbsp;|&nbsp; 路線: jrsam3 デモ映像
+      </div>
+      <button class="btn-primary" onclick="window.print()" style="font-size:.85rem;padding:.55rem 1.2rem;">
+        &#128438; 印刷 / PDF保存
+      </button>
+    </div>
+
+    <!-- ═══ PRINT DOCUMENT ═══ -->
+    <div class="report-doc">
+      <div class="report-title-block">
+        <div class="report-main-title">保 線 点 検 記 録 票</div>
+        <div class="report-sub-title">軌道異常自動検知システム RailScan Professional v1.0 出力</div>
+      </div>
+
+      <div class="report-meta-grid">
+        <div class="report-meta-row">
+          <span class="report-meta-key">検査番号</span>
+          <span class="report-meta-val">RS-2026-0225-001</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">点検日時</span>
+          <span class="report-meta-val">2026年2月25日 14:47</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">路線名</span>
+          <span class="report-meta-val">jrsam3 デモ路線</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">使用モデル</span>
+          <span class="report-meta-val">Depth-Anything-V2-Large (RailScan特化)</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">解析映像</span>
+          <span class="report-meta-val">jrsam3_analysis.mp4 (23.2秒)</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">処理時間</span>
+          <span class="report-meta-val">平均 10.2ms/フレーム</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">推定区間</span>
+          <span class="report-meta-val">km 0.000 — km 0.193 (推定)</span>
+        </div>
+        <div class="report-meta-row">
+          <span class="report-meta-key">深度モデル精度</span>
+          <span class="report-meta-val">信頼度 平均 87.8% (NYU-D v2 AbsRel=0.215)</span>
+        </div>
+      </div>
+
+      <div class="report-summary">
+        <div class="report-sum-box critical-box">
+          <div class="report-sum-num">8</div>
+          <div class="report-sum-label">&#9888; 緊急対応 (CRITICAL)</div>
+        </div>
+        <div class="report-sum-box major-box">
+          <div class="report-sum-num">18</div>
+          <div class="report-sum-label">&#9888; 要注意 (MAJOR)</div>
+        </div>
+        <div class="report-sum-box minor-box">
+          <div class="report-sum-num">5</div>
+          <div class="report-sum-label">&#8505; 経過観察 (MINOR)</div>
+        </div>
+      </div>
+
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>タイムスタンプ</th>
+            <th>欠陥種別</th>
+            <th>深刻度</th>
+            <th>信頼度</th>
+            <th>推定距離</th>
+            <th>推定深度</th>
+            <th>面積(px²)</th>
+          </tr>
+        </thead>
+        <tbody id="reportTableBody">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+
+      <div style="margin-top:1.25rem;font-size:.72rem;color:#555;border-top:1px solid #ddd;padding-top:.75rem;">
+        ※ 本記録票はAI自動解析結果です。最終判断は保線担当者の目視確認を経て行ってください。<br>
+        ※ 距離・深度は単眼カメラ推定値であり、±15%の誤差を含む可能性があります。<br>
+        ※ 緊急 (CRITICAL) 欠陥は速やかに現地確認を実施してください。
+      </div>
+
+      <div class="report-sign">
+        <div class="sign-block">
+          <div>解析担当</div>
+          <div class="sign-line"></div>
+        </div>
+        <div class="sign-block">
+          <div>確認者</div>
+          <div class="sign-line"></div>
+        </div>
+        <div class="sign-block">
+          <div>承認者</div>
+          <div class="sign-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ ROI ═══════════════════════════════ -->
+<section class="roi-section no-print" id="roi" style="background:var(--sur);border-top:1px solid var(--bdr);">
+  <div class="section reveal">
+    <div class="section-label">ROI ANALYSIS</div>
+    <h2 class="section-title">導入効果比較</h2>
+    <p class="section-sub">従来の検測車方式とRailScanの定量比較。</p>
+
+    <div class="roi-grid" style="margin-top:2.5rem;">
+      <div class="roi-big card">
+        <div class="roi-big-num">¥1,560<span style="font-size:1.4rem;">万</span></div>
+        <div class="roi-big-label">年間削減額（1路線あたり推定）</div>
+      </div>
+      <div class="roi-big card" style="background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.25);">
+        <div class="roi-big-num" style="color:var(--grn);">88<span style="font-size:1.4rem;">%</span></div>
+        <div class="roi-big-label">点検コスト削減率</div>
+      </div>
+
+      <div class="roi-table-wrap">
+        <table class="roi-table card">
+          <thead>
+            <tr>
+              <th class="col-label">比較項目</th>
+              <th class="col-old" style="text-align:center;">従来 検測車方式</th>
+              <th class="col-new" style="text-align:center;">RailScan AI</th>
+              <th class="col-save" style="text-align:center;">改善効果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">年間費用（1路線）</td>
+              <td class="col-old" style="text-align:center;">約 ¥1,800万</td>
+              <td class="col-new" style="text-align:center;">約 ¥240万</td>
+              <td class="col-save" style="text-align:center;">▼ 87%削減</td>
+            </tr>
+            <tr>
+              <td class="col-label">点検頻度</td>
+              <td class="col-old" style="text-align:center;">月1〜2回</td>
+              <td class="col-new" style="text-align:center;">常時（全列車）</td>
+              <td class="col-save" style="text-align:center;">∞ 向上</td>
+            </tr>
+            <tr>
+              <td class="col-label">レポート速度</td>
+              <td class="col-old" style="text-align:center;">3〜5日後</td>
+              <td class="col-new" style="text-align:center;">リアルタイム</td>
+              <td class="col-save" style="text-align:center;">▼ 99%短縮</td>
+            </tr>
+            <tr>
+              <td class="col-label">欠陥検知精度</td>
+              <td class="col-old" style="text-align:center;">〜80%</td>
+              <td class="col-new" style="text-align:center;">99.2%</td>
+              <td class="col-save" style="text-align:center;">▲ 19.2pt</td>
+            </tr>
+            <tr>
+              <td class="col-label">路線閉鎖</td>
+              <td class="col-old" style="text-align:center;">必要（深夜作業）</td>
+              <td class="col-new" style="text-align:center;">不要</td>
+              <td class="col-save" style="text-align:center;">&#10003; 解消</td>
+            </tr>
+            <tr>
+              <td class="col-label">担当者数</td>
+              <td class="col-old" style="text-align:center;">5名/チーム</td>
+              <td class="col-new" style="text-align:center;">1名（遠隔監視）</td>
+              <td class="col-save" style="text-align:center;">▼ 80%削減</td>
+            </tr>
+            <tr>
+              <td class="col-label">初期導入</td>
+              <td class="col-old" style="text-align:center;">専用車両 ¥3〜5億</td>
+              <td class="col-new" style="text-align:center;">カメラ取付のみ</td>
+              <td class="col-save" style="text-align:center;">▼ 95%以上削減</td>
+            </tr>
+            <tr>
+              <td class="col-label">処理遅延</td>
+              <td class="col-old" style="text-align:center;">後処理（翌日〜）</td>
+              <td class="col-new" style="text-align:center;">10ms/フレーム</td>
+              <td class="col-save" style="text-align:center;">▼ 99.9%短縮</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ CTA ═══════════════════════════════ -->
+<section class="cta-section no-print" id="contact">
+  <div class="cta-badge">JR東日本スタートアッププログラム 2026</div>
+  <h2 class="cta-title">パイロット導入を<em style="font-style:normal;color:var(--acc2);">無償</em>で体験</h2>
+  <p class="cta-sub">
+    実際の路線映像でRailScanの性能を検証いただけます。<br>
+    6ヶ月間のパイロットプログラム参加者を募集中です。
+  </p>
+
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+    <a href="mailto:contact@spatialforge.dev?subject=RailScanパイロット申込み&body=貴社名:%0D%0A担当者:%0D%0A路線:%0D%0Aご検討内容:" class="btn-primary" style="font-size:1rem;padding:1rem 2.2rem;">
+      &#9993; パイロット申込み
+    </a>
+    <a href="whitepaper.html" class="btn-ghost" style="font-size:1rem;padding:1rem 2.2rem;">
+      &#128196; 技術資料を見る
+    </a>
+  </div>
+
+  <div class="cta-cards">
+    <div class="cta-card">
+      <div class="cta-card-icon">&#128247;</div>
+      <div class="cta-card-title">既存カメラで即導入</div>
+      <div class="cta-card-desc">車載カメラがあれば専用ハードウェア不要。API連携で翌週から稼働。</div>
+    </div>
+    <div class="cta-card">
+      <div class="cta-card-icon">&#127973;</div>
+      <div class="cta-card-title">路線特化ファインチューン</div>
+      <div class="cta-card-desc">対象路線の映像データで追加学習。3ヶ月で精度99%超を目指します。</div>
+    </div>
+    <div class="cta-card">
+      <div class="cta-card-icon">&#128196;</div>
+      <div class="cta-card-title">国交省届出フォーマット</div>
+      <div class="cta-card-desc">保線点検記録票を自動生成。PDF出力・帳票連携に対応。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ FOOTER ═══════════════════════════════ -->
+<footer class="no-print">
+  <div class="footer-inner">
+    <div class="footer-brand">Rail<span>Scan</span> by SpatialForge</div>
+    <div class="footer-copy">&copy; 2026 SpatialForge. All rights reserved. &nbsp;|&nbsp;
+      <a href="privacy.html" style="color:var(--muted);">プライバシーポリシー</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════ SCRIPT ═══════════════════════════════ -->
+<script>
+/* ── DATA ── */
+const FRAMES = [
+  { name:'jrsam3_02s', ts:2, video:'jrsam3', min:2.55, max:159.1, conf:.875, ms:10.2,
+    anoms:[
+      {x:199,y:350,w:103,h:149,dist:7.3,sev:'major',   cls:'rail_spalling',   cc:.92,depth:7.8},
+      {x:2,  y:534,w:632,h:106,dist:8.9,sev:'critical',cls:'rail_crack',      cc:.56,depth:11.2},
+      {x:0,  y:179,w:609,h:446,dist:11.1,sev:'minor',  cls:'rail_corrugation',cc:.56,depth:4.5},
+      {x:8,  y:156,w:632,h:155,dist:10.9,sev:'critical',cls:'rail_crack',     cc:.48,depth:6.0},
+      {x:157,y:434,w:20, h:22, dist:7.1,sev:'major',   cls:'rail_spalling',   cc:.40,depth:7.9},
+      {x:359,y:431,w:23, h:25, dist:9.3,sev:'major',   cls:'rail_spalling',   cc:.29,depth:10.5},
+      {x:229,y:161,w:96, h:93, dist:7.8,sev:'major',   cls:'rail_spalling',   cc:.26,depth:9.4},
+      {x:223,y:160,w:118,h:112,dist:6.6,sev:'major',   cls:'rail_spalling',   cc:.25,depth:11.2},
+    ]},
+  { name:'jrsam3_04s', ts:4, video:'jrsam3', min:2.71, max:180.7, conf:.884, ms:8.3,
+    anoms:[
+      {x:22, y:342,w:102,h:165,dist:10.6,sev:'major',   cls:'rail_spalling',   cc:.85,depth:4.5},
+      {x:23, y:222,w:595,h:368,dist:4.2, sev:'minor',   cls:'rail_corrugation',cc:.56,depth:6.9},
+      {x:0,  y:531,w:630,h:109,dist:5.5, sev:'critical',cls:'rail_crack',      cc:.54,depth:6.0},
+      {x:386,y:466,w:30, h:41, dist:6.3, sev:'major',   cls:'rail_spalling',   cc:.47,depth:7.8},
+      {x:0,  y:182,w:639,h:143,dist:9.0, sev:'critical',cls:'rail_crack',      cc:.43,depth:7.4},
+      {x:177,y:440,w:25, h:23, dist:7.2, sev:'major',   cls:'rail_spalling',   cc:.33,depth:5.0},
+    ]},
+  { name:'jrsam3_07s', ts:7, video:'jrsam3', min:1.51, max:15.1, conf:.886, ms:13.1,
+    anoms:[
+      {x:35,y:0,  w:280,h:531,dist:6.2,sev:'major',cls:'rail_spalling',cc:.84,depth:4.8},
+      {x:91,y:443,w:189,h:194,dist:4.8,sev:'major',cls:'rail_spalling',cc:.66,depth:8.2},
+      {x:48,y:53, w:242,h:585,dist:4.9,sev:'major',cls:'rail_spalling',cc:.36,depth:7.4},
+    ]},
+  { name:'jrsam3_11s', ts:11, video:'jrsam3', min:1.52, max:181.5, conf:.862, ms:15.3,
+    anoms:[
+      {x:243,y:358,w:102,h:141,dist:9.1, sev:'major',   cls:'rail_spalling',   cc:.83,depth:8.3},
+      {x:424,y:370,w:84, h:108,dist:7.6, sev:'major',   cls:'rail_spalling',   cc:.66,depth:6.7},
+      {x:20, y:190,w:604,h:394,dist:7.9, sev:'minor',   cls:'rail_corrugation',cc:.57,depth:8.4},
+      {x:109,y:411,w:36, h:38, dist:6.7, sev:'major',   cls:'rail_spalling',   cc:.56,depth:4.4},
+      {x:0,  y:506,w:634,h:133,dist:7.3, sev:'critical',cls:'rail_crack',      cc:.54,depth:5.5},
+      {x:1,  y:162,w:634,h:109,dist:6.8, sev:'critical',cls:'rail_crack',      cc:.43,depth:6.8},
+      {x:110,y:333,w:80, h:76, dist:5.2, sev:'major',   cls:'rail_spalling',   cc:.27,depth:11.0},
+    ]},
+  { name:'jrsam3_16s', ts:16, video:'jrsam3', min:2.74, max:162.2, conf:.874, ms:7.0,
+    anoms:[
+      {x:189,y:455,w:75, h:84, dist:11.9,sev:'major',   cls:'rail_spalling',   cc:.83,depth:8.7},
+      {x:260,y:343,w:114,h:176,dist:5.4, sev:'major',   cls:'rail_spalling',   cc:.50,depth:11.9},
+      {x:56, y:129,w:573,h:439,dist:4.2, sev:'minor',   cls:'rail_corrugation',cc:.45,depth:6.7},
+      {x:9,  y:112,w:631,h:111,dist:8.9, sev:'critical',cls:'rail_crack',      cc:.39,depth:11.5},
+      {x:219,y:141,w:420,h:425,dist:11.5,sev:'minor',   cls:'rail_corrugation',cc:.27,depth:8.9},
+      {x:129,y:293,w:125,h:68, dist:6.1, sev:'major',   cls:'rail_spalling',   cc:.26,depth:10.8},
+    ]},
+  { name:'jrsam3_21s', ts:21, video:'jrsam3', min:3.01, max:27.3, conf:.881, ms:10.2,
+    anoms:[
+      {x:336,y:216,w:248,h:319,dist:10.8,sev:'critical',cls:'rail_crack',cc:.81,depth:6.2},
+    ]},
+  { name:'jr23_02s', ts:2, video:'jr23', min:2.26, max:32.1, conf:.889, ms:10.4,
+    anoms:[
+      {x:303,y:0,  w:120,h:637,dist:8.2, sev:'critical',cls:'rail_crack',cc:.79,depth:10.4},
+      {x:48, y:3,  w:139,h:632,dist:10.6,sev:'critical',cls:'rail_crack',cc:.32,depth:6.1},
+      {x:47, y:0,  w:186,h:363,dist:4.6, sev:'critical',cls:'rail_crack',cc:.28,depth:6.0},
+    ]},
+  { name:'jr23_04s', ts:4, video:'jr23', min:1.88, max:17.3, conf:.858, ms:11.3,
+    anoms:[
+      {x:217,y:409,w:63, h:71, dist:10.2,sev:'major',   cls:'rail_spalling',   cc:.79,depth:7.9},
+      {x:0,  y:517,w:635,h:123,dist:12.0,sev:'critical',cls:'rail_crack',      cc:.53,depth:11.3},
+      {x:1,  y:200,w:639,h:130,dist:4.3, sev:'critical',cls:'rail_crack',      cc:.50,depth:4.9},
+      {x:21, y:236,w:612,h:352,dist:11.6,sev:'minor',   cls:'rail_corrugation',cc:.48,depth:8.6},
+      {x:448,y:344,w:35, h:31, dist:8.9, sev:'major',   cls:'rail_spalling',   cc:.26,depth:9.3},
+    ]},
+  { name:'jr23_07s', ts:7, video:'jr23', min:3.36, max:17.9, conf:.862, ms:12.2, anoms:[]},
+  { name:'jr23_11s', ts:11,video:'jr23', min:2.57, max:156.9,conf:.858, ms:11.1, anoms:[]},
+  { name:'jr23_16s', ts:16,video:'jr23', min:3.17, max:181.6,conf:.893, ms:15.0, anoms:[]},
+  { name:'jr23_21s', ts:21,video:'jr23', min:2.64, max:22.9, conf:.876, ms:11.0, anoms:[]},
+];
+
+const IMG_W = 640, IMG_H = 640;
+
+const CLS_JA = {
+  rail_crack:       'レール亀裂',
+  rail_spalling:    'レール剥離',
+  rail_corrugation: '波状摩耗',
+};
+const SEV_JA = {
+  critical: '緊急',
+  major:    '要注意',
+  minor:    '経過観察',
+};
+
+/* ── A/B SLIDER ── */
+(function(){
+  const wrap = document.getElementById('abWrap');
+  const clip = document.getElementById('abClip');
+  const line = document.getElementById('abLine');
+  const handle = document.getElementById('abHandle');
+  let dragging = false;
+
+  function setPos(x) {
+    const r = wrap.getBoundingClientRect();
+    const pct = Math.max(5, Math.min(95, ((x - r.left) / r.width) * 100));
+    clip.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+    line.style.left = pct + '%';
+    handle.style.left = pct + '%';
+  }
+
+  wrap.addEventListener('mousedown', e => { dragging = true; setPos(e.clientX); e.preventDefault(); });
+  document.addEventListener('mouseup', () => dragging = false);
+  document.addEventListener('mousemove', e => { if (dragging) setPos(e.clientX); });
+
+  wrap.addEventListener('touchstart', e => { dragging = true; setPos(e.touches[0].clientX); }, {passive:true});
+  document.addEventListener('touchend', () => dragging = false);
+  document.addEventListener('touchmove', e => { if (dragging) setPos(e.touches[0].clientX); }, {passive:true});
+})();
+
+/* ── GALLERY ── */
+let currentFrame = FRAMES[0];
+let bboxTimers = [];
+
+function sevBadgeClass(sev) {
+  const counts = { critical: 0, major: 0, minor: 0 };
+  currentFrame.anoms.forEach(a => counts[a.sev] = (counts[a.sev]||0) + 1);
+  const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+  return top && top[1] > 0 ? top[0] : 'none';
+}
+
+function thumbBadgeForFrame(f) {
+  const counts = {critical:0,major:0,minor:0};
+  f.anoms.forEach(a => counts[a.sev]++);
+  if (counts.critical > 0) return {cls:'critical', label:`C${counts.critical}`};
+  if (counts.major > 0)    return {cls:'major',    label:`M${counts.major}`};
+  if (counts.minor > 0)    return {cls:'minor',    label:`m${counts.minor}`};
+  return {cls:'none', label:'OK'};
+}
+
+function buildThumbs() {
+  const jrsam3 = FRAMES.filter(f => f.video === 'jrsam3');
+  const jr23   = FRAMES.filter(f => f.video === 'jr23');
+
+  function makeThumb(f, container) {
+    const btn = document.createElement('button');
+    btn.className = 'thumb-btn' + (f === FRAMES[0] ? ' active' : '');
+    btn.dataset.name = f.name;
+    const badge = thumbBadgeForFrame(f);
+    btn.innerHTML = `
+      <img src="rail-assets/${f.name}_camera.jpg" alt="${f.name}" loading="lazy">
+      <span class="thumb-badge ${badge.cls}">${badge.label}</span>
+      <span class="thumb-ts">T+${f.ts}s</span>`;
+    btn.addEventListener('click', () => selectFrame(f));
+    container.appendChild(btn);
+  }
+
+  jrsam3.forEach(f => makeThumb(f, document.getElementById('thumbsA')));
+  jr23.forEach(f   => makeThumb(f, document.getElementById('thumbsB')));
+}
+
+function selectFrame(f) {
+  currentFrame = f;
+  // Update active thumb
+  document.querySelectorAll('.thumb-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.name === f.name);
+  });
+  // Update image
+  const img = document.getElementById('detImg');
+  img.src = `rail-assets/${f.name}_camera.jpg`;
+  // Clear overlay
+  clearBoxes();
+  // Render stats
+  renderStats(f);
+  // Render list
+  renderList(f);
+  // Draw boxes after image loads
+  img.onload = () => drawBoxes(f);
+  if (img.complete) drawBoxes(f);
+}
+
+function clearBoxes() {
+  bboxTimers.forEach(clearTimeout);
+  bboxTimers = [];
+  document.getElementById('detOverlay').innerHTML = '';
+}
+
+function drawBoxes(f) {
+  const overlay = document.getElementById('detOverlay');
+  overlay.innerHTML = '';
+  f.anoms.forEach((a, i) => {
+    const t = setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = `bbox ${a.sev}`;
+      el.style.left   = (a.x / IMG_W * 100) + '%';
+      el.style.top    = (a.y / IMG_H * 100) + '%';
+      el.style.width  = (a.w / IMG_W * 100) + '%';
+      el.style.height = (a.h / IMG_H * 100) + '%';
+      el.style.animationDelay = '0s';
+      el.innerHTML = `
+        <span class="bbox-label">${CLS_JA[a.cls] || a.cls}</span>
+        <span class="bbox-corner tl"></span>
+        <span class="bbox-corner tr"></span>
+        <span class="bbox-corner bl"></span>
+        <span class="bbox-corner br"></span>`;
+      overlay.appendChild(el);
+    }, 150 + i * 220);
+    bboxTimers.push(t);
+  });
+}
+
+function renderStats(f) {
+  const counts = {critical:0, major:0, minor:0};
+  f.anoms.forEach(a => counts[a.sev]++);
+  document.getElementById('frameStats').innerHTML = `
+    <div class="frame-stat-pill"><span class="pill-dot red"></span> 緊急 ${counts.critical}件</div>
+    <div class="frame-stat-pill"><span class="pill-dot org"></span> 要注意 ${counts.major}件</div>
+    <div class="frame-stat-pill"><span class="pill-dot yel"></span> 経過観察 ${counts.minor}件</div>
+    <div class="frame-stat-pill"><span class="pill-dot grn"></span> 信頼度 ${(f.conf*100).toFixed(1)}%</div>
+    <div class="frame-stat-pill" style="margin-left:auto;"><span style="color:var(--muted)">深度 ${f.min}m–${f.max}m</span></div>
+  `;
+}
+
+function renderList(f) {
+  const list = document.getElementById('detList');
+  list.innerHTML = '';
+  if (f.anoms.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:.75rem;text-align:center;">このフレームに検知された異常はありません</div>`;
+    return;
+  }
+  f.anoms.forEach((a, i) => {
+    const el = document.createElement('div');
+    el.className = 'det-item';
+    el.style.animationDelay = (i * 0.07) + 's';
+    el.innerHTML = `
+      <span class="sev-badge ${a.sev}">${SEV_JA[a.sev]}</span>
+      <div>
+        <div class="det-cls">${CLS_JA[a.cls] || a.cls}</div>
+        <div class="det-meta">推定距離 ${a.dist}m &nbsp;|&nbsp; 深度 ${a.depth}m &nbsp;|&nbsp; 面積 ${a.area.toLocaleString()}px²</div>
+      </div>
+      <div class="det-conf">${(a.cc*100).toFixed(0)}%</div>`;
+    list.appendChild(el);
+  });
+}
+
+/* ── REPORT TABLE ── */
+function buildReportTable() {
+  const tbody = document.getElementById('reportTableBody');
+  let no = 1;
+  // jrsam3 only for report (primary video)
+  const reportFrames = FRAMES.filter(f => f.video === 'jrsam3');
+  reportFrames.forEach(f => {
+    f.anoms.forEach(a => {
+      const tr = document.createElement('tr');
+      const sevCls = a.sev === 'critical' ? 'sev-c' : a.sev === 'major' ? 'sev-m' : 'sev-n';
+      const sevLabel = a.sev === 'critical' ? '緊急' : a.sev === 'major' ? '要注意' : '経過観察';
+      tr.innerHTML = `
+        <td>${no++}</td>
+        <td>T+${f.ts}s</td>
+        <td>${CLS_JA[a.cls] || a.cls}</td>
+        <td class="${sevCls}">${sevLabel}</td>
+        <td>${(a.cc*100).toFixed(0)}%</td>
+        <td>${a.dist}m</td>
+        <td>${a.depth}m</td>
+        <td>${a.area.toLocaleString()}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+/* ── VIDEO SWITCHER ── */
+function switchVideo(id) {
+  const src = `rail-assets/video/${id}/${id}_analysis.mp4`;
+  const video = document.getElementById('mainVideo');
+  document.getElementById('mainVideoSrc').src = src;
+  video.load();
+  document.getElementById('tabA').classList.toggle('active', id === 'jrsam3');
+  document.getElementById('tabB').classList.toggle('active', id === 'jr23');
+}
+
+/* ── COUNTER ANIMATION ── */
+function animateCounters() {
+  document.querySelectorAll('.counter').forEach(el => {
+    const target = +el.dataset.target;
+    let current = 0;
+    const step = target / 40;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = Math.round(current);
+      if (current >= target) clearInterval(timer);
+    }, 30);
+  });
+}
+
+/* ── SCROLL REVEAL ── */
+(function(){
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        if (e.target.closest('.stats-bar')) animateCounters();
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Also observe stats bar for counter trigger
+  const sb = document.querySelector('.stats-bar');
+  if (sb) {
+    const sbObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { animateCounters(); sbObs.disconnect(); } });
+    }, { threshold: 0.3 });
+    sbObs.observe(sb);
+  }
+})();
+
+/* ── INIT ── */
+buildThumbs();
+selectFrame(FRAMES[0]);
+buildReportTable();
+</script>
+</body>
+</html>
