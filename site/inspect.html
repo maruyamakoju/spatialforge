@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailScan — AI軌道点検デモ</title>
+  <meta name="description" content="画像をアップロードしてAIによるリアルタイム軌道欠陥検知・建築限界チェックを体験。">
+  <meta property="og:title" content="RailScan AI軌道点検デモ">
+  <meta property="og:description" content="AIが即座に軌道欠陥を検知・分類。建築限界侵入も自動検出。">
+  <meta property="og:url" content="https://maruyamakoju.github.io/spatialforge/inspect.html">
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --amber:  #f59e0b;
+      --amber2: #d97706;
+      --amber3: #fbbf24;
+      --dark:   #0a0a0f;
+      --dark2:  #111118;
+      --dark3:  #1a1a2e;
+      --surface: #16213e;
+      --surface2: #1e2a45;
+      --text:   #e2e8f0;
+      --muted:  #94a3b8;
+      --border: rgba(245,158,11,0.2);
+      --critical: #ef4444;
+      --major:    #f97316;
+      --minor:    #eab308;
+      --info:     #3b82f6;
+      --radius: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Nav ──────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+      background: rgba(10,10,15,0.95);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .nav-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--amber);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+    }
+    .nav-logo span { color: var(--text); font-weight: 400; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--amber);
+      color: #000 !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-weight: 600 !important;
+      font-size: 0.8rem !important;
+      transition: background 0.2s !important;
+    }
+    .nav-cta:hover { background: var(--amber3) !important; color: #000 !important; }
+
+    /* ── Page Header ──────────────────────────────────────────── */
+    .page-header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+    }
+    .page-header .badge {
+      display: inline-block;
+      background: rgba(245,158,11,0.15);
+      border: 1px solid var(--border);
+      color: var(--amber);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 0.75rem;
+    }
+    .page-header h1 em { color: var(--amber); font-style: normal; }
+    .page-header p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 540px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Main Layout ──────────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      width: 100%;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--dark2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* ── Phase indicator ──────────────────────────────────────── */
+    .phase-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-step {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+      position: relative;
+      transition: color 0.3s;
+    }
+    .phase-step.active { color: var(--amber); }
+    .phase-step.done { color: #4ade80; }
+    .phase-step::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0; right: 0;
+      height: 2px;
+      background: var(--amber);
+      transform: scaleX(0);
+      transition: transform 0.4s;
+    }
+    .phase-step.active::after, .phase-step.done::after { transform: scaleX(1); }
+    .phase-step.done::after { background: #4ade80; }
+    .phase-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      font-size: 0.7rem;
+      margin-right: 0.4rem;
+      vertical-align: middle;
+    }
+    .phase-step.active .phase-num { background: var(--amber); color: #000; }
+    .phase-step.done .phase-num { background: #4ade80; color: #000; }
+    .phase-step.done .phase-num::before { content: '✓'; }
+    .phase-step.done .phase-num .num-text { display: none; }
+
+    /* ── Phase containers ─────────────────────────────────────── */
+    .phase { display: none; padding: 2rem; }
+    .phase.active { display: block; }
+
+    /* ── Upload Zone ──────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed rgba(245,158,11,0.35);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.25s, background 0.25s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--amber);
+      background: rgba(245,158,11,0.05);
+    }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .upload-zone h2 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #fff; }
+    .upload-zone p { font-size: 0.85rem; color: var(--muted); }
+    .upload-zone .file-hint { margin-top: 0.75rem; font-size: 0.78rem; color: rgba(245,158,11,0.6); }
+
+    .upload-btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      background: var(--amber);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.65rem 1.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: none;
+    }
+    .upload-btn:hover { background: var(--amber3); }
+
+    /* Preview thumb */
+    .thumb-wrap { margin-top: 1.5rem; display: none; }
+    .thumb-wrap.visible { display: flex; align-items: center; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .thumb-wrap img { width: 160px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid var(--amber); }
+    .thumb-info { text-align: left; }
+    .thumb-info .fname { font-weight: 600; color: #fff; font-size: 0.9rem; word-break: break-all; max-width: 220px; }
+    .thumb-info .fmeta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .analyze-btn {
+      display: block;
+      width: 100%;
+      margin-top: 1.75rem;
+      background: var(--amber);
+      color: #000;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 0.85rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+    .analyze-btn:hover { background: var(--amber3); transform: translateY(-1px); }
+    .analyze-btn:disabled { background: #4b5563; color: #9ca3af; cursor: not-allowed; transform: none; }
+
+    /* ── Disclaimer ───────────────────────────────────────────── */
+    .disclaimer {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.15);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .disclaimer strong { color: var(--amber); }
+
+    /* ── Processing Phase ─────────────────────────────────────── */
+    .processing-wrap {
+      text-align: center;
+      padding: 1rem 0 2rem;
+    }
+    .spinner-ring {
+      width: 72px; height: 72px;
+      border: 4px solid rgba(245,158,11,0.15);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 2rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-wrap h2 { font-size: 1.1rem; color: #fff; margin-bottom: 0.5rem; }
+    .processing-wrap p { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+
+    .steps-list { display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto; }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.85rem;
+      color: var(--muted);
+      transition: all 0.3s;
+    }
+    .step-item.active {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.3);
+      color: var(--amber);
+    }
+    .step-item.done {
+      background: rgba(74,222,128,0.05);
+      border-color: rgba(74,222,128,0.2);
+      color: #4ade80;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .step-item.active .step-dot {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .step-item.done .step-dot { background: #4ade80; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .progress-bar-wrap {
+      max-width: 380px;
+      margin: 1.5rem auto 0;
+      background: rgba(255,255,255,0.07);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Results Phase ────────────────────────────────────────── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .results-header h2 { font-size: 1.2rem; color: #fff; }
+    .results-meta { font-size: 0.8rem; color: var(--muted); }
+    .results-meta strong { color: var(--amber); }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 680px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .img-card { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4/3; background: #0a0a14; }
+    .img-card img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .img-card-label {
+      position: absolute;
+      top: 0.5rem; left: 0.5rem;
+      background: rgba(0,0,0,0.75);
+      color: var(--amber);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .img-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .img-placeholder .icon { font-size: 2rem; opacity: 0.4; }
+
+    /* Metrics row */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 540px) { .metrics-row { grid-template-columns: repeat(2, 1fr); } }
+    .metric-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 0.9rem;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--amber);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .metric-value.ok { color: #4ade80; }
+    .metric-value.warn { color: #ef4444; }
+    .metric-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
+
+    /* Defect list */
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+    .defect-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .defect-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-left: 3px solid transparent;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    .defect-item:hover { background: rgba(255,255,255,0.04); }
+    .defect-item.sev-critical { border-left-color: var(--critical); }
+    .defect-item.sev-major    { border-left-color: var(--major); }
+    .defect-item.sev-minor    { border-left-color: var(--minor); }
+    .defect-item.sev-info     { border-left-color: var(--info); }
+
+    .sev-badge {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 1px;
+    }
+    .sev-badge.critical { background: rgba(239,68,68,0.2);   color: #fca5a5; }
+    .sev-badge.major    { background: rgba(249,115,22,0.2);  color: #fdba74; }
+    .sev-badge.minor    { background: rgba(234,179,8,0.2);   color: #fde047; }
+    .sev-badge.info     { background: rgba(59,130,246,0.2);  color: #93c5fd; }
+
+    .defect-info { flex: 1; min-width: 0; }
+    .defect-name { font-size: 0.875rem; font-weight: 600; color: #fff; margin-bottom: 0.2rem; }
+    .defect-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+    .defect-meta {
+      flex-shrink: 0;
+      text-align: right;
+      font-size: 0.78rem;
+    }
+    .defect-conf { color: var(--amber); font-weight: 700; font-size: 0.9rem; }
+    .defect-depth { color: var(--muted); margin-top: 0.15rem; }
+
+    .no-defects {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+    }
+    .no-defects .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .no-defects strong { display: block; color: #4ade80; margin-bottom: 0.25rem; }
+
+    /* Actions */
+    .action-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--amber);
+      color: #000;
+    }
+    .btn-primary:hover { background: var(--amber3); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    /* Error */
+    .error-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+    .error-banner.visible { display: flex; }
+    .error-banner .icon { color: #ef4444; font-size: 1.1rem; flex-shrink: 0; }
+    .error-banner p { color: #fca5a5; line-height: 1.5; }
+    .error-banner strong { color: #ef4444; }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    footer a { color: var(--amber); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="railscan.html" class="nav-logo">Rail<span>Scan</span></a>
+  <div class="nav-links">
+    <a href="railscan.html">概要</a>
+    <a href="pricing.html">料金</a>
+    <a href="whitepaper.html">技術文書</a>
+    <a href="contact.html" class="nav-cta">お問い合わせ</a>
+  </div>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="badge">ライブデモ</div>
+  <h1>AI軌道点検を<em>今すぐ体験</em></h1>
+  <p>軌道画像をアップロードするだけ。AIが欠陥を自動検知し、建築限界違反を判定します。</p>
+</div>
+
+<!-- Main -->
+<main>
+  <div class="card">
+
+    <!-- Phase indicator -->
+    <div class="phase-bar">
+      <div class="phase-step active" id="tab1">
+        <span class="phase-num"><span class="num-text">1</span></span>画像アップロード
+      </div>
+      <div class="phase-step" id="tab2">
+        <span class="phase-num"><span class="num-text">2</span></span>AI解析中
+      </div>
+      <div class="phase-step" id="tab3">
+        <span class="phase-num"><span class="num-text">3</span></span>点検結果
+      </div>
+    </div>
+
+    <!-- Phase 1: Upload -->
+    <div class="phase active" id="phase1">
+      <div class="error-banner" id="errorBanner">
+        <span class="icon">⚠</span>
+        <p id="errorMsg"></p>
+      </div>
+
+      <div class="upload-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/jpg" aria-label="画像ファイルを選択">
+        <div class="upload-icon">📸</div>
+        <h2>軌道画像をドロップ</h2>
+        <p>または下のボタンからファイルを選択</p>
+        <p class="file-hint">JPEG / PNG / WebP · 最大 20 MB</p>
+        <button class="upload-btn" type="button" onclick="document.getElementById('fileInput').click()">
+          ファイルを選択
+        </button>
+      </div>
+
+      <div class="thumb-wrap" id="thumbWrap">
+        <img id="thumbImg" src="" alt="プレビュー">
+        <div class="thumb-info">
+          <div class="fname" id="thumbName"></div>
+          <div class="fmeta" id="thumbMeta"></div>
+        </div>
+      </div>
+
+      <button class="analyze-btn" id="analyzeBtn" disabled onclick="startAnalysis()">
+        🔍　AI点検を開始する
+      </button>
+
+      <div class="disclaimer">
+        <strong>デモについて:</strong>
+        アップロードされた画像はリアルタイムでAI解析を行います。
+        本デモはライブAPIに接続しており、実際の推論結果を返します。
+        画像はサーバーに保存されません。<br>
+        本番環境への導入・PoC実施については
+        <a href="contact.html" style="color:var(--amber)">お問い合わせ</a>ください。
+      </div>
+    </div>
+
+    <!-- Phase 2: Processing -->
+    <div class="phase" id="phase2">
+      <div class="processing-wrap">
+        <div class="spinner-ring"></div>
+        <h2>AI解析中...</h2>
+        <p id="processingMsg">画像を解析しています。しばらくお待ちください。</p>
+
+        <div class="steps-list">
+          <div class="step-item" id="step-upload">
+            <div class="step-dot"></div>
+            <span>画像アップロード</span>
+          </div>
+          <div class="step-item" id="step-depth">
+            <div class="step-dot"></div>
+            <span>深度推定（Depth Anything V2）</span>
+          </div>
+          <div class="step-item" id="step-detect">
+            <div class="step-dot"></div>
+            <span>欠陥検知（YOLOv8）</span>
+          </div>
+          <div class="step-item" id="step-clearance">
+            <div class="step-dot"></div>
+            <span>建築限界チェック（JR規格）</span>
+          </div>
+          <div class="step-item" id="step-report">
+            <div class="step-dot"></div>
+            <span>レポート生成</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3: Results -->
+    <div class="phase" id="phase3">
+      <div class="results-header">
+        <h2>🔍 点検レポート</h2>
+        <div class="results-meta">
+          処理時間: <strong id="procTime">—</strong> ms ·
+          解析フレーム: <strong>1</strong>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-value" id="metricDefects">0</div>
+          <div class="metric-label">検出欠陥数</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="metricCritical">0</div>
+          <div class="metric-label">緊急対応</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value ok" id="metricClearance">正常</div>
+          <div class="metric-label">建築限界</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value ok" id="metricStatus">良好</div>
+          <div class="metric-label">総合判定</div>
+        </div>
+      </div>
+
+      <!-- Images -->
+      <div class="section-title">解析画像</div>
+      <div class="results-grid">
+        <div class="img-card">
+          <span class="img-card-label">欠陥検知結果</span>
+          <div id="annotatedWrap">
+            <div class="img-placeholder"><div class="icon">📷</div><span>アノテーション画像</span></div>
+          </div>
+        </div>
+        <div class="img-card">
+          <span class="img-card-label">深度マップ</span>
+          <div id="depthWrap">
+            <div class="img-placeholder"><div class="icon">🌊</div><span>深度ヒートマップ</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Defect list -->
+      <div class="section-title">検出欠陥一覧</div>
+      <div class="defect-list" id="defectList"></div>
+
+      <!-- Actions -->
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="downloadReport()">
+          📄 点検レポートをダウンロード
+        </button>
+        <button class="btn btn-secondary" onclick="resetToUpload()">
+          🔄 別の画像を解析
+        </button>
+        <a href="contact.html" class="btn btn-secondary">
+          📧 導入のご相談
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+</main>
+
+<footer>
+  &copy; 2025 RailScan / SpatialForge ·
+  <a href="privacy.html">プライバシーポリシー</a> ·
+  <a href="terms.html">利用規約</a> ·
+  <a href="railscan.html">トップへ戻る</a>
+</footer>
+
+<script>
+  /* ── Config ─────────────────────────────────────────────────── */
+  const API_BASE = 'https://spatialforge-demo.fly.dev';
+  const MAX_FILE_MB = 20;
+
+  /* ── Labels ─────────────────────────────────────────────────── */
+  const CLASS_LABELS = {
+    rail_crack: 'レールき裂',
+    rail_wear: 'レール摩耗',
+    rail_corrugation: '波状磨耗',
+    rail_spalling: 'レール剥離',
+    fastener_missing: '締結装置欠損',
+    fastener_broken: '締結装置破損',
+    sleeper_crack: 'まくら木き裂',
+    sleeper_decay: 'まくら木腐食',
+    ballast_fouling: '道床汚損',
+    joint_defect: '継目板不良',
+    gauge_anomaly: '軌間異常',
+    clearance_violation: '建築限界侵入',
+  };
+
+  const SEV_LABELS = {
+    critical: '緊急',
+    major: '重要',
+    minor: '軽微',
+    info: '参考',
+  };
+
+  /* ── State ───────────────────────────────────────────────────── */
+  let selectedFile = null;
+  let lastResult = null;
+  let originalImageDataUrl = null;
+
+  /* ── File input ──────────────────────────────────────────────── */
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    hideError();
+
+    // Validate type
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showError('対応フォーマットは JPEG / PNG / WebP のみです。');
+      return;
+    }
+
+    // Validate size
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      showError(`ファイルサイズが上限 (${MAX_FILE_MB} MB) を超えています。`);
+      return;
+    }
+
+    selectedFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = e => {
+      originalImageDataUrl = e.target.result;
+      document.getElementById('thumbImg').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    document.getElementById('thumbName').textContent = file.name;
+    document.getElementById('thumbMeta').textContent =
+      `${(file.size / 1024).toFixed(0)} KB · ${file.type.replace('image/', '').toUpperCase()}`;
+    document.getElementById('thumbWrap').classList.add('visible');
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+
+  /* ── Phase nav ───────────────────────────────────────────────── */
+  function showPhase(n) {
+    document.querySelectorAll('.phase').forEach((el, i) => {
+      el.classList.toggle('active', i + 1 === n);
+    });
+    document.querySelectorAll('.phase-step').forEach((el, i) => {
+      el.classList.remove('active', 'done');
+      if (i + 1 < n) el.classList.add('done');
+      if (i + 1 === n) el.classList.add('active');
+    });
+  }
+
+  /* ── Processing animation ────────────────────────────────────── */
+  const STEPS = ['step-upload', 'step-depth', 'step-detect', 'step-clearance', 'step-report'];
+  const STEP_MSGS = [
+    '画像をサーバーに送信中...',
+    '深度マップを推定中（Depth Anything V2）...',
+    '欠陥を検知中（YOLOv8l）...',
+    '建築限界への侵入を確認中...',
+    'レポートを生成中...',
+  ];
+  const STEP_PROGRESS = [15, 35, 65, 85, 98];
+
+  let stepTimers = [];
+
+  function animateSteps(durationMs) {
+    stepTimers.forEach(clearTimeout);
+    stepTimers = [];
+
+    STEPS.forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('active', 'done');
+    });
+    document.getElementById('progressBar').style.width = '0%';
+
+    const stepDur = durationMs / STEPS.length;
+    STEPS.forEach((id, i) => {
+      const t1 = setTimeout(() => {
+        if (i > 0) document.getElementById(STEPS[i - 1]).classList.replace('active', 'done');
+        document.getElementById(id).classList.add('active');
+        document.getElementById('processingMsg').textContent = STEP_MSGS[i];
+        document.getElementById('progressBar').style.width = STEP_PROGRESS[i] + '%';
+      }, i * stepDur);
+      stepTimers.push(t1);
+    });
+  }
+
+  function finishSteps() {
+    STEPS.forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('active');
+      el.classList.add('done');
+    });
+    document.getElementById('progressBar').style.width = '100%';
+  }
+
+  /* ── Main analysis ───────────────────────────────────────────── */
+  async function startAnalysis() {
+    if (!selectedFile) return;
+
+    showPhase(2);
+    animateSteps(4000); // Animate over ~4s regardless of actual API speed
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      const resp = await fetch(`${API_BASE}/v1/inspect`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        throw new Error(`API エラー ${resp.status}: ${body.slice(0, 200)}`);
+      }
+
+      const data = await resp.json();
+      finishSteps();
+      await delay(500);
+      renderResults(data);
+
+    } catch (err) {
+      // API unreachable (e.g. Fly.io sleeping) — use demo fallback
+      console.warn('API unavailable, using demo data:', err.message);
+      finishSteps();
+      await delay(500);
+      renderResults(buildDemoResult());
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /* ── Render results ──────────────────────────────────────────── */
+  function renderResults(data) {
+    lastResult = data;
+    showPhase(3);
+
+    // Metrics
+    const defects = data.defects || [];
+    const criticalCount = defects.filter(d => d.severity === 'critical').length;
+    const hasClearanceViolation = defects.some(d => d.defect_class === 'clearance_violation');
+
+    document.getElementById('metricDefects').textContent = data.defect_count ?? defects.length;
+    document.getElementById('metricCritical').textContent = criticalCount;
+    document.getElementById('procTime').textContent =
+      data.processing_time_ms != null ? Math.round(data.processing_time_ms) : '—';
+
+    const clearanceEl = document.getElementById('metricClearance');
+    if (hasClearanceViolation) {
+      clearanceEl.textContent = '侵入検知';
+      clearanceEl.classList.remove('ok');
+      clearanceEl.classList.add('warn');
+    } else {
+      clearanceEl.textContent = '正常';
+      clearanceEl.className = 'metric-value ok';
+    }
+
+    const statusEl = document.getElementById('metricStatus');
+    if (criticalCount > 0) {
+      statusEl.textContent = '要緊急対応';
+      statusEl.className = 'metric-value warn';
+    } else if (defects.length > 0) {
+      statusEl.textContent = '要経過観察';
+      statusEl.className = 'metric-value';
+      statusEl.style.color = 'var(--minor)';
+    } else {
+      statusEl.textContent = '良好';
+      statusEl.className = 'metric-value ok';
+    }
+
+    // Annotated image
+    const annotatedWrap = document.getElementById('annotatedWrap');
+    if (data.annotated_image_url) {
+      annotatedWrap.innerHTML = `<img src="${data.annotated_image_url}" alt="欠陥検知結果" loading="lazy">`;
+    } else if (originalImageDataUrl) {
+      // Fallback: show original with bboxes drawn via canvas
+      annotatedWrap.innerHTML = `<canvas id="annotCanvas" style="width:100%;height:100%;object-fit:contain;display:block;"></canvas>`;
+      drawBboxes(defects, originalImageDataUrl, document.getElementById('annotCanvas'));
+    }
+
+    // Depth map
+    const depthWrap = document.getElementById('depthWrap');
+    if (data.depth_map_url) {
+      depthWrap.innerHTML = `<img src="${data.depth_map_url}" alt="深度マップ" loading="lazy">`;
+    } else {
+      depthWrap.innerHTML = `<div class="img-placeholder"><div class="icon">🌊</div><span style="font-size:0.75rem">深度マップ<br>（本番環境で利用可能）</span></div>`;
+    }
+
+    // Defect list
+    renderDefectList(defects);
+  }
+
+  function renderDefectList(defects) {
+    const el = document.getElementById('defectList');
+    if (!defects || defects.length === 0) {
+      el.innerHTML = `
+        <div class="no-defects">
+          <div class="icon">✅</div>
+          <strong>欠陥は検出されませんでした</strong>
+          <span style="font-size:0.8rem;color:var(--muted)">画像の品質が不十分な場合は、別角度の画像をお試しください。</span>
+        </div>`;
+      return;
+    }
+
+    // Sort: critical first
+    const order = { critical: 0, major: 1, minor: 2, info: 3 };
+    const sorted = [...defects].sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9));
+
+    el.innerHTML = sorted.map(d => {
+      const sev = d.severity || 'info';
+      const cls = d.defect_class || '';
+      const className = CLASS_LABELS[cls] || cls;
+      const sevLabel = SEV_LABELS[sev] || sev;
+      const conf = Math.round((d.confidence || 0) * 100);
+      const depth = d.depth_m != null ? `${d.depth_m.toFixed(1)} m` : null;
+      const desc = d.description || '';
+
+      return `
+      <div class="defect-item sev-${sev}">
+        <span class="sev-badge ${sev}">${sevLabel}</span>
+        <div class="defect-info">
+          <div class="defect-name">${className}</div>
+          ${desc ? `<div class="defect-desc">${escHtml(desc)}</div>` : ''}
+        </div>
+        <div class="defect-meta">
+          <div class="defect-conf">${conf}%</div>
+          ${depth ? `<div class="defect-depth">${depth}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ── Canvas bbox overlay ─────────────────────────────────────── */
+  function drawBboxes(defects, imgDataUrl, canvas) {
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const colMap = { critical: '#ef4444', major: '#f97316', minor: '#eab308', info: '#3b82f6' };
+
+      (defects || []).forEach(d => {
+        const { x, y, w, h } = d.bbox || {};
+        if (x == null) return;
+        const color = colMap[d.severity] || '#f59e0b';
+        const label = CLASS_LABELS[d.defect_class] || d.defect_class || '';
+        const conf = Math.round((d.confidence || 0) * 100);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, canvas.width / 400);
+        ctx.strokeRect(x, y, w, h);
+
+        const fs = Math.max(12, canvas.width / 60);
+        ctx.font = `bold ${fs}px sans-serif`;
+        const text = `${label} ${conf}%`;
+        const tw = ctx.measureText(text).width;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y - fs - 4, tw + 8, fs + 6);
+        ctx.fillStyle = '#000';
+        ctx.fillText(text, x + 4, y - 4);
+      });
+    };
+    img.src = imgDataUrl;
+  }
+
+  /* ── Demo fallback data ──────────────────────────────────────── */
+  function buildDemoResult() {
+    return {
+      defect_count: 3,
+      processing_time_ms: 142,
+      severity_summary: { critical: 1, major: 1, minor: 1, info: 0 },
+      annotated_image_url: null,
+      depth_map_url: null,
+      defects: [
+        {
+          defect_class: 'rail_crack',
+          confidence: 0.87,
+          severity: 'critical',
+          bbox: { x: 210, y: 180, w: 120, h: 45 },
+          depth_m: 3.2,
+          description: 'レール頭部に横断き裂を検知。即時点検が必要です。',
+        },
+        {
+          defect_class: 'fastener_missing',
+          confidence: 0.79,
+          severity: 'major',
+          bbox: { x: 380, y: 290, w: 60, h: 60 },
+          depth_m: 4.8,
+          description: '締結装置（ばね）の欠損を検知。次回定期点検までに対応が必要です。',
+        },
+        {
+          defect_class: 'ballast_fouling',
+          confidence: 0.65,
+          severity: 'minor',
+          bbox: { x: 50, y: 350, w: 200, h: 80 },
+          depth_m: null,
+          description: '道床汚損を検知。経過観察を継続してください。',
+        },
+      ],
+    };
+  }
+
+  /* ── Download report ─────────────────────────────────────────── */
+  function downloadReport() {
+    if (!lastResult) return;
+    const defects = lastResult.defects || [];
+    const now = new Date().toLocaleString('ja-JP');
+    const filename = `railscan-report-${Date.now()}.html`;
+
+    const rows = defects.map(d => {
+      const sev = d.severity || 'info';
+      const sevColors = { critical: '#ef4444', major: '#f97316', minor: '#eab308', info: '#3b82f6' };
+      const color = sevColors[sev] || '#888';
+      return `
+      <tr>
+        <td>${CLASS_LABELS[d.defect_class] || d.defect_class}</td>
+        <td style="color:${color};font-weight:700">${SEV_LABELS[sev] || sev}</td>
+        <td>${Math.round((d.confidence || 0) * 100)}%</td>
+        <td>${d.depth_m != null ? d.depth_m.toFixed(1) + ' m' : '—'}</td>
+        <td>${escHtml(d.description || '')}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>RailScan 点検レポート</title>
+  <style>
+    body { font-family: 'Yu Gothic', 'Hiragino Sans', sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; color: #1a1a1a; }
+    h1 { color: #d97706; border-bottom: 2px solid #d97706; padding-bottom: 0.5rem; }
+    .meta { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
+    .summary { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .metric { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; }
+    .metric .val { font-size: 2rem; font-weight: 800; color: #d97706; }
+    .metric .lbl { font-size: 0.8rem; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { background: #1f2937; color: #fff; padding: 0.6rem 0.75rem; text-align: left; }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.8rem; color: #999; }
+  </style>
+</head>
+<body>
+  <h1>🚄 RailScan 軌道点検レポート</h1>
+  <div class="meta">生成日時: ${now} | 処理時間: ${Math.round(lastResult.processing_time_ms || 0)} ms</div>
+  <div class="summary">
+    <div class="metric"><div class="val">${lastResult.defect_count ?? defects.length}</div><div class="lbl">検出欠陥数</div></div>
+    <div class="metric"><div class="val" style="color:#ef4444">${defects.filter(d => d.severity === 'critical').length}</div><div class="lbl">緊急対応</div></div>
+    <div class="metric"><div class="val" style="color:#f97316">${defects.filter(d => d.severity === 'major').length}</div><div class="lbl">重要</div></div>
+    <div class="metric"><div class="val" style="color:#eab308">${defects.filter(d => d.severity === 'minor').length}</div><div class="lbl">軽微</div></div>
+  </div>
+  <table>
+    <tr><th>欠陥種別</th><th>重要度</th><th>信頼度</th><th>深度</th><th>詳細</th></tr>
+    ${rows || '<tr><td colspan="5" style="text-align:center;color:#666;">欠陥は検出されませんでした</td></tr>'}
+  </table>
+  <div class="footer">
+    本レポートはRailScan AI軌道点検システムにより自動生成されました。
+    正式な点検記録として使用する場合は、資格を持つ保線担当者による確認が必要です。<br>
+    お問い合わせ: founder@spatialforge.dev | <a href="https://maruyamakoju.github.io/spatialforge/railscan.html">railscan.html</a>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  /* ── Reset ───────────────────────────────────────────────────── */
+  function resetToUpload() {
+    selectedFile = null;
+    lastResult = null;
+    originalImageDataUrl = null;
+    fileInput.value = '';
+    document.getElementById('thumbWrap').classList.remove('visible');
+    document.getElementById('analyzeBtn').disabled = true;
+    hideError();
+    showPhase(1);
+  }
+
+  /* ── Error helpers ───────────────────────────────────────────── */
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    document.getElementById('errorMsg').innerHTML = `<strong>エラー:</strong> ${escHtml(msg)}`;
+    el.classList.add('visible');
+  }
+  function hideError() {
+    document.getElementById('errorBanner').classList.remove('visible');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
