@@ -6,6 +6,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from .responses import AsyncJobState
 
 # ── Defect taxonomy ──────────────────────────────────────────
 # Aligned with Japanese railway inspection standards (保線規程).
@@ -27,6 +28,7 @@ class DefectClass(str, Enum):
     BALLAST_FOULING = "ballast_fouling"    # 道床汚損
     JOINT_DEFECT = "joint_defect"          # 継目板不良
     GAUGE_ANOMALY = "gauge_anomaly"        # 軌間異常
+    CLEARANCE_VIOLATION = "clearance_violation"  # 建築限界侵入
 
 
 # Japanese display names (for reports)
@@ -42,6 +44,7 @@ DEFECT_LABELS_JA: dict[DefectClass, str] = {
     DefectClass.BALLAST_FOULING: "道床汚損",
     DefectClass.JOINT_DEFECT: "継目板不良",
     DefectClass.GAUGE_ANOMALY: "軌間異常",
+    DefectClass.CLEARANCE_VIOLATION: "建築限界侵入",
 }
 
 
@@ -110,6 +113,20 @@ class InspectModel(str, Enum):
     PRECISE = "precise"    # YOLOv8x — maximum accuracy
 
 
+class InspectProcessingStep(str, Enum):
+    """Standardized processing steps for async inspection video jobs."""
+
+    QUEUED = "queued"
+    DOWNLOADING_VIDEO = "downloading_video"
+    LOADING_MODELS = "loading_models"
+    SAMPLING_FRAMES = "sampling_frames"
+    ANALYZING_FRAMES = "analyzing_frames"
+    DEDUPLICATING_DEFECTS = "deduplicating_defects"
+    GENERATING_REPORT = "generating_report"
+    UPLOADING_REPORT = "uploading_report"
+    FINALIZING = "finalizing"
+
+
 class InspectResponse(BaseModel):
     """Single-image inspection result."""
 
@@ -133,6 +150,14 @@ class InspectVideoJobResponse(BaseModel):
 
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field("processing", description="Job status")
+    state: AsyncJobState = Field(
+        AsyncJobState.PROCESSING,
+        description="Stable job state enum for clients",
+    )
+    step: InspectProcessingStep | str | None = Field(
+        None,
+        description="Optional standardized processing step when state is processing",
+    )
     estimated_time_s: float | None = Field(None, description="Estimated completion time")
 
 
@@ -159,6 +184,8 @@ class InspectionReportResponse(BaseModel):
 
     job_id: str
     status: str
+    state: AsyncJobState | None = None
+    step: InspectProcessingStep | str | None = None
     summary: InspectionReportSummary | None = None
     frames: list[FrameInspection] | None = Field(
         None, description="Per-frame details (paginated)",

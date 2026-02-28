@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
@@ -27,14 +28,16 @@ from ..models.inspection import (
     DetectedDefect,
     FrameInspection,
     InspectionReportSummary,
+    InspectProcessingStep,
     Severity,
 )
-from .defect_engine import DefectEngine, DefectDetectionResult, Detection
+from .defect_engine import DefectEngine, Detection
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .depth_engine import DepthEngine
+    from .railway_depth_engine import RailwayDepthEngine, ViolationObject
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +51,12 @@ class InspectionConfig:
     max_frames: int = 500             # Maximum frames to process
 
     # Detection
-    confidence_threshold: float = 0.25
+    # Safety-critical context: lower threshold to prefer recall over precision.
+    # A missed defect is more dangerous than a false alarm.
+    confidence_threshold: float = 0.15
     iou_threshold: float = 0.45
     enable_depth: bool = True         # Run depth estimation for each frame
+    enable_clearance: bool = True     # Run railway clearance envelope check
 
     # Deduplication
     dedup_iou_threshold: float = 0.5  # IoU threshold for cross-frame dedup
@@ -68,6 +74,7 @@ class InspectionResult:
     frames: list[FrameInspection] = field(default_factory=list)
     unique_defects: list[DetectedDefect] = field(default_factory=list)
     annotated_frames: list[NDArray[np.uint8]] = field(default_factory=list)
+    preview_depth_map: NDArray[np.float32] | None = None
     total_processing_time_ms: float = 0.0
     video_duration_s: float = 0.0
     video_fps: float = 0.0
@@ -126,10 +133,15 @@ class InspectionPipeline:
         defect_engine: DefectEngine,
         depth_engine: DepthEngine | None = None,
         config: InspectionConfig | None = None,
+        railway_engine: RailwayDepthEngine | None = None,
     ) -> None:
+        self._config = config or InspectionConfig()
+        # Apply pipeline config thresholds to the defect engine
+        defect_engine._conf_threshold = self._config.confidence_threshold
+        defect_engine._iou_threshold = self._config.iou_threshold
         self._defect = defect_engine
         self._depth = depth_engine
-        self._config = config or InspectionConfig()
+        self._railway = railway_engine
 
     def inspect_image(
         self,
@@ -147,11 +159,22 @@ class InspectionPipeline:
         """
         t0 = time.perf_counter()
 
-        # Run depth estimation
+        # Run depth estimation (prefer RailwayDepthEngine when available)
         depth_map = None
         depth_min = None
         depth_max = None
-        if self._depth and self._config.enable_depth:
+        clearance_defects: list[DetectedDefect] = []
+
+        if self._railway and self._config.enable_depth:
+            railway_result = self._railway.estimate_railway(image_rgb)
+            depth_map = railway_result.base.depth_map
+            depth_min = float(railway_result.base.min_depth)
+            depth_max = float(railway_result.base.max_depth)
+            if self._config.enable_clearance:
+                clearance_defects = self._violations_to_defects(
+                    railway_result.clearance.violation_objects
+                )
+        elif self._depth and self._config.enable_depth:
             depth_result = self._depth.estimate(image_rgb)
             depth_map = depth_result.depth_map
             depth_min = depth_result.min_depth
@@ -160,8 +183,9 @@ class InspectionPipeline:
         # Run defect detection
         det_result = self._defect.detect(image_rgb, depth_map)
 
-        # Convert to API models
-        defects = self._detections_to_models(det_result.detections, depth_map)
+        # Merge YOLO defects + clearance violations (clearance takes priority)
+        yolo_defects = self._detections_to_models(det_result.detections, depth_map)
+        defects = clearance_defects + yolo_defects
 
         frame = FrameInspection(
             frame_index=0,
@@ -184,6 +208,7 @@ class InspectionPipeline:
             frames=[frame],
             unique_defects=defects,  # Single frame, no dedup needed
             annotated_frames=annotated,
+            preview_depth_map=depth_map,
             total_processing_time_ms=elapsed_ms,
             frames_analyzed=1,
         )
@@ -193,7 +218,8 @@ class InspectionPipeline:
         video_path: str | Path,
         km_start: float | None = None,
         km_end: float | None = None,
-        progress_callback: callable | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+        step_callback: Callable[[str, dict[str, Any] | None], None] | None = None,
     ) -> InspectionResult:
         """Run inspection on a video file.
 
@@ -231,6 +257,16 @@ class InspectionPipeline:
                 self._config.max_frames,
             )
 
+            if step_callback is not None:
+                step_callback(
+                    InspectProcessingStep.SAMPLING_FRAMES.value,
+                    {
+                        "sample_interval": sample_interval,
+                        "frames_to_analyze": int(frames_to_analyze),
+                        "total_frames_in_video": int(total_frames),
+                    },
+                )
+
             # KM interpolation
             km_per_frame = None
             if km_start is not None and km_end is not None and frames_to_analyze > 1:
@@ -249,14 +285,24 @@ class InspectionPipeline:
                     break
 
                 if frame_idx % sample_interval == 0:
-                    rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+                    rgb_frame = np.asarray(cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB), dtype=np.uint8)
                     timestamp_s = frame_idx / video_fps
 
-                    # Depth estimation
+                    # Depth estimation (prefer RailwayDepthEngine)
                     depth_map = None
                     depth_min = None
                     depth_max = None
-                    if self._depth and self._config.enable_depth:
+                    frame_clearance: list[DetectedDefect] = []
+                    if self._railway and self._config.enable_depth:
+                        rw_result = self._railway.estimate_railway(rgb_frame)
+                        depth_map = rw_result.base.depth_map
+                        depth_min = float(rw_result.base.min_depth)
+                        depth_max = float(rw_result.base.max_depth)
+                        if self._config.enable_clearance:
+                            frame_clearance = self._violations_to_defects(
+                                rw_result.clearance.violation_objects
+                            )
+                    elif self._depth and self._config.enable_depth:
                         depth_result = self._depth.estimate(rgb_frame)
                         depth_map = depth_result.depth_map
                         depth_min = depth_result.min_depth
@@ -265,8 +311,9 @@ class InspectionPipeline:
                     # Defect detection
                     det_result = self._defect.detect(rgb_frame, depth_map)
 
-                    # Convert to models
-                    defects = self._detections_to_models(det_result.detections, depth_map)
+                    # Merge clearance + YOLO
+                    yolo_defects = self._detections_to_models(det_result.detections, depth_map)
+                    defects = frame_clearance + yolo_defects
 
                     # KM marker
                     km = None
@@ -306,6 +353,11 @@ class InspectionPipeline:
             cap.release()
 
         # Deduplicate detections across frames
+        if step_callback is not None:
+            step_callback(
+                InspectProcessingStep.DEDUPLICATING_DEFECTS.value,
+                {"frames_analyzed": int(analyzed)},
+            )
         unique_defects = self._deduplicate_detections(all_frames)
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -320,6 +372,50 @@ class InspectionPipeline:
             total_frames_in_video=total_frames,
             frames_analyzed=analyzed,
         )
+
+    def _violations_to_defects(
+        self,
+        violations: list[ViolationObject],
+    ) -> list[DetectedDefect]:
+        """Convert RailwayDepthEngine clearance violations to DetectedDefect models.
+
+        Clearance violations are produced by the depth-based geometric analysis
+        (RANSAC rail plane + projective envelope), which is independent of the
+        YOLO model and is more reliable for spatial intrusion detection.
+        """
+        from .railway_depth_engine import ViolationSeverity
+
+        sev_map = {
+            ViolationSeverity.CRITICAL: Severity.CRITICAL,
+            ViolationSeverity.WARNING: Severity.MAJOR,
+            ViolationSeverity.ADVISORY: Severity.MINOR,
+        }
+
+        result = []
+        for v in violations:
+            side = max(20.0, float(v.area_px) ** 0.5)
+            bbox = BBox2D(
+                x=max(0.0, round(v.centroid_x - side / 2, 1)),
+                y=max(0.0, round(v.centroid_y - side / 2, 1)),
+                w=round(side, 1),
+                h=round(side, 1),
+            )
+            # Confidence based on violation severity and penetration depth
+            conf = min(0.97, 0.60 + v.penetration_m * 0.15 + min(v.area_px / 50000, 0.15))
+            severity = sev_map.get(v.severity, Severity.MAJOR)
+            desc = (
+                f"建築限界侵入を検知: 物体まで {v.depth_m:.1f} m, "
+                f"侵入量 {v.penetration_m:.2f} m, 高さ {v.world_height_m:.1f} m"
+            )
+            result.append(DetectedDefect(
+                defect_class=DefectClass.CLEARANCE_VIOLATION,
+                confidence=round(conf, 3),
+                severity=severity,
+                bbox=bbox,
+                depth_m=round(v.depth_m, 2),
+                description=desc,
+            ))
+        return result
 
     def _detections_to_models(
         self,
@@ -410,12 +506,12 @@ class InspectionPipeline:
 
         unique: list[DetectedDefect] = []
 
-        for cls, detections in by_class.items():
+        for _cls, detections in by_class.items():
             # Sort by timestamp
             detections.sort(key=lambda x: x[0])
 
             merged: list[DetectedDefect] = []
-            for ts, det in detections:
+            for _ts, det in detections:
                 # Check if this detection overlaps with any existing merged detection
                 found_match = False
                 for i, existing in enumerate(merged):

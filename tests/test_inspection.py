@@ -9,18 +9,17 @@ Tests:
 
 from __future__ import annotations
 
-import io
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
-from PIL import Image
+from pydantic import ValidationError
 
 from spatialforge.inference.defect_engine import (
-    DefectEngine,
-    DefectDetectionResult,
-    Detection,
     _DEFAULT_CLASS_MAP,
+    DefectDetectionResult,
+    DefectEngine,
+    Detection,
 )
 from spatialforge.inference.inspector import (
     InspectionConfig,
@@ -28,16 +27,15 @@ from spatialforge.inference.inspector import (
     InspectionResult,
 )
 from spatialforge.models.inspection import (
+    DEFECT_LABELS_JA,
+    SEVERITY_LABELS_JA,
     BBox2D,
     DefectClass,
     DetectedDefect,
     FrameInspection,
     InspectionReportSummary,
     Severity,
-    DEFECT_LABELS_JA,
-    SEVERITY_LABELS_JA,
 )
-
 
 # ── Fixtures ────────────────────────────────────────────────────
 
@@ -169,10 +167,11 @@ class TestInspectionModels:
     """Tests for inspection data models."""
 
     def test_defect_class_enum(self):
-        """All 11 defect classes are defined."""
-        assert len(DefectClass) == 11
+        """All 12 defect classes are defined (11 surface + 1 clearance)."""
+        assert len(DefectClass) == 12
         assert DefectClass.RAIL_CRACK.value == "rail_crack"
         assert DefectClass.GAUGE_ANOMALY.value == "gauge_anomaly"
+        assert DefectClass.CLEARANCE_VIOLATION.value == "clearance_violation"
 
     def test_severity_enum(self):
         """All 4 severity levels are defined."""
@@ -201,7 +200,7 @@ class TestInspectionModels:
 
     def test_detected_defect_confidence_bounds(self):
         """Confidence must be 0-1."""
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             DetectedDefect(
                 defect_class=DefectClass.RAIL_CRACK,
                 confidence=1.5,  # Invalid
@@ -313,6 +312,8 @@ class TestInspectionPipeline:
         result = pipeline.inspect_image(sample_rgb)
         assert result.frames[0].depth_min_m == 0.5
         assert result.frames[0].depth_max_m == 10.0
+        assert result.preview_depth_map is not None
+        assert result.preview_depth_map.shape == sample_depth.shape
         mock_depth_engine.estimate.assert_called_once()
 
     def test_summary_generation(self, sample_rgb, mock_detections):
